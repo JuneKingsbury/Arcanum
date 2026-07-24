@@ -1102,6 +1102,46 @@ export const DIMENSIONS = {
             ],
         },
     },
+    crystal_mines: {
+        name: 'Crystal Mines', difficulty: 2,
+        duration: [350, 550], encounters: 4,
+        vis: { wall: 'stone_wall', floor: 'stone_floor' },
+        requiresDimension: 'crystal_caves',
+        loot: [
+            { resource: 'runite', weight: 35, amount: [4, 9] },
+            { resource: 'stone', weight: 25, amount: [6, 14] },
+            { resource: 'void_essence', weight: 15, amount: [2, 5] },
+            { artifact: 'drum_of_rallying', weight: 3 },
+        ],
+        enemies: { hp: [70, 110], damage: [7, 12], count: [3, 5] },
+        events: {
+            ambient: [
+                '{name} hears the echoing clink of ancient pickaxes.',
+                'The mineshaft vibrates with deep seismic rumbling.',
+                '{name} passes collapsed tunnels sealed by crystal growth.',
+                'Rail tracks rusted shut stretch deeper into the dark.',
+                'Luminescent veins pulse in time with an unseen heartbeat.',
+                '{name} finds old miner graffiti scratched into the wall.',
+            ],
+            discoveries: [
+                '{name} breaks through a sealed chamber — pristine runite!',
+                'An abandoned mine cart still holds a rich payload.',
+                '{name} digs into a pocket of concentrated crystal ore.',
+            ],
+            traps: [
+                'A ceiling collapse rains rubble on {name}!',
+                '{name} triggers a tripwire — a pickaxe swings from the wall!',
+                'Unstable ground gives way beneath {name}!',
+                'A pressurized gas pocket bursts near {name}!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} finds a deep runite motherload!', loot: { resource: 'runite', amount: [6, 12] } },
+                { chance: 0.03, text: '{name} discovers a crystallized void pocket deep underground!', loot: { resource: 'void_essence', amount: [4, 8] } },
+                { chance: 0.015, text: '{name} unearths an ancient mining golem core — still humming with power!', loot: { artifact: 'boots_of_haste' } },
+                { chance: 0.015, text: '{name} pries a ward stone from a sealed vault door!', loot: { artifact: 'ward_of_the_sentinel' } },
+            ],
+        },
+    },
     verdant_depths: {
         name: 'Verdant Depths', difficulty: 1,
         duration: [150, 280], encounters: 2,

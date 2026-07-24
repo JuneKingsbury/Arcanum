@@ -74,6 +74,7 @@ export function saveGame(game) {
         exploration: {
             expeditions: game.exploration.expeditions,
             completedExpeditions: game.exploration.completedExpeditions,
+            completedDimensions: [...(game.exploration.completedDimensions || [])],
         },
 
         research: {
@@ -82,6 +83,7 @@ export function saveGame(game) {
         },
 
         manaCrystalBonus: game.manaCrystalBonus || 0,
+        discoveredLoot: [...(game.discoveredLoot || [])],
 
         tasks: game.taskQueue.getAll(),
         eventLog: game.eventLog.entries,
@@ -196,6 +198,7 @@ export function loadGame(game) {
     if (data.exploration) {
         game.exploration.expeditions = data.exploration.expeditions || [];
         game.exploration.completedExpeditions = data.exploration.completedExpeditions || [];
+        game.exploration.completedDimensions = new Set(data.exploration.completedDimensions || []);
         for (const exp of [...game.exploration.expeditions, ...game.exploration.completedExpeditions]) {
             if (exp.log && exp.log.length > 0 && typeof exp.log[0] === 'string') {
                 exp.log = exp.log.map(text => ({ tick: 0, text, type: 'info' }));
@@ -218,6 +221,7 @@ export function loadGame(game) {
     }
 
     game.manaCrystalBonus = data.manaCrystalBonus || 0;
+    game.discoveredLoot = new Set(data.discoveredLoot || []);
 
     game.taskQueue.tasks = data.tasks;
     game.taskQueue.syncIdCounter();

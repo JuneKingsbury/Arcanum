@@ -72,6 +72,7 @@ class Game {
         this.eventLog = new EventLog();
 
         this.manaCrystalBonus = 0;
+        this.discoveredLoot = new Set();
 
         this.colonists = [];
         this._colonistById = new Map();

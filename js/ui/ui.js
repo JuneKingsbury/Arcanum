@@ -2242,7 +2242,18 @@ export class UI {
             if (dims.length > 0 && this.game.power.powered) {
                 html += `<div class="info-row" style="margin-top:8px;font-weight:bold;color:#33ccff;">Send Expedition:</div>`;
                 for (const dim of dims) {
-                    html += `<div class="info-actions"><button onclick="window.game.showExpeditionSetupInPanel('${dim.key}')" style="background:#1a4466;color:#88ddff;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;margin:2px 0;">${dim.name} (Difficulty ${dim.difficulty})</button></div>`;
+                    const completed = expl.completedDimensions.has(dim.key);
+                    const hasSequel = Object.values(DIMENSIONS).some(d => d.requiresDimension === dim.key);
+                    const badge = completed ? `<span style="color:#44cc44;font-size:0.8em;"> ✓</span>` : '';
+                    const chain = hasSequel && completed ? ` <span style="color:#666;font-size:0.8em;">→</span>` : '';
+                    const reqBy = dim.requiresDimension ? DIMENSIONS[dim.requiresDimension]?.name : null;
+                    const indent = reqBy ? 'margin-left:16px;border-left:2px solid #446;padding-left:8px;' : '';
+                    html += `<div class="info-actions" style="${indent}"><button onclick="window.game.showExpeditionSetupInPanel('${dim.key}')" style="background:#1a4466;color:#88ddff;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;margin:2px 0;">${dim.name} (Difficulty ${dim.difficulty})${badge}${chain}</button></div>`;
+                }
+                const locked = Object.entries(DIMENSIONS).filter(([k, d]) => d.requiresDimension && !expl.completedDimensions.has(d.requiresDimension) && (!d.research || this.game.research.isResearched(d.research)));
+                for (const [key, dim] of locked) {
+                    const reqName = DIMENSIONS[dim.requiresDimension]?.name || dim.requiresDimension;
+                    html += `<div class="info-actions" style="margin-left:16px;border-left:2px solid #333;padding-left:8px;opacity:0.5;"><span style="color:#666;padding:6px 12px;display:inline-block;">${dim.name} — complete ${reqName} to unlock</span></div>`;
                 }
             } else if (!this.game.power.powered) {
                 html += `<div class="info-row" style="color:#ff4444;margin-top:8px;">No mana — cannot send expeditions</div>`;
@@ -2297,10 +2308,66 @@ export class UI {
         html += `<span id="exp-diff-label" style="min-width:70px;color:#ffaa33;font-size:0.9em;"></span>`;
         html += `</div>`;
         html += `<div id="exp-diff-desc" style="color:#888;font-size:0.8em;padding:2px 4px;"></div>`;
+        html += this._buildDimensionDropsHtml(dimensionKey);
         html += `<div class="info-actions" style="margin-top:8px;">`;
         html += `<button onclick="window.game.launchExpeditionFromPanel('${dimensionKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
         html += `<button onclick="window.game.ui._arcaneExpSetup=null;window.game.ui._lastArcaneHtml='';window.game.ui.updateArcanePanel();" style="background:#333;color:#aaa;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:8px;">Cancel</button>`;
         html += `</div></div>`;
+        return html;
+    }
+
+    _buildDimensionDropsHtml(dimensionKey) {
+        const dim = DIMENSIONS[dimensionKey];
+        if (!dim) return '';
+        const discovered = this.game.discoveredLoot || new Set();
+        let html = `<div style="margin-top:10px;color:#ccaa44;font-weight:bold;font-size:0.9em;">Possible Drops</div>`;
+        html += `<div style="max-height:120px;overflow-y:auto;margin-top:4px;padding:4px;background:#1a1a2e;border-radius:4px;">`;
+
+        const totalWeight = dim.loot.reduce((s, l) => s + l.weight, 0);
+        for (const entry of dim.loot) {
+            const pct = Math.round(entry.weight / totalWeight * 100);
+            const key = entry.artifact || entry.resource;
+            const isFound = discovered.has(`${dimensionKey}:${key}`);
+            const name = isFound ? (entry.artifact ? (ARTIFACTS[entry.artifact]?.name || entry.artifact) : entry.resource.replace(/_/g, ' ')) : '??????';
+            const icon = isFound ? this._itemIcon(key, entry.artifact ? 'artifact' : null) : '';
+            const nameColor = isFound ? '#ccc' : '#555';
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px;font-size:0.8em;">`;
+            html += `<span style="color:${nameColor};">${icon}${name}</span>`;
+            html += `<span style="color:#888;">${pct}%</span>`;
+            html += `</div>`;
+        }
+
+        if (dim.events && dim.events.rare) {
+            html += `<div style="color:#aa66cc;font-size:0.75em;margin-top:4px;padding-top:4px;border-top:1px solid #333;">Rare Encounters</div>`;
+            for (const rare of dim.events.rare) {
+                const pct = (rare.chance * 100).toFixed(1);
+                let key, name, isFound;
+                if (rare.loot.artifact) {
+                    key = rare.loot.artifact;
+                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    name = isFound ? (ARTIFACTS[key]?.name || key) : '??????';
+                } else if (rare.loot.item) {
+                    key = rare.loot.item;
+                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    name = isFound ? (TRADER_EXCLUSIVE_ITEMS[key]?.name || key) : '??????';
+                } else {
+                    key = rare.loot.resource;
+                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    name = isFound ? key.replace(/_/g, ' ') : '??????';
+                }
+                const icon = isFound ? this._itemIcon(key, rare.loot.artifact ? 'artifact' : null) : '';
+                const nameColor = isFound ? '#ccc' : '#555';
+                html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px;font-size:0.8em;">`;
+                html += `<span style="color:${nameColor};">${icon}${name}</span>`;
+                html += `<span style="color:#aa66cc;">${pct}%</span>`;
+                html += `</div>`;
+            }
+        }
+
+        const totalDrops = dim.loot.length + (dim.events?.rare?.length || 0);
+        const foundCount = [...dim.loot.map(e => e.artifact || e.resource), ...(dim.events?.rare || []).map(r => r.loot.artifact || r.loot.item || r.loot.resource)].filter(k => discovered.has(`${dimensionKey}:${k}`)).length;
+        html += `<div style="color:#666;font-size:0.7em;text-align:right;margin-top:4px;">${foundCount}/${totalDrops} discovered</div>`;
+        html += `</div>`;
         return html;
     }
 

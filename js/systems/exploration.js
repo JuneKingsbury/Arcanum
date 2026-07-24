@@ -7,6 +7,7 @@ export class ExplorationSystem {
     constructor() {
         this.expeditions = [];
         this.completedExpeditions = [];
+        this.completedDimensions = new Set();
     }
 
     canSend(game, dimensionKey) {
@@ -22,6 +23,7 @@ export class ExplorationSystem {
         const results = [];
         for (const [key, dim] of Object.entries(DIMENSIONS)) {
             if (dim.research && !game.research.isResearched(dim.research)) continue;
+            if (dim.requiresDimension && !this.completedDimensions.has(dim.requiresDimension)) continue;
             results.push({ key, ...dim });
         }
         return results;
@@ -624,6 +626,9 @@ export class ExplorationSystem {
         exp.status = 'complete';
 
         const allDefeated = exp.partySnapshot.every(p => p.hp <= 0);
+        if (!allDefeated) {
+            this.completedDimensions.add(exp.dimension);
+        }
         const gx = exp.gatePos.x;
         const gy = exp.gatePos.y;
 
@@ -660,6 +665,17 @@ export class ExplorationSystem {
         for (const itemKey of items) {
             const itemDef = TRADER_EXCLUSIVE_ITEMS[itemKey];
             game.resources.addConsumable({ key: itemKey, name: itemDef?.name || itemKey });
+        }
+        if (game.discoveredLoot) {
+            for (const res of Object.keys(exp.loot)) {
+                game.discoveredLoot.add(`${exp.dimension}:${res}`);
+            }
+            for (const artKey of artifacts) {
+                game.discoveredLoot.add(`${exp.dimension}:${artKey}`);
+            }
+            for (const itemKey of items) {
+                game.discoveredLoot.add(`${exp.dimension}:${itemKey}`);
+            }
         }
         const parts = Object.entries(exp.loot).map(([k, v]) => `${v} ${k}`);
         for (const artKey of artifacts) {
