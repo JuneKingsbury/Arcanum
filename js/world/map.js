@@ -344,7 +344,8 @@ export function getTileColor(tile, season) {
     if (tile.resource) {
         const rDef = RESOURCES[tile.resource.type];
         if (rDef) {
-            if (rDef.autumnColor && season === 'autumn') return rDef.autumnColor;
+            const seasonColor = rDef[season + 'Color'];
+            if (seasonColor) return seasonColor;
             return rDef.color;
         }
     }

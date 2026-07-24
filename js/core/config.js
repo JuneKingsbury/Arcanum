@@ -1320,7 +1320,7 @@ export const TERRAIN = {
 // To add a harvestable resource: add entry here. Rendering, gathering, and yields handled automatically.
 // designation: 'chop' or 'mine'. yield: { resource: amount }. work: ticks to gather.
 export const RESOURCES = {
-    tree:       { char: 'T', color: '#8B6B3A', autumnColor: '#cc8822', designation: 'chop', work: 12, yield: { wood: 1 }, perAmount: true },
+    tree:       { char: 'T', color: '#8B6B3A', springColor: '#55cc44', summerColor: '#338822', autumnColor: '#cc8822', winterColor: '#667788', designation: 'chop', work: 12, yield: { wood: 1 }, perAmount: true },
     stone:      { char: 'o', color: '#999', designation: 'mine', work: 18, yield: { stone: 1 }, perAmount: true },
     runite_ore: { char: 'o', color: '#44cccc', designation: 'mine', work: 22, yield: { runite: 1 }, perAmount: true },
 };

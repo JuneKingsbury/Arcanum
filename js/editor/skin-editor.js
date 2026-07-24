@@ -238,8 +238,10 @@ class SkinEditor {
             case 'Resources':
                 for (const [key, def] of Object.entries(RESOURCES)) {
                     items.push({ key, char: def.char, color: def.color, desc: key, category: 'resources' });
-                    if (def.autumnColor) {
-                        items.push({ key: key + '_autumn', char: def.char, color: def.autumnColor, desc: key + ' (autumn)', category: 'resources' });
+                    for (const season of ['spring', 'summer', 'autumn', 'winter']) {
+                        if (def[season + 'Color']) {
+                            items.push({ key: key + '_' + season, char: def.char, color: def[season + 'Color'], desc: `${key} (${season})`, category: 'resources' });
+                        }
                     }
                 }
                 break;

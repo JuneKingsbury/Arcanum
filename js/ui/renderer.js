@@ -94,10 +94,8 @@ export class Renderer {
             return sm.getSprite('farms', 'farm_' + state);
         }
         if (tile.resource) {
-            if (season === 'autumn') {
-                const autumn = sm.getSprite('resources', tile.resource.type + '_autumn');
-                if (autumn) return autumn;
-            }
+            const seasonal = sm.getSprite('resources', tile.resource.type + '_' + season);
+            if (seasonal) return seasonal;
             return sm.getSprite('resources', tile.resource.type);
         }
         if (tile.floor) return sm.getSprite('floors', tile.floor);
@@ -370,6 +368,32 @@ export class Renderer {
                                 lastColor = '';
                             }
                             spriteDrawn = true;
+                        }
+                        if (tile.designation) {
+                            if (tile.designation.type === 'build' && tile.designation.buildType) {
+                                const ghostSprite = this.skinManager.getSprite('buildings', tile.designation.buildType)
+                                    || this.skinManager.getSprite('floors', tile.designation.buildType);
+                                if (ghostSprite) {
+                                    if (!spriteDrawn) {
+                                        const ground = this._resolveGroundSprite(tile, game.weather.season);
+                                        if (ground) {
+                                            ctx.drawImage(ground, px, py, cw, ch);
+                                            spriteDrawn = true;
+                                        }
+                                    }
+                                    ctx.globalAlpha = 0.4;
+                                    ctx.drawImage(ghostSprite, px, py, cw, ch);
+                                    ctx.globalAlpha = 1.0;
+                                    spriteDrawn = true;
+                                }
+                            } else if (spriteDrawn) {
+                                const tintColor = TILE_COLORS[`designation_${tile.designation.type}`] || '#ffff00';
+                                ctx.fillStyle = tintColor;
+                                ctx.globalAlpha = 0.35;
+                                ctx.fillRect(px, py, cw, ch);
+                                ctx.globalAlpha = 1.0;
+                                lastColor = '';
+                            }
                         }
                     }
                 }
