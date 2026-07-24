@@ -32,6 +32,7 @@
             </div>
             <div class="start-btn-row">
                 <button id="start-blueprint">Blueprint Editor</button>
+                <button id="start-skin-editor">Skin Editor</button>
             </div>
         </div>
         <p style="font-size:12px; color:#777;">
@@ -85,6 +86,12 @@
             <div class="settings-section">
                 <div class="settings-section-title">Visual</div>
                 <div class="settings-row">
+                    <label for="start-skin">Tile Skin:</label>
+                    <select id="start-skin" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">
+                        <option value="ascii">ASCII (default)</option>
+                    </select>
+                </div>
+                <div class="settings-row">
                     <label for="start-names">Colonist names:</label>
                     <select id="start-names" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">
                         <option value="off">Off</option>
@@ -126,6 +133,7 @@
     </div>
 
     <div id="blueprint-editor" style="display:none;"></div>
+    <div id="skin-editor" style="display:none;"></div>
 
     <div id="game-container">
         <div id="status-bar">
@@ -199,6 +207,7 @@
     </div>
 
     <div id="ui-tooltip"></div>
+    <script src="lib/jszip.min.js"></script>
     <script type="module" src="js/core/main.js"></script>
 </body>
 </html>

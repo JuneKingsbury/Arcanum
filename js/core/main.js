@@ -3,6 +3,7 @@ import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
 import { InputHandler } from '../ui/input.js';
+import { SkinManager } from '../ui/skin-manager.js';
 import { createColonist, createGolem, updateColonist, addThought, grantCastXp } from '../entities/colonist.js';
 import { TaskQueue } from './tasks.js';
 import { ResourceManager } from '../systems/resources.js';
@@ -51,6 +52,7 @@ class Game {
             showMinimap: true,
             showFps: false,
             autoSaveInterval: 60,
+            activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
         };
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
@@ -94,8 +96,9 @@ class Game {
         this.spawnStartingColonists();
         this.spawnStartingWildlife();
 
+        this.skinManager = window._sharedSkinManager || new SkinManager();
         const gameContainer = document.getElementById('game');
-        this.renderer = new Renderer(gameContainer);
+        this.renderer = new Renderer(gameContainer, this.skinManager);
         this.ui = new UI(this);
         this.input = new InputHandler(this, this.renderer.canvas);
         this.minimap = new Minimap(document.getElementById('minimap'), this);
@@ -151,6 +154,19 @@ class Game {
         this.lastTime = performance.now();
         requestAnimationFrame(this.gameLoop);
         requestAnimationFrame(() => resetMinimapSize());
+
+        this.skinManager.init().then(() => {
+            if (this.settings.activeSkin !== 'ascii') {
+                this.skinManager.switchSkin(this.settings.activeSkin);
+            }
+            this.ui.populateSkinDropdown();
+        });
+    }
+
+    async switchSkin(skinName) {
+        await this.skinManager.switchSkin(skinName);
+        this.settings.activeSkin = skinName;
+        localStorage.setItem('convocation_skin', skinName);
     }
 
     gameLoop(timestamp) {
@@ -1312,6 +1328,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionLabel = document.getElementById('version-label');
     if (versionLabel) versionLabel.textContent = `v${GAME_VERSION}`;
 
+    // Shared skin manager — created early so start screen and game use the same instance
+    const sharedSkinManager = new SkinManager();
+    window._sharedSkinManager = sharedSkinManager;
+
+    // Populate start screen skin dropdown
+    const startSkinSelect = document.getElementById('start-skin');
+    if (startSkinSelect) {
+        const savedSkin = localStorage.getItem('convocation_skin') || 'ascii';
+        sharedSkinManager.init().then(() => {
+            const names = sharedSkinManager.getSkinNames();
+            startSkinSelect.innerHTML = '';
+            for (const name of names) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+                opt.selected = name === savedSkin;
+                startSkinSelect.appendChild(opt);
+            }
+        });
+    }
+
     if (hasSave()) {
         loadBtn.disabled = false;
         exportBtn.disabled = false;
@@ -1414,8 +1451,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showFps: document.getElementById('start-fps').checked,
             showColonistNames: document.getElementById('start-names').value,
             uiFontSize: parseInt(document.getElementById('start-ui-font-size').value) || 12,
+            activeSkin: document.getElementById('start-skin').value || 'ascii',
         };
         setUIFontSize(startSettings.uiFontSize);
+        localStorage.setItem('convocation_skin', startSettings.activeSkin);
         launchGame(game => Object.assign(game.settings, startSettings));
     });
 
@@ -1426,6 +1465,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('start-blueprint').addEventListener('click', () => {
         import('../editor/blueprint-editor.js').then(({ launchBlueprintEditor }) => {
             launchBlueprintEditor();
+        });
+    });
+
+    document.getElementById('start-skin-editor').addEventListener('click', () => {
+        import('../editor/skin-editor.js').then(({ launchSkinEditor }) => {
+            launchSkinEditor();
         });
     });
 

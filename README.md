@@ -3,7 +3,7 @@ A Rimworld-like Arcane Colony Management Sim
 
 ## About
 
-Convocation is a browser-based ASCII colony management game inspired by Rimworld and Dwarf Fortress. Manage colonists, build defenses, research arcane technologies, and defend your settlement against waves of void creatures.
+Convocation is a browser-based colony management game inspired by Rimworld and Dwarf Fortress. Manage colonists, build defenses, research arcane technologies, and defend your settlement against waves of void creatures. The game ships with a classic ASCII renderer and supports custom pixel-art skins that can be created in the built-in Skin Editor.
 
 ---
 
@@ -516,3 +516,60 @@ Tabbed into four categories for easy navigation:
 Accessible from Settings during gameplay or from the start screen. Features:
 - **Tabbed sections** matching this guide's topics for quick navigation.
 - **Search bar** that filters across all sections — type "mana" to see every building, spell, and system that involves mana.
+
+---
+
+## Skins & Skin Editor
+
+Convocation supports visual skins that replace ASCII characters with pixel-art sprites. Switch skins at any time from the start screen settings or the in-game settings panel.
+
+### How Skins Work
+A skin is a collection of PNG sprites organized by category (buildings, terrain, resources, entities, floors, effects). The game looks for skins as `.skin.zip` files in the `skins/` folder — any ZIP placed there is automatically detected and appears in the dropdown.
+
+When a skin is active, the renderer draws sprites instead of ASCII characters. Any object without a sprite gracefully falls back to its ASCII representation, so partial skins work fine.
+
+### Colonist Variants
+Skins can include multiple colonist sprites (`colonist_1.png`, `colonist_2.png`, etc.) for visual variety. Variants are assigned deterministically by colonist ID, so each colonist always looks the same. A small colored marker dot in the corner still distinguishes individuals sharing a variant.
+
+### Using the Skin Editor
+Launch from the start screen. The editor is a full pixel-art painting tool:
+
+- **Canvas sizes** — 8x8 through 128x128 pixels
+- **Tools** — Draw, Erase, Fill (flood-fill), Pick Color (eyedropper)
+- **Transparency** — Erase to transparent; checkerboard background shows alpha. Transparent pixels let floors/terrain show through in-game.
+- **Zoom/Pan** — Scroll wheel to zoom, middle-click drag to pan, +/-/0 keys
+- **Undo/Redo** — Ctrl+Z / Ctrl+Y (up to 50 levels)
+- **Copy/Paste** — Copy a sprite and paste it as a starting point for another object (C/V keys)
+- **Object palette** — Browse all game objects by category; select one to paint its sprite
+- **Colonist variants** — Add as many numbered variants as you want; remove with the ✕ button
+- **Auto-save** — Work is saved to browser storage after every stroke; switching objects preserves progress
+
+### Exporting & Importing
+- **Export .zip** — Downloads your skin as a single `.skin.zip` file. Drop it in the `skins/` folder to use it.
+- **Import .zip** — Load an existing `.skin.zip` into the editor to modify sprites and re-export.
+
+### Skin File Structure
+```
+my_skin.skin.zip
+├── manifest.json
+├── buildings/
+│   ├── wood_wall.png
+│   ├── door.png
+│   └── ...
+├── terrain/
+│   ├── grass.png
+│   └── ...
+├── entities/
+│   ├── colonist.png
+│   ├── colonist_1.png
+│   ├── colonist_2.png
+│   └── ...
+├── resources/
+├── floors/
+└── effects/
+    ├── fire.png
+    ├── snow.png
+    └── ...
+```
+
+The `manifest.json` lists which sprites are included so the game knows what to load.

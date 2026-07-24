@@ -1869,6 +1869,20 @@ export class UI {
         this._updateOverlay();
     }
 
+    populateSkinDropdown() {
+        const el = document.getElementById('set-skin');
+        if (!el) return;
+        const skinNames = this.game.skinManager.getSkinNames();
+        el.innerHTML = '';
+        for (const name of skinNames) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+            opt.selected = this.game.settings.activeSkin === name;
+            el.appendChild(opt);
+        }
+    }
+
     updateSettingsPanel() {
         const s = this.game.settings;
         let html = '<div class="panel-close" data-panel-close="settings">&times;</div><h3>Settings</h3>';
@@ -1903,6 +1917,15 @@ export class UI {
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Visual</div>`;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-skin">Tile Skin:</label>`;
+        html += `<select id="set-skin" onchange="window.game.switchSkin(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
+        const skinNames = this.game.skinManager.getSkinNames();
+        for (const name of skinNames) {
+            const display = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+            html += `<option value="${name}" ${s.activeSkin === name ? 'selected' : ''}>${display}</option>`;
+        }
+        html += `</select></div>`;
         html += `<div class="settings-row">`;
         html += `<label for="set-names">Colonist names:</label>`;
         html += `<select id="set-names" onchange="window.game.settings.showColonistNames=this.value" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;

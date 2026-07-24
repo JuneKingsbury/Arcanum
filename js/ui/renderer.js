@@ -1,10 +1,12 @@
 import { CONFIG, TILE_COLORS, BUILDINGS, RENDER_CONFIG, COMBAT_VISUALS } from '../core/config.js';
 import { getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { OverlayRenderer } from './overlay-renderer.js';
+import { SkinManager } from './skin-manager.js';
 
 export class Renderer {
-    constructor(container) {
+    constructor(container, skinManager) {
         this.container = container;
+        this.skinManager = skinManager || new SkinManager();
         this.canvas = document.createElement('canvas');
         this.canvas.id = 'game-canvas';
         this.canvas.style.display = 'block';
@@ -55,6 +57,47 @@ export class Renderer {
         this._lastViewportH = CONFIG.VIEWPORT_HEIGHT;
     }
 
+    _resolveSprite(tile, entity, season) {
+        const sm = this.skinManager;
+        if (entity) {
+            if (entity.type === 'colonist') {
+                return sm.getColonistSprite(entity.colonistId, entity.drafted);
+            }
+            if (entity.type === 'golem') {
+                return sm.getSprite('entities', 'golem');
+            }
+            if (entity.type === 'raider') {
+                return sm.getSprite('entities', 'raider');
+            }
+            if (entity.type === 'wave_enemy') {
+                return sm.getSprite('entities', 'wave_enemy') || sm.getSprite('entities', 'raider');
+            }
+            if (entity.type === 'rally') {
+                return sm.getSprite('effects', 'rally');
+            }
+            // Animal type
+            if (entity.type) {
+                return sm.getSprite('entities', entity.type);
+            }
+        }
+        if (tile.onFire) return sm.getSprite('effects', 'fire');
+        if (tile.structure) return sm.getSprite('buildings', tile.structure);
+        if (tile.zone) {
+            const state = tile.zone.state || 'empty';
+            return sm.getSprite('farms', 'farm_' + state);
+        }
+        if (tile.resource) {
+            if (season === 'autumn') {
+                const autumn = sm.getSprite('resources', tile.resource.type + '_autumn');
+                if (autumn) return autumn;
+            }
+            return sm.getSprite('resources', tile.resource.type);
+        }
+        if (tile.floor) return sm.getSprite('floors', tile.floor);
+        if (tile.snowCovered && tile.terrain === 'grass') return sm.getSprite('effects', 'snow');
+        return sm.getSprite('terrain', tile.terrain);
+    }
+
     getNightDarkness(timeOfDay, season) {
         const t = timeOfDay / CONFIG.TICKS_PER_DAY;
         const daylight = RENDER_CONFIG.seasonDaylight[season] || RENDER_CONFIG.seasonDaylight.default;
@@ -73,6 +116,8 @@ export class Renderer {
         if (this._lastViewportW !== CONFIG.VIEWPORT_WIDTH || this._lastViewportH !== CONFIG.VIEWPORT_HEIGHT) {
             this._resizeCanvas();
         }
+
+        this.ctx.imageSmoothingEnabled = !this.skinManager.isActive;
 
         const { map, camera, colonists, wildlife, raiders, tamedAnimals, cursor } = game;
         const ctx = this.ctx;
@@ -105,20 +150,20 @@ export class Renderer {
         const entityMap = this._entityMap;
         entityMap.clear();
         for (const a of wildlife) {
-            if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color });
+            if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
         }
         if (tamedAnimals) {
             for (const a of tamedAnimals) {
-                if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color });
+                if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
             }
         }
         if (game.waves) {
             for (const e of game.waves.enemies) {
-                if (e.hp > 0) entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color });
+                if (e.hp > 0) entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy' });
             }
         }
         for (const r of raiders) {
-            if (r.hp > 0) entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: 'R', color: TILE_COLORS.raider });
+            if (r.hp > 0) entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: 'R', color: TILE_COLORS.raider, type: 'raider' });
         }
         const rallySet = this._rallySet;
         rallySet.clear();
@@ -134,7 +179,7 @@ export class Renderer {
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
-                entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, { char: c.golem ? 'G' : '@', color });
+                entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted });
                 if (drafted && c.draftTarget) {
                     rallySet.set(c.draftTarget.y * CONFIG.MAP_WIDTH + c.draftTarget.x, true);
                 }
@@ -142,7 +187,7 @@ export class Renderer {
         }
         for (const [key] of rallySet) {
             if (!entityMap.has(key)) {
-                entityMap.set(key, { char: '⚑', color: '#ff4444' });
+                entityMap.set(key, { char: '⚑', color: '#ff4444', type: 'rally' });
             }
         }
 
@@ -254,18 +299,44 @@ export class Renderer {
                     lastColor = '';
                 }
 
-                if (char === '█' || char === '▓' || char === '▒') {
-                    if (color !== lastColor) {
-                        ctx.fillStyle = color;
-                        lastColor = color;
+                let spriteDrawn = false;
+                if (this.skinManager.isActive) {
+                    const sprite = this._resolveSprite(tile, entity, game.weather.season);
+                    if (sprite) {
+                        ctx.drawImage(sprite, px, py, cw, ch);
+                        if (entity && entity.type === 'colonist') {
+                            ctx.fillStyle = entity.color;
+                            ctx.fillRect(px + cw - 4, py, 4, 4);
+                            lastColor = '';
+                        }
+                        spriteDrawn = true;
                     }
+                }
+
+                if (!spriteDrawn) {
+                    if (char === '█' || char === '▓' || char === '▒') {
+                        if (color !== lastColor) {
+                            ctx.fillStyle = color;
+                            lastColor = color;
+                        }
+                        ctx.fillRect(px, py, cw, ch);
+                    } else {
+                        if (color !== lastColor) {
+                            ctx.fillStyle = color;
+                            lastColor = color;
+                        }
+                        ctx.fillText(char, px + this._textOffsetX, py);
+                    }
+                }
+
+                if (spriteDrawn && (inSelection || (cursor && cursor.x === wx && cursor.y === wy))) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = inSelection
+                        ? (game.input.mode === 'zone' ? RENDER_CONFIG.selectionBgZone : RENDER_CONFIG.selectionBgBuild)
+                        : RENDER_CONFIG.cursorBg;
                     ctx.fillRect(px, py, cw, ch);
-                } else {
-                    if (color !== lastColor) {
-                        ctx.fillStyle = color;
-                        lastColor = color;
-                    }
-                    ctx.fillText(char, px + this._textOffsetX, py);
+                    ctx.globalAlpha = 1.0;
+                    lastColor = '';
                 }
             }
         }
