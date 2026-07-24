@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -1333,10 +1333,50 @@ document.addEventListener('DOMContentLoaded', () => {
     window._sharedSkinManager = sharedSkinManager;
 
     // Populate start screen skin dropdown
+    const startBgCanvas = document.getElementById('start-bg-canvas');
+    function renderStartBackground() {
+        if (!startBgCanvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const w = startBgCanvas.clientWidth;
+        const h = startBgCanvas.clientHeight;
+        startBgCanvas.width = w * dpr;
+        startBgCanvas.height = h * dpr;
+        const ctx = startBgCanvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const grassSprite = sharedSkinManager.getSprite('terrain', 'grass');
+        const grassDef = TERRAIN.grass;
+        if (grassSprite) {
+            const tileSize = 16;
+            ctx.imageSmoothingEnabled = false;
+            for (let y = 0; y < h; y += tileSize) {
+                for (let x = 0; x < w; x += tileSize) {
+                    ctx.drawImage(grassSprite, x, y, tileSize, tileSize);
+                }
+            }
+        } else {
+            const fontSize = 14;
+            ctx.font = `${fontSize}px monospace`;
+            ctx.textBaseline = 'top';
+            if (grassDef.bg) {
+                ctx.fillStyle = grassDef.bg;
+                ctx.fillRect(0, 0, w, h);
+            }
+            ctx.fillStyle = grassDef.color;
+            const cw = fontSize * 0.6;
+            const ch = fontSize;
+            for (let y = 0; y < h; y += ch) {
+                for (let x = 0; x < w; x += cw) {
+                    ctx.fillText(grassDef.char, x, y);
+                }
+            }
+        }
+    }
+
     const startSkinSelect = document.getElementById('start-skin');
     if (startSkinSelect) {
         const savedSkin = localStorage.getItem('convocation_skin') || 'ascii';
-        sharedSkinManager.init().then(() => {
+        sharedSkinManager.init().then(async () => {
             const names = sharedSkinManager.getSkinNames();
             startSkinSelect.innerHTML = '';
             for (const name of names) {
@@ -1346,8 +1386,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.selected = name === savedSkin;
                 startSkinSelect.appendChild(opt);
             }
+            if (savedSkin !== 'ascii') {
+                await sharedSkinManager.switchSkin(savedSkin);
+            }
+            renderStartBackground();
         });
+        startSkinSelect.addEventListener('change', async () => {
+            const skinName = startSkinSelect.value;
+            localStorage.setItem('convocation_skin', skinName);
+            await sharedSkinManager.switchSkin(skinName);
+            renderStartBackground();
+        });
+    } else {
+        sharedSkinManager.init().then(() => renderStartBackground());
     }
+    window.addEventListener('resize', renderStartBackground);
 
     if (hasSave()) {
         loadBtn.disabled = false;

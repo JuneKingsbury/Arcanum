@@ -105,6 +105,18 @@ export class Renderer {
         return sm.getSprite('terrain', tile.terrain);
     }
 
+    _resolveGroundSprite(tile, season) {
+        const sm = this.skinManager;
+        if (tile.floor) {
+            const floorSprite = sm.getSprite('floors', tile.floor);
+            if (floorSprite) return floorSprite;
+        }
+        if (tile.snowCovered && tile.terrain === 'grass') {
+            return sm.getSprite('effects', 'snow') || sm.getSprite('terrain', tile.terrain);
+        }
+        return sm.getSprite('terrain', tile.terrain);
+    }
+
     _resolveEffectSprite(effectOrKey) {
         if (typeof effectOrKey === 'string') {
             return this.skinManager.getSprite('effects', effectOrKey);
@@ -345,6 +357,12 @@ export class Renderer {
                     } else {
                         const sprite = this._resolveSprite(tile, entity, game.weather.season);
                         if (sprite) {
+                            const needsGround = tile.structure && BUILDINGS[tile.structure] &&
+                                BUILDINGS[tile.structure].structureType === 'furniture';
+                            if (needsGround || entity) {
+                                const ground = this._resolveGroundSprite(tile, game.weather.season);
+                                if (ground) ctx.drawImage(ground, px, py, cw, ch);
+                            }
                             ctx.drawImage(sprite, px, py, cw, ch);
                             if (entity && entity.type === 'colonist') {
                                 ctx.fillStyle = entity.color;

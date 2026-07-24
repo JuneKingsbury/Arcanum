@@ -52,6 +52,21 @@ body {
     height: 100dvh;
     gap: 20px;
     padding: 16px;
+    position: relative;
+}
+
+#start-bg-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.3;
+}
+
+#start-screen > *:not(#start-bg-canvas) {
+    position: relative;
+    z-index: 1;
 }
 
 #start-screen h1 {
