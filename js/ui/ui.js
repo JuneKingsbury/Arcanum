@@ -1887,6 +1887,30 @@ export class UI {
         const s = this.game.settings;
         let html = '<div class="panel-close" data-panel-close="settings">&times;</div><h3>Settings</h3>';
 
+        html += `<div class="settings-section"><div class="settings-section-title">Visual</div>`;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-skin">Tile Skin:</label>`;
+        html += `<select id="set-skin" onchange="window.game.switchSkin(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
+        const skinNames = this.game.skinManager.getSkinNames();
+        for (const name of skinNames) {
+            const display = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+            html += `<option value="${name}" ${s.activeSkin === name ? 'selected' : ''}>${display}</option>`;
+        }
+        html += `</select></div>`;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-names">Colonist names:</label>`;
+        html += `<select id="set-names" onchange="window.game.settings.showColonistNames=this.value" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
+        for (const val of ['off', 'selected', 'always']) {
+            html += `<option value="${val}" ${s.showColonistNames === val ? 'selected' : ''}>${val.charAt(0).toUpperCase() + val.slice(1)}</option>`;
+        }
+        html += `</select></div>`;
+        const uiSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ui-font-size')) || 12;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-ui-font-size">UI Font Size: <span id="ui-font-size-val">${uiSize}px</span></label>`;
+        html += `<input type="range" id="set-ui-font-size" min="8" max="20" value="${uiSize}" style="width:80px" oninput="document.getElementById('ui-font-size-val').textContent=this.value+'px';window.setUIFontSize(this.value)">`;
+        html += `</div>`;
+        html += `</div>`;
+
         html += `<div class="settings-section"><div class="settings-section-title">Gameplay</div>`;
         html += this._settingsCheck('set-pause-hostile', s.autoPauseHostile, 'window.game.settings.autoPauseHostile=this.checked', 'Auto-pause on hostile event (raids)');
         html += this._settingsCheck('set-pause-event', s.autoPauseEvent, 'window.game.settings.autoPauseEvent=this.checked', 'Auto-pause on choice events (wanderers, caravans)');
@@ -1914,30 +1938,6 @@ export class UI {
         html += this._settingsCheck('set-weather', s.showWeatherParticles, 'window.game.settings.showWeatherParticles=this.checked', 'Show weather particles (future feature)');
         html += this._settingsCheck('set-minimap', s.showMinimap, 'window.game.settings.showMinimap=this.checked;document.getElementById("minimap-container").style.display=this.checked?"":"none"', 'Show minimap');
         html += this._settingsCheck('set-fps', s.showFps, 'window.game.settings.showFps=this.checked', 'Show FPS counter (top-right of game grid)');
-        html += `</div>`;
-
-        html += `<div class="settings-section"><div class="settings-section-title">Visual</div>`;
-        html += `<div class="settings-row">`;
-        html += `<label for="set-skin">Tile Skin:</label>`;
-        html += `<select id="set-skin" onchange="window.game.switchSkin(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
-        const skinNames = this.game.skinManager.getSkinNames();
-        for (const name of skinNames) {
-            const display = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
-            html += `<option value="${name}" ${s.activeSkin === name ? 'selected' : ''}>${display}</option>`;
-        }
-        html += `</select></div>`;
-        html += `<div class="settings-row">`;
-        html += `<label for="set-names">Colonist names:</label>`;
-        html += `<select id="set-names" onchange="window.game.settings.showColonistNames=this.value" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
-        for (const val of ['off', 'selected', 'always']) {
-            html += `<option value="${val}" ${s.showColonistNames === val ? 'selected' : ''}>${val.charAt(0).toUpperCase() + val.slice(1)}</option>`;
-        }
-        html += `</select></div>`;
-        const uiSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ui-font-size')) || 12;
-        html += `<div class="settings-row">`;
-        html += `<label for="set-ui-font-size">UI Font Size: <span id="ui-font-size-val">${uiSize}px</span></label>`;
-        html += `<input type="range" id="set-ui-font-size" min="8" max="20" value="${uiSize}" style="width:80px" oninput="document.getElementById('ui-font-size-val').textContent=this.value+'px';window.setUIFontSize(this.value)">`;
-        html += `</div>`;
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Save / Load</div>`;

@@ -64,6 +64,10 @@ export class Renderer {
                 return sm.getColonistSprite(entity.colonistId, entity.drafted);
             }
             if (entity.type === 'golem') {
+                if (entity.golemType) {
+                    const specific = sm.getSprite('entities', entity.golemType);
+                    if (specific) return specific;
+                }
                 return sm.getSprite('entities', 'golem');
             }
             if (entity.type === 'raider') {
@@ -75,7 +79,6 @@ export class Renderer {
             if (entity.type === 'rally') {
                 return sm.getSprite('effects', 'rally');
             }
-            // Animal type
             if (entity.type) {
                 return sm.getSprite('entities', entity.type);
             }
@@ -84,6 +87,10 @@ export class Renderer {
         if (tile.structure) return sm.getSprite('buildings', tile.structure);
         if (tile.zone) {
             const state = tile.zone.state || 'empty';
+            if (tile.zone.crop) {
+                const cropSprite = sm.getSprite('farms', tile.zone.crop + '_' + state);
+                if (cropSprite) return cropSprite;
+            }
             return sm.getSprite('farms', 'farm_' + state);
         }
         if (tile.resource) {
@@ -96,6 +103,27 @@ export class Renderer {
         if (tile.floor) return sm.getSprite('floors', tile.floor);
         if (tile.snowCovered && tile.terrain === 'grass') return sm.getSprite('effects', 'snow');
         return sm.getSprite('terrain', tile.terrain);
+    }
+
+    _resolveEffectSprite(effectOrKey) {
+        if (typeof effectOrKey === 'string') {
+            return this.skinManager.getSprite('effects', effectOrKey);
+        }
+        const e = effectOrKey;
+        if (e.char === COMBAT_VISUALS.hitChar) {
+            if (e.color === COMBAT_VISUALS.hitColor) return this.skinManager.getSprite('effects', 'hit');
+            if (e.color === COMBAT_VISUALS.damageTakenColor) return this.skinManager.getSprite('effects', 'damage_taken');
+            if (e.color === COMBAT_VISUALS.structureDamageColor) return this.skinManager.getSprite('effects', 'structure_damage');
+            if (e.color === COMBAT_VISUALS.nexusDamageColor) return this.skinManager.getSprite('effects', 'structure_damage');
+        }
+        if (e.char === COMBAT_VISUALS.spellHealChar && e.color === COMBAT_VISUALS.spellHealColor) return this.skinManager.getSprite('effects', 'spell_heal');
+        if (e.char === COMBAT_VISUALS.spellBuffChar && e.color === COMBAT_VISUALS.spellBuffColor) return this.skinManager.getSprite('effects', 'spell_buff');
+        if (e.char === COMBAT_VISUALS.spellShieldChar && e.color === COMBAT_VISUALS.spellShieldColor) return this.skinManager.getSprite('effects', 'spell_shield');
+        if (e.char === COMBAT_VISUALS.spellTeleportChar && e.color === COMBAT_VISUALS.spellTeleportColor) return this.skinManager.getSprite('effects', 'spell_teleport');
+        if (e.char === COMBAT_VISUALS.spellGrowthChar && e.color === COMBAT_VISUALS.spellGrowthColor) return this.skinManager.getSprite('effects', 'spell_growth');
+        if (e.char === COMBAT_VISUALS.spellTerraformChar && e.color === COMBAT_VISUALS.spellTerraformColor) return this.skinManager.getSprite('effects', 'spell_terraform');
+        if (e.char === COMBAT_VISUALS.spellDivinationChar && e.color === COMBAT_VISUALS.spellDivinationColor) return this.skinManager.getSprite('effects', 'spell_divination');
+        return null;
     }
 
     getNightDarkness(timeOfDay, season) {
@@ -179,7 +207,7 @@ export class Renderer {
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
-                entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted });
+                entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType });
                 if (drafted && c.draftTarget) {
                     rallySet.set(c.draftTarget.y * CONFIG.MAP_WIDTH + c.draftTarget.x, true);
                 }
@@ -301,15 +329,30 @@ export class Renderer {
 
                 let spriteDrawn = false;
                 if (this.skinManager.isActive) {
-                    const sprite = this._resolveSprite(tile, entity, game.weather.season);
-                    if (sprite) {
-                        ctx.drawImage(sprite, px, py, cw, ch);
-                        if (entity && entity.type === 'colonist') {
-                            ctx.fillStyle = entity.color;
-                            ctx.fillRect(px + cw - 4, py, 4, 4);
-                            lastColor = '';
-                        }
+                    let overlaySprite = null;
+                    if (effect) {
+                        overlaySprite = this._resolveEffectSprite(effect);
+                    } else if (shotColor && !entity) {
+                        overlaySprite = this._resolveEffectSprite('turret_shot');
+                    } else if (portalMap.has(tileKey)) {
+                        overlaySprite = this._resolveEffectSprite('portal');
+                    }
+                    if (overlaySprite) {
+                        const baseSprite = this._resolveSprite(tile, null, game.weather.season);
+                        if (baseSprite) ctx.drawImage(baseSprite, px, py, cw, ch);
+                        ctx.drawImage(overlaySprite, px, py, cw, ch);
                         spriteDrawn = true;
+                    } else {
+                        const sprite = this._resolveSprite(tile, entity, game.weather.season);
+                        if (sprite) {
+                            ctx.drawImage(sprite, px, py, cw, ch);
+                            if (entity && entity.type === 'colonist') {
+                                ctx.fillStyle = entity.color;
+                                ctx.fillRect(px + cw - 4, py, 4, 4);
+                                lastColor = '';
+                            }
+                            spriteDrawn = true;
+                        }
                     }
                 }
 

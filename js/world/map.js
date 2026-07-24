@@ -1,4 +1,4 @@
-import { CONFIG, TILE_CHARS, TILE_COLORS, TERRAIN, RESOURCES, BUILDINGS, IMPASSABLE_STRUCTURES, ENEMY_BLOCKED_STRUCTURES, BREAKABLE_STRUCTURES, MAP_GENERATORS } from '../core/config.js';
+import { CONFIG, TILE_CHARS, TILE_COLORS, TERRAIN, RESOURCES, BUILDINGS, IMPASSABLE_STRUCTURES, ENEMY_BLOCKED_STRUCTURES, BREAKABLE_STRUCTURES, MAP_GENERATORS, CROPS } from '../core/config.js';
 
 export function createTile(terrain) {
     return {
@@ -309,8 +309,14 @@ export function getTileChar(tile, season) {
     if (tile.onFire) return '^';
     if (tile.structure) return TILE_CHARS[tile.structure] || '?';
     if (tile.zone) {
-        if (tile.zone.state === 'ready') return TILE_CHARS.farm_ready;
-        if (tile.zone.state === 'growing') return TILE_CHARS.farm_growing;
+        if (tile.zone.state === 'ready') {
+            const cropDef = tile.zone.crop && CROPS[tile.zone.crop];
+            return (cropDef && cropDef.readyChar) || TILE_CHARS.farm_ready;
+        }
+        if (tile.zone.state === 'growing') {
+            const cropDef = tile.zone.crop && CROPS[tile.zone.crop];
+            return (cropDef && cropDef.char) || TILE_CHARS.farm_growing;
+        }
         return TILE_CHARS.farm_empty;
     }
     if (tile.resource) {
@@ -327,6 +333,10 @@ export function getTileColor(tile, season) {
     if (tile.onFire) return '#ff4400';
     if (tile.structure) return TILE_COLORS[tile.structure] || '#fff';
     if (tile.zone) {
+        if (tile.zone.state === 'ready' || tile.zone.state === 'growing') {
+            const cropDef = tile.zone.crop && CROPS[tile.zone.crop];
+            if (cropDef) return cropDef.color;
+        }
         if (tile.zone.state === 'ready') return '#ffdd00';
         if (tile.zone.state === 'growing') return TILE_COLORS.farm_growing;
         return TILE_COLORS.farm_empty;

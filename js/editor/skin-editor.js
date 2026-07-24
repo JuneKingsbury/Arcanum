@@ -1,4 +1,4 @@
-import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS } from '../core/config.js';
+import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS } from '../core/config.js';
 
 const CANVAS_SIZES = [8, 16, 32, 64, 128];
 const STORAGE_PREFIX = 'convocation_skin_editor_';
@@ -8,9 +8,12 @@ const MIN_ZOOM = 2;
 const MAX_ZOOM = 64;
 
 const ENTITY_SPECIALS = [
-    { key: 'colonist', char: '@', color: '#ffff00', desc: 'Default colonist sprite' },
     { key: 'colonist_drafted', char: '@', color: '#ff4444', desc: 'Colonist in combat mode' },
-    { key: 'golem', char: 'G', color: '#cc8833', desc: 'Golem colonist' },
+    { key: 'golem', char: 'G', color: '#cc8833', desc: 'Default golem sprite' },
+    { key: 'farmer_golem', char: 'G', color: '#55aa33', desc: 'Farmer Golem' },
+    { key: 'miner_golem', char: 'G', color: '#888888', desc: 'Miner Golem' },
+    { key: 'combat_golem', char: 'G', color: '#cc4444', desc: 'Combat Golem' },
+    { key: 'hauler_golem', char: 'G', color: '#bbaa55', desc: 'Hauler Golem' },
     { key: 'raider', char: 'R', color: '#ff3333', desc: 'Enemy raider' },
     { key: 'wave_enemy', char: 'E', color: '#ff2222', desc: 'Void nexus wave enemy' },
 ];
@@ -22,9 +25,17 @@ const EFFECT_ITEMS = [
     { key: 'portal', char: 'Ø', color: '#ff55ff', desc: 'Void nexus portal' },
     { key: 'snow', char: '*', color: '#ffffff', desc: 'Snow overlay (winter grass)' },
     { key: 'rally', char: '⚑', color: '#ff4444', desc: 'Draft rally point' },
-    { key: 'farm_empty', char: '=', color: '#8b6b3a', desc: 'Empty farm plot' },
-    { key: 'farm_growing', char: '%', color: '#55aa33', desc: 'Growing crop' },
-    { key: 'farm_ready', char: '*', color: '#ffdd00', desc: 'Ready to harvest' },
+    { key: 'hit', char: '!', color: '#ffff00', desc: 'Melee hit / combat strike' },
+    { key: 'damage_taken', char: '!', color: '#ff3333', desc: 'Colonist takes damage' },
+    { key: 'structure_damage', char: '!', color: '#ff8800', desc: 'Structure being attacked' },
+    { key: 'turret_shot', char: '*', color: '#ff4444', desc: 'Turret/sentinel shot projectile' },
+    { key: 'spell_heal', char: '+', color: '#44ff44', desc: 'Healing spell effect' },
+    { key: 'spell_buff', char: '>', color: '#88ffff', desc: 'Buff spell effect' },
+    { key: 'spell_shield', char: 'O', color: '#4488ff', desc: 'Shield spell effect' },
+    { key: 'spell_teleport', char: '@', color: '#33ccff', desc: 'Teleport spell effect' },
+    { key: 'spell_growth', char: '%', color: '#44ff44', desc: 'Growth spell effect' },
+    { key: 'spell_terraform', char: '.', color: '#88ff88', desc: 'Terraform spell effect' },
+    { key: 'spell_divination', char: '?', color: '#ccaaff', desc: 'Divination spell effect' },
 ];
 
 let editorInstance = null;
@@ -201,7 +212,7 @@ class SkinEditor {
     }
 
     _buildCategoryFilter() {
-        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Floors', 'Effects'];
+        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Floors', 'Farms', 'Effects'];
         const container = document.getElementById('se-category-filter');
         container.innerHTML = categories.map(c =>
             `<button class="bp-cat${c === this.categoryFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
@@ -227,16 +238,18 @@ class SkinEditor {
             case 'Resources':
                 for (const [key, def] of Object.entries(RESOURCES)) {
                     items.push({ key, char: def.char, color: def.color, desc: key, category: 'resources' });
+                    if (def.autumnColor) {
+                        items.push({ key: key + '_autumn', char: def.char, color: def.autumnColor, desc: key + ' (autumn)', category: 'resources' });
+                    }
                 }
                 break;
             case 'Entities':
-                items.push({ key: 'colonist', char: '@', color: '#ffff00', desc: 'Default colonist sprite', category: 'entities' });
                 for (let i = 1; i <= this.colonistVariants; i++) {
                     const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
-                    items.push({ key: `colonist_${i}`, char: '@', color, desc: `Colonist variant ${i}`, category: 'entities', isVariant: true });
+                    items.push({ key: `colonist_${i}`, char: '@', color, desc: `Colonist variant ${i}`, category: 'entities', isVariant: i > 1 });
                 }
                 items.push({ key: '__add_variant__', char: '+', color: '#888888', desc: 'Add another colonist variant', category: 'entities', isAction: true });
-                for (const e of ENTITY_SPECIALS.filter(e => e.key !== 'colonist')) {
+                for (const e of ENTITY_SPECIALS) {
                     items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'entities' });
                 }
                 for (const [key, def] of Object.entries(ANIMALS)) {
@@ -247,6 +260,15 @@ class SkinEditor {
                 for (const [key, def] of Object.entries(BUILDINGS)) {
                     if (def.structureType !== 'floor') continue;
                     items.push({ key, char: def.char, color: def.color, desc: def.description || key, category: 'floors' });
+                }
+                break;
+            case 'Farms':
+                items.push({ key: 'farm_empty', char: '=', color: '#8b6b3a', desc: 'Empty farm plot (generic)', category: 'farms' });
+                items.push({ key: 'farm_growing', char: '%', color: '#55aa33', desc: 'Growing crop (generic)', category: 'farms' });
+                items.push({ key: 'farm_ready', char: '*', color: '#ffdd00', desc: 'Ready to harvest (generic)', category: 'farms' });
+                for (const [key, def] of Object.entries(CROPS)) {
+                    items.push({ key: key + '_growing', char: def.char, color: def.color, desc: key + ' (growing)', category: 'farms' });
+                    items.push({ key: key + '_ready', char: def.readyChar, color: def.color, desc: key + ' (ready)', category: 'farms' });
                 }
                 break;
             case 'Effects':
@@ -935,7 +957,7 @@ class SkinEditor {
 
     _removeVariant(variantKey) {
         const num = parseInt(variantKey.split('_')[1]);
-        if (!num || num > this.colonistVariants) return;
+        if (!num || num > this.colonistVariants || this.colonistVariants <= 1) return;
         delete this.savedSprites[`entities:${variantKey}`];
         // Shift down higher variants
         for (let i = num; i < this.colonistVariants; i++) {
@@ -949,7 +971,6 @@ class SkinEditor {
         }
         delete this.savedSprites[`entities:colonist_${this.colonistVariants}`];
         this.colonistVariants--;
-        if (this.colonistVariants < 0) this.colonistVariants = 0;
         if (this.activeObject && this.activeObject.key === variantKey) {
             this.activeObject = null;
             this.pixels = new Uint8ClampedArray(this.canvasSize * this.canvasSize * 4);
