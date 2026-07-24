@@ -16,6 +16,11 @@ export class UI {
         this._researchTab = 'foundations';
         this.tamingPanelVisible = false;
         this.settingsPanelVisible = false;
+        this.arcanePanelVisible = false;
+        this._arcaneTab = 'defense';
+        this._arcaneExpSetup = null;
+        this._lastArcaneHtml = '';
+        this._expVisState = { lastLogLen: 0, effects: [], partyX: 0 };
         this.elements = {};
         this.initElements();
     }
@@ -53,6 +58,17 @@ export class UI {
         this.elements.inventoryPanel = document.getElementById('inventory-panel');
         this.elements.tamingPanel = document.getElementById('taming-panel');
         this.elements.settingsPanel = document.getElementById('settings-panel');
+        this.elements.arcanePanel = document.getElementById('arcane-panel');
+
+        this.elements.arcanePanel.addEventListener('click', (e) => {
+            const tab = e.target.closest('[data-arcane-tab]');
+            if (tab) {
+                this._arcaneTab = tab.dataset.arcaneTab;
+                this._arcaneExpSetup = null;
+                this._lastArcaneHtml = '';
+                this.updateArcanePanel();
+            }
+        });
 
         this.elements.craftPanel.addEventListener('click', (e) => {
             const tab = e.target.closest('[data-craft-tab]');
@@ -127,6 +143,7 @@ export class UI {
                     case 'tame': this.toggleTamingPanel(); break;
                     case 'inventory': this.toggleInventoryPanel(); break;
                     case 'settings': this.toggleSettingsPanel(); break;
+                    case 'arcane': this.toggleArcanePanel(); break;
                 }
                 return;
             }
@@ -177,6 +194,7 @@ export class UI {
                 case 'inventory': this.toggleInventoryPanel(); break;
                 case 'taming': this.toggleTamingPanel(); break;
                 case 'settings': this.toggleSettingsPanel(); break;
+                case 'arcane': this.toggleArcanePanel(); break;
             }
         });
 
@@ -215,6 +233,7 @@ export class UI {
         this.updateEventLog();
         if (this.inventoryVisible) this.updateInventoryPanel();
         if (this.tamingPanelVisible) this.updateTamingPanel();
+        if (this.arcanePanelVisible) this.updateArcanePanel();
         if (this._viewingRiftGate) this._refreshRiftGateInfo();
         if (this._viewingColonistId != null) this._refreshColonistInfo();
     }
@@ -301,8 +320,10 @@ export class UI {
                 const costStr = Object.entries(def.cost).map(([k, v]) => `${k}:${v}`).join(' ');
                 const keyLabel = i < 9 ? i + 1 : (i === 9 ? '0' : '');
                 const locked = this.isBuildingLocked(opt);
-                const lockStr = locked ? ' [LOCKED]' : '';
-                html += `<span class="mode-opt${active}" data-build-opt="${opt}"${locked ? ' style="opacity:0.4"' : ''}>${keyLabel ? `[${keyLabel}]` : ''}<span style="color:${def.color}">${def.char}</span> ${opt.replace(/_/g,' ')}(${costStr})${lockStr}</span>`;
+                const atMax = !locked && this.isBuildingAtMax(opt);
+                const lockStr = locked ? ' [LOCKED]' : atMax ? ' [MAX]' : '';
+                const dimmed = locked || atMax;
+                html += `<span class="mode-opt${active}" data-build-opt="${opt}"${dimmed ? ' style="opacity:0.4"' : ''}>${keyLabel ? `[${keyLabel}]` : ''}<span style="color:${def.color}">${def.char}</span> ${opt.replace(/_/g,' ')}(${costStr})${lockStr}</span>`;
             });
             html += '</span>';
             html += '<span class="mode-hint">[Tab]Cycle category | Click item to select | Left-click/drag to place | Right-click/drag to deconstruct</span>';
@@ -340,6 +361,7 @@ export class UI {
             html += `<span class="mode-opt" data-mode-action="research">[R]Research</span>`;
             html += `<span class="mode-opt" data-mode-action="tame">[T]Tame</span>`;
             html += `<span class="mode-opt" data-mode-action="inventory">[I]Inventory</span>`;
+            html += `<span class="mode-opt" data-mode-action="arcane">[V]Portal</span>`;
             html += '</span>';
         }
         this.elements.modeBar.innerHTML = html;
@@ -919,17 +941,11 @@ export class UI {
         if (tile.structure === 'void_nexus') {
             const waves = this.game.waves;
             html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
-            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted}</div>`;
-            html += `<div class="info-row">Colony Cap: ${waves.getColonistCap()}</div>`;
+            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
             if (waves.active) {
-                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} in progress!</div>`;
-                html += `<div class="info-row">Nexus HP: ${waves.nexusHp}/${waves.nexusMaxHp}</div>`;
-                html += `<div class="info-row">Enemies: ${waves.enemies.length} alive, ${waves.enemiesToSpawn - waves.enemiesSpawned} spawning</div>`;
-            } else {
-                const nextWave = waves.highestWaveCompleted + 1;
-                html += `<div class="info-row">Next: Wave ${nextWave} (${this.getWavePreview(nextWave)})</div>`;
-                html += `<div class="info-actions"><button onclick="window.game.startWave()" style="background:#6622aa;color:white;">Start Wave ${nextWave}</button></div>`;
+                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
             }
+            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('defense')" style="background:#6622aa;color:white;">Open Portal Panel</button></div>`;
         }
 
         if (tile.structure === 'artifact_pedestal') {
@@ -961,7 +977,16 @@ export class UI {
         }
 
         if (tile.structure === 'rift_gate') {
-            html += this._buildRiftGateHtml();
+            html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Rift Gate</div>`;
+            const expl = this.game.exploration;
+            if (expl.expeditions.length > 0) {
+                const exp = expl.expeditions[0];
+                const elapsed = this.game.tick - (exp.startTick || this.game.tick);
+                const totalDur = Math.floor((exp.duration || 1) * 1.2);
+                const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
+                html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
+            }
+            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
         }
 
         if (tile.structure === 'golem_forge') {
@@ -1102,17 +1127,11 @@ export class UI {
         if (tile.structure === 'void_nexus') {
             const waves = this.game.waves;
             html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
-            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted}</div>`;
-            html += `<div class="info-row">Colony Cap: ${waves.getColonistCap()}</div>`;
+            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
             if (waves.active) {
-                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} in progress!</div>`;
-                html += `<div class="info-row">Nexus HP: ${waves.nexusHp}/${waves.nexusMaxHp}</div>`;
-                html += `<div class="info-row">Enemies: ${waves.enemies.length} alive, ${waves.enemiesToSpawn - waves.enemiesSpawned} spawning</div>`;
-            } else {
-                const nextWave = waves.highestWaveCompleted + 1;
-                html += `<div class="info-row">Next: Wave ${nextWave} (${this.getWavePreview(nextWave)})</div>`;
-                html += `<div class="info-actions"><button onclick="window.game.startWave()" style="background:#6622aa;color:white;">Start Wave ${nextWave}</button></div>`;
+                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
             }
+            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('defense')" style="background:#6622aa;color:white;">Open Portal Panel</button></div>`;
         }
 
         if (tile.structure === 'artifact_pedestal') {
@@ -1144,7 +1163,16 @@ export class UI {
         }
 
         if (tile.structure === 'rift_gate') {
-            html += this._buildRiftGateHtml();
+            html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Rift Gate</div>`;
+            const expl = this.game.exploration;
+            if (expl.expeditions.length > 0) {
+                const exp = expl.expeditions[0];
+                const elapsed = this.game.tick - (exp.startTick || this.game.tick);
+                const totalDur = Math.floor((exp.duration || 1) * 1.2);
+                const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
+                html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
+            }
+            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
         }
 
         if (tile.structure === 'golem_forge') {
@@ -1185,7 +1213,8 @@ export class UI {
     _updateOverlay() {
         const anyOpen = this.priorityPanelVisible || this.craftPanelVisible ||
             this.researchPanelVisible || this.inventoryVisible ||
-            this.tamingPanelVisible || this.settingsPanelVisible;
+            this.tamingPanelVisible || this.settingsPanelVisible ||
+            this.arcanePanelVisible;
         const overlay = document.getElementById('panel-overlay');
         if (overlay) overlay.classList.toggle('visible', anyOpen);
     }
@@ -1214,6 +1243,10 @@ export class UI {
         if (this.settingsPanelVisible) {
             this.settingsPanelVisible = false;
             this.elements.settingsPanel.style.display = 'none';
+        }
+        if (this.arcanePanelVisible) {
+            this.arcanePanelVisible = false;
+            this.elements.arcanePanel.style.display = 'none';
         }
     }
 
@@ -2018,6 +2051,407 @@ export class UI {
         return `<div class="settings-row"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''} onchange="${onchange}"><label for="${id}">${label}</label></div>`;
     }
 
+    toggleArcanePanel(tab) {
+        const opening = !this.arcanePanelVisible;
+        this._closeAllPanels();
+        this.arcanePanelVisible = opening;
+        this.elements.arcanePanel.style.display = opening ? 'block' : 'none';
+        if (tab) this._arcaneTab = tab;
+        if (opening) {
+            this._arcaneExpSetup = null;
+            this._lastArcaneHtml = '';
+            this.updateArcanePanel();
+        }
+        this._updateOverlay();
+    }
+
+    updateArcanePanel() {
+        const tab = this._arcaneTab || 'defense';
+        let html = '<div class="panel-close" data-panel-close="arcane">&times;</div>';
+        html += '<h3 style="color:#aa44ff">Arcane Portal</h3>';
+        html += '<div class="arcane-tabs">';
+        html += `<button class="arcane-tab${tab === 'defense' ? ' active' : ''}" data-arcane-tab="defense">Defense</button>`;
+        html += `<button class="arcane-tab${tab === 'expeditions' ? ' active' : ''}" data-arcane-tab="expeditions">Expeditions</button>`;
+        html += '</div>';
+
+        if (tab === 'defense') {
+            html += this._buildDefenseTabHtml();
+        } else {
+            html += this._buildExpeditionsTabHtml();
+        }
+
+        if (html !== this._lastArcaneHtml) {
+            this._lastArcaneHtml = html;
+            this.elements.arcanePanel.innerHTML = html;
+            if (tab === 'expeditions') {
+                const logEl = this.elements.arcanePanel.querySelector('.exp-log-container');
+                if (logEl) logEl.scrollTop = logEl.scrollHeight;
+            }
+        }
+
+        if (tab === 'expeditions') this._renderExpeditionVis();
+    }
+
+    _buildDefenseTabHtml() {
+        let html = '';
+        let hasNexus = false;
+        for (const row of this.game.map) {
+            for (const t of row) {
+                if (t.structure === 'void_nexus') { hasNexus = true; break; }
+            }
+            if (hasNexus) break;
+        }
+
+        if (!hasNexus) {
+            html += `<div class="arcane-section" style="color:#888;padding:20px 0;text-align:center;">`;
+            html += `<div style="font-size:1.2em;color:#9933ff;margin-bottom:8px;">Void Nexus Required</div>`;
+            html += `<div>Build a Void Nexus to defend your colony against waves of enemies.</div>`;
+            html += `<div style="margin-top:6px;color:#666;">Enemies will attack the nexus — defend it to earn void essence and increase your colonist cap.</div>`;
+            html += `</div>`;
+            return html;
+        }
+
+        const waves = this.game.waves;
+        html += `<div class="arcane-section">`;
+        html += `<div class="info-row" style="color:#9933ff;font-weight:bold;font-size:1.1em;">Wave Defense</div>`;
+        html += `<div class="info-row">Highest Wave Completed: <span style="color:#ffcc00">${waves.highestWaveCompleted}</span></div>`;
+        html += `<div class="info-row">Colony Cap: <span style="color:#88ff88">${waves.getColonistCap()}</span></div>`;
+
+        if (waves.active) {
+            html += `<div class="info-row" style="color:#ff4444;font-weight:bold;margin-top:8px;">Wave ${waves.currentWave} In Progress</div>`;
+            const hpPct = waves.nexusMaxHp > 0 ? Math.round((waves.nexusHp / waves.nexusMaxHp) * 100) : 0;
+            const hpColor = hpPct > 60 ? '#44ff44' : hpPct > 30 ? '#ffaa44' : '#ff4444';
+            html += `<div class="info-row">Nexus HP: ${waves.nexusHp}/${waves.nexusMaxHp} <span class="arcane-hp-track"><span class="arcane-hp-bar" style="width:${hpPct}%;background:${hpColor};"></span></span></div>`;
+            html += `<div class="info-row">Enemies Alive: <span style="color:#ff6644">${waves.enemies.length}</span></div>`;
+            const remaining = waves.enemiesToSpawn - waves.enemiesSpawned;
+            if (remaining > 0) {
+                html += `<div class="info-row">Enemies Spawning: <span style="color:#ff8844">${remaining}</span></div>`;
+            }
+        } else {
+            const nextWave = waves.highestWaveCompleted + 1;
+            html += `<div class="info-row" style="margin-top:8px;">Next: Wave ${nextWave} — ${this.getWavePreview(nextWave)}</div>`;
+            html += `<div class="info-actions" style="margin-top:8px;"><button onclick="window.game.startWave()" style="background:#6622aa;color:white;padding:8px 16px;font-size:1em;cursor:pointer;border:none;border-radius:4px;">Start Wave ${nextWave}</button></div>`;
+        }
+
+        if (waves.lastWaveResult) {
+            const r = waves.lastWaveResult;
+            const color = r.victory ? '#44ff44' : '#ff4444';
+            html += `<div class="info-row" style="margin-top:8px;color:${color};">Last Wave: ${r.victory ? 'Victory' : 'Defeat'} (Wave ${r.wave})</div>`;
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+    _buildExpeditionsTabHtml() {
+        let html = '';
+        let hasGate = false;
+        for (const row of this.game.map) {
+            for (const t of row) {
+                if (t.structure === 'rift_gate') { hasGate = true; break; }
+            }
+            if (hasGate) break;
+        }
+
+        if (!hasGate) {
+            html += `<div class="arcane-section" style="color:#888;padding:20px 0;text-align:center;">`;
+            html += `<div style="font-size:1.2em;color:#33ccff;margin-bottom:8px;">Rift Gate Required</div>`;
+            html += `<div>Build a Rift Gate to send expeditions to other dimensions.</div>`;
+            html += `<div style="margin-top:6px;color:#666;">Explore for treasure, artifacts, and rare materials. Requires mana to operate.</div>`;
+            html += `</div>`;
+            return html;
+        }
+
+        if (this._arcaneExpSetup) {
+            return this._buildExpeditionSetupHtml(this._arcaneExpSetup);
+        }
+
+        const expl = this.game.exploration;
+        html += `<div class="arcane-section">`;
+
+        if (expl.expeditions.length > 0) {
+            for (const exp of expl.expeditions) {
+                if (exp.status === 'gathering') {
+                    const names = exp.partyIds.map(id => {
+                        const c = this.game.getColonist(id);
+                        return c ? c.name : '?';
+                    }).join(', ');
+                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.dimensionName} — Assembling</div>`;
+                    html += `<div class="info-row" style="color:#888;">Party: ${names}</div>`;
+                } else {
+                    const elapsed = this.game.tick - exp.startTick;
+                    const totalDur = Math.floor(exp.duration * 1.2);
+                    const pct = Math.min(100, Math.floor((elapsed / totalDur) * 100));
+                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.dimensionName} — ${exp.status}${exp.combat ? ' [COMBAT]' : ''}</div>`;
+                    html += `<div class="info-row">Progress: <span style="color:#88ddff">${pct}%</span></div>`;
+
+                    html += `<canvas class="exp-vis-canvas" width="560" height="120"></canvas>`;
+
+                    const aliveParty = exp.partySnapshot.filter(p => p.hp > 0);
+                    html += `<div class="info-row" style="color:#888;">Party (${aliveParty.length}/${exp.partySnapshot.length} alive):</div>`;
+                    for (const p of exp.partySnapshot) {
+                        const hpPct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
+                        const color = p.hp <= 0 ? '#664444' : hpPct < 30 ? '#ff4444' : hpPct < 60 ? '#ffaa44' : '#88cc88';
+                        const status = p.hp <= 0 ? ' [DOWN]' : '';
+                        const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
+                        html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${status}</div>`;
+                    }
+
+                    if (exp.combat) {
+                        const enemiesAlive = exp.combat.enemies.filter(e => e.hp > 0).length;
+                        html += `<div class="info-row" style="color:#ff8844;margin-top:4px;">Enemies: ${enemiesAlive}/${exp.combat.enemies.length}</div>`;
+                    }
+
+                    html += `<div class="exp-log-container">`;
+                    const logSlice = exp.log.slice(-15);
+                    for (const entry of logSlice) {
+                        const color = this._expLogColor(entry.type);
+                        html += `<div class="exp-log-entry" style="color:${color};">${entry.text}</div>`;
+                    }
+                    html += `</div>`;
+                }
+            }
+        }
+
+        const dims = expl.getAvailableDimensions(this.game);
+        if (expl.expeditions.length === 0) {
+            if (dims.length > 0 && this.game.power.powered) {
+                html += `<div class="info-row" style="margin-top:8px;font-weight:bold;color:#33ccff;">Send Expedition:</div>`;
+                for (const dim of dims) {
+                    html += `<div class="info-actions"><button onclick="window.game.showExpeditionSetupInPanel('${dim.key}')" style="background:#1a4466;color:#88ddff;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;margin:2px 0;">${dim.name} (Difficulty ${dim.difficulty})</button></div>`;
+                }
+            } else if (!this.game.power.powered) {
+                html += `<div class="info-row" style="color:#ff4444;margin-top:8px;">No mana — cannot send expeditions</div>`;
+            } else {
+                html += `<div class="info-row" style="color:#888;margin-top:8px;">No dimensions available yet</div>`;
+            }
+
+            if (expl.completedExpeditions.length > 0) {
+                const last = expl.completedExpeditions[expl.completedExpeditions.length - 1];
+                html += `<div class="info-row" style="margin-top:10px;color:#88ccff;font-weight:bold;">Last: ${last.dimensionName}</div>`;
+                html += `<div class="exp-log-container">`;
+                const logSlice = last.log.slice(-10);
+                for (const entry of logSlice) {
+                    const color = this._expLogColor(entry.type);
+                    html += `<div class="exp-log-entry" style="color:${color};">${entry.text}</div>`;
+                }
+                html += `</div>`;
+            }
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+    _buildExpeditionSetupHtml(dimensionKey) {
+        const available = this.game.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
+        let html = `<div class="arcane-section">`;
+        html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Select Party</div>`;
+        html += `<div class="info-row" style="color:#888;">Choose colonists to send:</div>`;
+        for (const c of available) {
+            const weaponInfo = c.weapon ? ` (${c.weapon.name})` : ' (unarmed)';
+            html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}"> ${c.name}${weaponInfo} HP:${c.hp}/${c.maxHp}</label></div>`;
+        }
+        const packAnimals = (this.game.tamedAnimals || []).filter(a => {
+            const def = TAMED_ANIMALS[a.type];
+            return def && def.packAnimal && a.hp > 0 && !a.onExpedition;
+        });
+        if (packAnimals.length > 0) {
+            html += `<div class="info-row" style="color:#bbaa44;margin-top:6px;"><b>Pack Animals:</b></div>`;
+            for (const a of packAnimals) {
+                const def = TAMED_ANIMALS[a.type];
+                html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
+            }
+        }
+        html += `<div class="info-actions" style="margin-top:8px;">`;
+        html += `<button onclick="window.game.launchExpeditionFromPanel('${dimensionKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
+        html += `<button onclick="window.game.ui._arcaneExpSetup=null;window.game.ui._lastArcaneHtml='';window.game.ui.updateArcanePanel();" style="background:#333;color:#aaa;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:8px;">Cancel</button>`;
+        html += `</div></div>`;
+        return html;
+    }
+
+    _renderExpeditionVis() {
+        const canvas = this.elements.arcanePanel.querySelector('.exp-vis-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const expl = this.game.exploration;
+        const exp = expl.expeditions.find(e => e.status === 'exploring' || e.status === 'returning');
+        if (!exp) {
+            ctx.clearRect(0, 0, W, H);
+            return;
+        }
+
+        const elapsed = this.game.tick - exp.startTick;
+        const totalDur = Math.floor(exp.duration * 1.2);
+        const progress = Math.min(1, elapsed / totalDur);
+
+        const dimColors = {
+            crystal_caves: { bg1: '#0a0a2a', bg2: '#1a1a4a', accent: '#4488ff' },
+            verdant_depths: { bg1: '#0a1a0a', bg2: '#1a3a1a', accent: '#44cc44' },
+            shadow_realm: { bg1: '#1a0a1a', bg2: '#2a1a2a', accent: '#aa44ff' },
+            arcane_library: { bg1: '#1a1a0a', bg2: '#2a2a1a', accent: '#ffcc44' },
+        };
+        const colors = dimColors[exp.dimensionKey] || dimColors.crystal_caves;
+
+        const grad = ctx.createLinearGradient(0, 0, W, 0);
+        grad.addColorStop(0, colors.bg1);
+        grad.addColorStop(1, colors.bg2);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        const roomCount = 8;
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < roomCount; i++) {
+            const rx = (W / roomCount) * i;
+            ctx.beginPath();
+            ctx.moveTo(rx, 0);
+            ctx.lineTo(rx, H);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, H - 14, W, 14);
+        ctx.fillStyle = colors.accent;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(0, H - 14, W * progress, 14);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ccc';
+        ctx.font = '10px monospace';
+        ctx.fillText(`${Math.floor(progress * 100)}%`, W * progress - 20, H - 3);
+
+        const targetX = 30 + progress * (W - 80);
+        this._expVisState.partyX += (targetX - this._expVisState.partyX) * 0.1;
+        const partyX = this._expVisState.partyX;
+
+        const party = exp.partySnapshot;
+        const skinMgr = this.game.skinManager;
+        const useSkins = skinMgr && skinMgr.isActive;
+        for (let i = 0; i < party.length; i++) {
+            const p = party[i];
+            const px = partyX + i * 14;
+            const py = H / 2 + (i - party.length / 2) * 16;
+            const hpPct = p.maxHp > 0 ? p.hp / p.maxHp : 0;
+            if (p.hp <= 0) {
+                ctx.globalAlpha = 0.4;
+            }
+            if (useSkins) {
+                const sprite = skinMgr.getColonistSprite(p.id, false);
+                if (sprite) {
+                    ctx.drawImage(sprite, px - 7, py - 7, 14, 14);
+                } else {
+                    ctx.font = 'bold 14px monospace';
+                    ctx.fillStyle = '#ccc';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('@', px, py);
+                }
+            } else {
+                ctx.font = 'bold 14px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (hpPct < 0.3) {
+                    ctx.fillStyle = '#ff4444';
+                } else if (hpPct < 0.6) {
+                    ctx.fillStyle = '#ffaa44';
+                } else {
+                    ctx.fillStyle = '#44ff44';
+                }
+                ctx.fillText('@', px, py);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        if (exp.combat) {
+            const enemies = exp.combat.enemies.filter(e => e.hp > 0);
+            for (let i = 0; i < enemies.length; i++) {
+                const ex = partyX + 60 + i * 16;
+                const ey = H / 2 + (i - enemies.length / 2) * 16;
+                ctx.beginPath();
+                ctx.moveTo(ex, ey - 7);
+                ctx.lineTo(ex - 6, ey + 5);
+                ctx.lineTo(ex + 6, ey + 5);
+                ctx.closePath();
+                ctx.fillStyle = '#ff3333';
+                ctx.fill();
+                ctx.strokeStyle = '#aa0000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            if (Math.random() < 0.3) {
+                this._expVisState.effects.push({
+                    type: 'slash',
+                    x: partyX + 30 + Math.random() * 40,
+                    y: H / 2 - 10 + Math.random() * 20,
+                    frame: 0, maxFrames: 15
+                });
+            }
+        }
+
+        const logLen = exp.log.length;
+        if (logLen > this._expVisState.lastLogLen) {
+            const newEntries = exp.log.slice(this._expVisState.lastLogLen);
+            for (const entry of newEntries) {
+                if (entry.type === 'loot' || entry.type === 'success') {
+                    this._expVisState.effects.push({
+                        type: 'loot',
+                        x: partyX + Math.random() * 20,
+                        y: H / 2 - 20 + Math.random() * 10,
+                        frame: 0, maxFrames: 40
+                    });
+                } else if (entry.type === 'danger') {
+                    this._expVisState.effects.push({
+                        type: 'danger',
+                        x: partyX - 5 + Math.random() * 30,
+                        y: H / 2,
+                        frame: 0, maxFrames: 20
+                    });
+                }
+            }
+            this._expVisState.lastLogLen = logLen;
+        }
+
+        for (let i = this._expVisState.effects.length - 1; i >= 0; i--) {
+            const eff = this._expVisState.effects[i];
+            eff.frame++;
+            if (eff.frame >= eff.maxFrames) {
+                this._expVisState.effects.splice(i, 1);
+                continue;
+            }
+            const alpha = 1 - eff.frame / eff.maxFrames;
+            ctx.globalAlpha = alpha;
+            if (eff.type === 'slash') {
+                ctx.strokeStyle = '#ffff44';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(eff.x - 6, eff.y - 4);
+                ctx.lineTo(eff.x + 6, eff.y + 4);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(eff.x + 4, eff.y - 5);
+                ctx.lineTo(eff.x - 4, eff.y + 5);
+                ctx.stroke();
+            } else if (eff.type === 'loot') {
+                ctx.fillStyle = '#ffcc44';
+                ctx.beginPath();
+                const dy = -eff.frame * 0.5;
+                ctx.moveTo(eff.x, eff.y + dy - 6);
+                ctx.lineTo(eff.x - 5, eff.y + dy);
+                ctx.lineTo(eff.x, eff.y + dy + 6);
+                ctx.lineTo(eff.x + 5, eff.y + dy);
+                ctx.closePath();
+                ctx.fill();
+            } else if (eff.type === 'danger') {
+                ctx.fillStyle = '#ff2222';
+                ctx.globalAlpha = alpha * 0.4;
+                ctx.fillRect(eff.x - 15, eff.y - 15, 30, 30);
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
+
     getColonistTaskDescription(colonist) {
         if (!colonist.currentTaskId) return `<span style="color:#666;cursor:pointer" onclick="window.game.camera.centerOn(${colonist.x},${colonist.y})">None</span>`;
         const task = this.game.taskQueue.getAll().find(t => t.id === colonist.currentTaskId);
@@ -2063,6 +2497,19 @@ export class UI {
     isBuildingLocked(buildType) {
         const def = BUILDINGS[buildType];
         return def?.research && !this.game.research.isResearched(def.research);
+    }
+
+    isBuildingAtMax(buildType) {
+        const def = BUILDINGS[buildType];
+        if (!def || !def.maxCount) return false;
+        let count = 0;
+        for (const row of this.game.map) {
+            for (const t of row) {
+                if (t.structure === buildType) count++;
+                if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
+            }
+        }
+        return count >= def.maxCount;
     }
 
     updateNotifications() {
@@ -2115,14 +2562,14 @@ export class UI {
         const data = evt.data;
         const stock = this.game.resources.stockpile;
         let html = `<div class="event-text" style="font-size:0.9em;">Trader's Goods — select what to buy and offer</div>`;
-        html += `<div style="display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow-y:auto;">`;
+        html += `<div class="trade-columns" style="display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow-y:auto;">`;
 
         const markupMult = getPedestalEffect(this.game, 'tradeMarkupMult');
         const effectiveMarkup = TRADER_MARKUP * markupMult;
         html += `<div style="flex:1;min-width:140px;"><b style="color:#88ddff;">Trader Sells:</b>`;
         for (const [res, amt] of Object.entries(data.traderResources)) {
             const val = Math.ceil((TRADE_VALUES[res] || 1) * effectiveMarkup);
-            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRequest('${res}',1)" style="padding:0 4px;">+1</button></div>`;
+            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRemoveRequest('${res}',10)" style="padding:0 4px;">-10</button><button onclick="window.game.tradeRemoveRequest('${res}',1)" style="padding:0 4px;">-1</button><button onclick="window.game.tradeRequest('${res}',1)" style="padding:0 4px;">+1</button><button onclick="window.game.tradeRequest('${res}',10)" style="padding:0 4px;margin-left:2px;">+10</button></div>`;
         }
         if (data.exclusiveItem) {
             const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
@@ -2135,7 +2582,7 @@ export class UI {
             if (typeof amt !== 'number' || amt <= 0 || res.startsWith('_')) continue;
             if (!TRADE_VALUES[res]) continue;
             const val = Math.floor((TRADE_VALUES[res] || 1) * TRADER_DISCOUNT * 10) / 10;
-            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeOffer('${res}',1)" style="padding:0 4px;">+1</button></div>`;
+            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRemoveOffer('${res}',10)" style="padding:0 4px;">-10</button><button onclick="window.game.tradeRemoveOffer('${res}',1)" style="padding:0 4px;">-1</button><button onclick="window.game.tradeOffer('${res}',1)" style="padding:0 4px;">+1</button><button onclick="window.game.tradeOffer('${res}',10)" style="padding:0 4px;margin-left:2px;">+10</button></div>`;
         }
         html += `</div></div>`;
 
@@ -2159,7 +2606,11 @@ export class UI {
         html += `<button onclick="window.game.dismissTrader()">Done</button>`;
         html += `</div>`;
 
+        const scrollEl = this.elements.eventPanel.querySelector('.trade-columns');
+        const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
         this.elements.eventPanel.innerHTML = html;
+        const newScrollEl = this.elements.eventPanel.querySelector('.trade-columns');
+        if (newScrollEl) newScrollEl.scrollTop = scrollTop;
     }
 }
 

@@ -16,6 +16,18 @@ export function designateBuild(game, x, y, buildType) {
     if (!tile.passable) return false;
 
     if (def.research && !game.research.isResearched(def.research)) return false;
+
+    if (def.maxCount) {
+        let count = 0;
+        for (const row of game.map) {
+            for (const t of row) {
+                if (t.structure === buildType) count++;
+                if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
+            }
+        }
+        if (count >= def.maxCount) return false;
+    }
+
     if (!game.resources.has(def.cost)) return false;
 
     game.resources.deduct(def.cost);

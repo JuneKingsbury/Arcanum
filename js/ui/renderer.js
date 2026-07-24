@@ -414,6 +414,14 @@ export class Renderer {
                     }
                 }
 
+                if (spriteDrawn && portalPathMap.has(tileKey)) {
+                    ctx.fillStyle = COMBAT_VISUALS.portalPathColor;
+                    ctx.globalAlpha = 0.35;
+                    ctx.fillRect(px, py, cw, ch);
+                    ctx.globalAlpha = 1.0;
+                    lastColor = '';
+                }
+
                 if (spriteDrawn && (inSelection || (cursor && cursor.x === wx && cursor.y === wy))) {
                     ctx.globalAlpha = 0.3;
                     ctx.fillStyle = inSelection

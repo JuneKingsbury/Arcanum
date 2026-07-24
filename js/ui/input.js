@@ -121,7 +121,8 @@ export class InputHandler {
                 const ui = this.game.ui;
                 const hadPanel = ui.priorityPanelVisible || ui.craftPanelVisible ||
                     ui.researchPanelVisible || ui.inventoryVisible ||
-                    ui.tamingPanelVisible || ui.settingsPanelVisible;
+                    ui.tamingPanelVisible || ui.settingsPanelVisible ||
+                    ui.arcanePanelVisible;
                 if (hadPanel) {
                     if (ui.priorityPanelVisible) ui.togglePriorityPanel();
                     if (ui.craftPanelVisible) ui.toggleCraftPanel();
@@ -129,6 +130,7 @@ export class InputHandler {
                     if (ui.inventoryVisible) ui.toggleInventoryPanel();
                     if (ui.tamingPanelVisible) ui.toggleTamingPanel();
                     if (ui.settingsPanelVisible) ui.toggleSettingsPanel();
+                    if (ui.arcanePanelVisible) ui.toggleArcanePanel();
                 } else if (this.mode !== 'normal') {
                     this.setMode('normal');
                 }
@@ -141,6 +143,7 @@ export class InputHandler {
                 break;
             case 't': this.game.ui.toggleTamingPanel(); break;
             case 'i': this.game.ui.toggleInventoryPanel(); break;
+            case 'v': this.game.ui.toggleArcanePanel(); break;
             case ',': this.game.ui.toggleSettingsPanel(); break;
             case ' ':
                 e.preventDefault();

@@ -576,6 +576,18 @@ class Game {
         this.ui._tradeDirty = true;
     }
 
+    tradeRemoveOffer(resource, amount) {
+        if (!this.ui._tradeOffer) return;
+        const cur = this.ui._tradeOffer[resource] || 0;
+        const next = Math.max(0, cur - amount);
+        if (next <= 0) {
+            delete this.ui._tradeOffer[resource];
+        } else {
+            this.ui._tradeOffer[resource] = next;
+        }
+        this.ui._tradeDirty = true;
+    }
+
     tradeRequest(resource, amount) {
         if (!this.ui._tradeRequest) this.ui._tradeRequest = {};
         if (resource === '__exclusive') {
@@ -584,6 +596,22 @@ class Game {
             const evt = this.events.pendingEvent;
             const max = evt?.data?.traderResources?.[resource] || 0;
             this.ui._tradeRequest[resource] = Math.min((this.ui._tradeRequest[resource] || 0) + amount, max);
+        }
+        this.ui._tradeDirty = true;
+    }
+
+    tradeRemoveRequest(resource, amount) {
+        if (!this.ui._tradeRequest) return;
+        if (resource === '__exclusive') {
+            delete this.ui._tradeRequest.__exclusive;
+        } else {
+            const cur = this.ui._tradeRequest[resource] || 0;
+            const next = Math.max(0, cur - amount);
+            if (next <= 0) {
+                delete this.ui._tradeRequest[resource];
+            } else {
+                this.ui._tradeRequest[resource] = next;
+            }
         }
         this.ui._tradeDirty = true;
     }
@@ -674,6 +702,39 @@ class Game {
         }
         html += `<div class="info-actions"><button onclick="window.game.launchExpedition('${dimensionKey}')" style="background:#1a4466;color:#88ddff;">Launch</button></div>`;
         this.ui.elements.infoPanel.innerHTML = html;
+    }
+
+    showExpeditionSetupInPanel(dimensionKey) {
+        const available = this.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
+        if (available.length === 0) {
+            this.notifications.push({ text: 'No colonists available for expedition', tick: this.tick, type: 'danger' });
+            return;
+        }
+        this.ui._arcaneExpSetup = dimensionKey;
+        this.ui._lastArcaneHtml = '';
+        this.ui.updateArcanePanel();
+    }
+
+    launchExpeditionFromPanel(dimensionKey) {
+        const panel = this.ui.elements.arcanePanel;
+        const checks = panel.querySelectorAll('.exp-check:checked');
+        const ids = Array.from(checks).map(cb => parseInt(cb.value));
+        if (ids.length === 0) {
+            this.notifications.push({ text: 'Select at least one colonist', tick: this.tick, type: 'danger' });
+            return;
+        }
+        const packChecks = panel.querySelectorAll('.exp-pack-check:checked');
+        const packIds = Array.from(packChecks).map(cb => parseInt(cb.value));
+        const result = this.exploration.sendExpedition(this, dimensionKey, ids, packIds);
+        if (result) {
+            this.notifications.push({ text: `Expedition launched to ${result.dimensionName}!`, tick: this.tick, type: 'success' });
+            this.ui._arcaneExpSetup = null;
+            this.ui._lastArcaneHtml = '';
+            this.ui._expVisState = { lastLogLen: 0, effects: [], partyX: 0 };
+            this.ui.updateArcanePanel();
+        } else {
+            this.notifications.push({ text: 'Cannot launch expedition', tick: this.tick, type: 'danger' });
+        }
     }
 
     launchExpedition(dimensionKey) {

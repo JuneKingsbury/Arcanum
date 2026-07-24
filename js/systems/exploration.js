@@ -138,6 +138,7 @@ export class ExplorationSystem {
 
             if (exp.status === 'exploring') {
                 if (exp.combat) {
+                    exp.startTick++;
                     this._updateCombat(exp, game);
                     continue;
                 }
@@ -593,6 +594,8 @@ export class ExplorationSystem {
             member.shieldActive = false;
             member.shieldReduction = 0;
         }
+        const combatBonus = Math.floor(exp.duration * 0.05);
+        exp.startTick -= combatBonus;
         exp.combat = null;
     }
 

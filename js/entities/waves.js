@@ -19,6 +19,7 @@ export class WaveSystem {
         this.spawnTimer = 0;
         this.waveStartTick = 0;
         this.portals = [];
+        this.lastWaveResult = null;
     }
 
     getColonistCap() {
@@ -225,6 +226,7 @@ export class WaveSystem {
             game.roomsDirty = true;
         }
 
+        this.lastWaveResult = { wave: this.currentWave, victory };
         this.active = false;
         this.enemies = [];
         this.portals = [];
@@ -380,12 +382,12 @@ function attackStructure(game, x, y, damage) {
 }
 
 function getWaveSpawnPosition(side, nexus) {
-    const { near, far, offsetRange } = WAVE_CONFIG.spawnDistance;
+    const { near, offsetRange } = WAVE_CONFIG.spawnDistance;
     const offset = Math.floor(Math.random() * offsetRange) - Math.floor(offsetRange / 2);
     switch (side) {
         case 0: return { x: Math.max(0, Math.min(CONFIG.MAP_WIDTH - 1, nexus.x + offset)), y: Math.max(0, nexus.y - near) };
-        case 1: return { x: Math.min(CONFIG.MAP_WIDTH - 1, nexus.x + far), y: Math.max(0, Math.min(CONFIG.MAP_HEIGHT - 1, nexus.y + offset)) };
+        case 1: return { x: Math.min(CONFIG.MAP_WIDTH - 1, nexus.x + near), y: Math.max(0, Math.min(CONFIG.MAP_HEIGHT - 1, nexus.y + offset)) };
         case 2: return { x: Math.max(0, Math.min(CONFIG.MAP_WIDTH - 1, nexus.x + offset)), y: Math.min(CONFIG.MAP_HEIGHT - 1, nexus.y + near) };
-        case 3: return { x: Math.max(0, nexus.x - far), y: Math.max(0, Math.min(CONFIG.MAP_HEIGHT - 1, nexus.y + offset)) };
+        case 3: return { x: Math.max(0, nexus.x - near), y: Math.max(0, Math.min(CONFIG.MAP_HEIGHT - 1, nexus.y + offset)) };
     }
 }
