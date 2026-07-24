@@ -1,4 +1,4 @@
-import { DIMENSIONS, EXPLORATION_CONFIG, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS } from '../core/config.js';
+import { DIMENSIONS, EXPLORATION_CONFIG, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
 let nextExpeditionId = 1;
@@ -34,7 +34,10 @@ export class ExplorationSystem {
         const dim = DIMENSIONS[dimensionKey];
         const party = [];
 
-        for (const id of colonistIds) {
+        const cappedColonists = colonistIds.slice(0, 5);
+        const cappedPacks = (packAnimalIds || []).slice(0, 2);
+
+        for (const id of cappedColonists) {
             const c = game.getColonist(id);
             if (!c || c.hp <= 0 || c.onExpedition || c.drafted) continue;
             party.push(c);
@@ -46,7 +49,7 @@ export class ExplorationSystem {
         if (!gatePos) return null;
 
         const packAnimals = [];
-        for (const id of packAnimalIds) {
+        for (const id of cappedPacks) {
             const a = game.tamedAnimals.find(ta => ta.id === id);
             if (!a || a.hp <= 0) continue;
             const def = TAMED_ANIMALS[a.type];
@@ -157,6 +160,8 @@ export class ExplorationSystem {
                 const allDefeated = exp.partySnapshot.every(p => p.hp <= 0);
                 if (allDefeated) {
                     exp.status = 'returning';
+                    exp.retreatStartTick = game.tick;
+                    exp.retreatTick = game.tick + EXPLORATION_CONFIG.retreatTicks;
                     this._addLog(exp, game, 'All explorers defeated — retreating empty-handed', 'danger');
                     exp.loot = {};
                 }
@@ -168,8 +173,8 @@ export class ExplorationSystem {
             }
 
             if (exp.status === 'returning') {
-                const returnTick = exp.startTick + Math.floor(exp.duration * EXPLORATION_CONFIG.returnTimeMult);
-                if (game.tick >= returnTick) {
+                const deadline = exp.retreatTick || (exp.startTick + Math.floor(exp.duration * EXPLORATION_CONFIG.returnTimeMult));
+                if (game.tick >= deadline) {
                     this._completeExpedition(exp, game);
                 }
             }
@@ -316,6 +321,11 @@ export class ExplorationSystem {
                         exp.loot._artifacts.push(rare.loot.artifact);
                         const artName = ARTIFACTS[rare.loot.artifact]?.name || rare.loot.artifact;
                         this._addLog(exp, game, `${msg} (found ${artName}!)`, 'loot');
+                    } else if (rare.loot.item) {
+                        if (!exp.loot._items) exp.loot._items = [];
+                        exp.loot._items.push(rare.loot.item);
+                        const itemName = TRADER_EXCLUSIVE_ITEMS[rare.loot.item]?.name || rare.loot.item;
+                        this._addLog(exp, game, `${msg} (found ${itemName}!)`, 'loot');
                     } else {
                         const amount = randInt(rare.loot.amount[0], rare.loot.amount[1]);
                         exp.loot[rare.loot.resource] = (exp.loot[rare.loot.resource] || 0) + amount;
@@ -630,13 +640,22 @@ export class ExplorationSystem {
 
         const artifacts = exp.loot._artifacts || [];
         delete exp.loot._artifacts;
+        const items = exp.loot._items || [];
+        delete exp.loot._items;
         game.resources.add(exp.loot);
         for (const artKey of artifacts) {
             game.resources.addArtifact({ ...ARTIFACTS[artKey], key: artKey });
         }
+        for (const itemKey of items) {
+            const itemDef = TRADER_EXCLUSIVE_ITEMS[itemKey];
+            game.resources.addConsumable({ key: itemKey, name: itemDef?.name || itemKey });
+        }
         const parts = Object.entries(exp.loot).map(([k, v]) => `${v} ${k}`);
         for (const artKey of artifacts) {
             parts.push(ARTIFACTS[artKey]?.name || artKey);
+        }
+        for (const itemKey of items) {
+            parts.push(TRADER_EXCLUSIVE_ITEMS[itemKey]?.name || itemKey);
         }
         const lootSummary = parts.join(', ');
         if (!allDefeated) {

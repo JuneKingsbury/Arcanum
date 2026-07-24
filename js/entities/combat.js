@@ -32,8 +32,10 @@ export class CombatSystem {
 
     startRaid(game) {
         const wealth = game.resources.getWealth();
+        const timeFactor = Math.min(1, game.tick / RAID_CONFIG.timeScalingPeak);
+        const scaledRaiders = wealth * RAID_CONFIG.wealthScaling * timeFactor;
         const numRaiders = Math.max(RAID_CONFIG.baseRaiders,
-            Math.floor(RAID_CONFIG.baseRaiders + wealth * RAID_CONFIG.wealthScaling));
+            Math.floor(RAID_CONFIG.baseRaiders + scaledRaiders));
 
         const edge = Math.floor(Math.random() * 4);
         for (let i = 0; i < numRaiders; i++) {
@@ -56,6 +58,7 @@ export class CombatSystem {
 
         if (game.settings.autoPauseHostile && !game.paused) {
             game.togglePause();
+            game._eventPaused = true;
         }
 
         this.nextRaidTick = game.tick + RAID_CONFIG.minInterval +

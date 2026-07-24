@@ -15,6 +15,7 @@ export class ResourceManager {
         this.artifacts = [];
         this.potions = [];
         this.tomes = [];
+        this.consumables = [];
         this._decayAccumulators = {};
         this.reservedFoodstuffs = {};
     }
@@ -145,6 +146,15 @@ export class ResourceManager {
 
     getPotionCount(type) {
         return this.potions.filter(p => p.type === type).length;
+    }
+
+    addConsumable(item) {
+        this.consumables.push(item);
+    }
+
+    takeConsumable(index) {
+        if (index < 0 || index >= this.consumables.length) return null;
+        return this.consumables.splice(index, 1)[0];
     }
 
     getWealth() {

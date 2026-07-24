@@ -71,6 +71,8 @@ class Game {
         this.exploration = new ExplorationSystem();
         this.eventLog = new EventLog();
 
+        this.manaCrystalBonus = 0;
+
         this.colonists = [];
         this._colonistById = new Map();
         this.wildlife = [];
@@ -550,16 +552,22 @@ class Game {
         if (!evt) return;
         if (evt.type === 'wanderer') {
             this.events.resolveWanderer(this, choice === 0);
-            if (this.paused) this.togglePause();
         } else if (evt.type === 'caravan' || evt.type === 'trade') {
             this.events.resolveCaravan(this, choice);
-            if (this.paused) this.togglePause();
         } else if (evt.type === 'raid') {
             if (choice === 0) {
                 this.camera.centerOn(evt.data.x, evt.data.y);
             }
             this.events.pendingEvent = null;
         }
+        this._unpauseFromEvent();
+    }
+
+    _unpauseFromEvent() {
+        if (this._eventPaused && this.paused) {
+            this.togglePause();
+        }
+        this._eventPaused = false;
     }
 
     openTradePanel() {
@@ -636,6 +644,7 @@ class Game {
         this.ui._tradeOpen = false;
         this.ui._tradeOffer = {};
         this.ui._tradeRequest = {};
+        this._unpauseFromEvent();
     }
 
     toggleSettingsPanel() {
@@ -784,6 +793,21 @@ class Game {
         c.equippedTome = null;
         this.notifications.push({ text: `${c.name} stopped studying`, tick: this.tick, type: 'success' });
         this.ui.showColonistInfo(c);
+    }
+
+    useConsumable(index) {
+        const item = this.resources.takeConsumable(index);
+        if (!item) return;
+        this.useConsumableItem(item.key);
+    }
+
+    useConsumableItem(itemKey) {
+        if (itemKey === 'crystal_capacitor') {
+            this.manaCrystalBonus = (this.manaCrystalBonus || 0) + 1;
+            const newLimit = 4 + this.manaCrystalBonus;
+            this.notifications.push({ text: `Crystal Capacitor used! Mana crystal limit: ${newLimit}`, tick: this.tick, type: 'success' });
+            this.eventLog.add(this, `Used Crystal Capacitor — mana crystal limit increased to ${newLimit}`, 'event', null);
+        }
     }
 
     startSpellTargeting(colonistId, spellKey) {

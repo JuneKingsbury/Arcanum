@@ -355,7 +355,7 @@ export const BUILDINGS = {
     void_wall:         { char: '▓', color: '#6622aa', cost: { stone: 3, void_essence: 3 }, work: 15, hp: 120, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, research: 'void_forging', description: 'Reinforced wall (120 HP). Blocks enemies.' },
     void_turret:       { char: 'Y', color: '#aa33ff', cost: { stone: 5, planks: 3, void_essence: 6 }, work: 55, structureType: 'furniture', category: 'Defense', passable: { colonist: false, animal: false, enemy: false }, research: 'void_forging', power: { consumes: 5, damage: 20, range: 5 }, description: 'Auto-attacks enemies in range 5, 20 dmg. Consumes 5 mana.' },
     void_door:         { char: '▒', color: '#7733bb', cost: { stone: 3, planks: 2, void_essence: 4 }, work: 20, hp: 80, structureType: 'door', category: 'Walls & Floors', passable: { colonist: true, animal: false, enemy: false }, breakable: true, research: 'void_forging', description: 'Reinforced door (80 HP). Colonists pass through, enemies must break it.' },
-    mana_crystal:      { char: 'W', color: '#aa44ff', cost: { wood: 8, stone: 4 }, work: 45, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'ley_channeling', power: { generates: 10 }, description: 'Generates 10 mana for powering magical buildings.' },
+    mana_crystal:      { char: 'W', color: '#aa44ff', cost: { wood: 8, stone: 4 }, work: 45, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'ley_channeling', maxCount: 4, maxCountBonusKey: 'manaCrystalBonus', power: { generates: 10 }, description: 'Generates 10 mana for powering magical buildings. Limit: 4 (upgradeable).' },
     glowstone:         { char: 'L', color: '#ffff88', cost: { planks: 2, stone: 1 }, work: 14, structureType: 'furniture', category: 'Furniture', lightRadius: 10, research: 'luminance', power: { consumes: 2, radius: 5 }, description: 'Mana-powered light, radius 5. Consumes 2 mana.' },
     enchanting_table:  { char: 'P', color: '#bb88ff', cost: { planks: 4, stone: 3 }, work: 35, structureType: 'furniture', category: 'Production', research: 'arcane_infusion', power: { consumes: 4, speedMult: 2.0 }, description: '2x crafting speed. Consumes 4 mana.' },
     ember_ward:        { char: 'H', color: '#ff8844', cost: { stone: 4, planks: 2 }, work: 28, structureType: 'furniture', category: 'Arcane', research: 'ember_magic', power: { consumes: 3, warmRadius: 4 }, description: 'Warms nearby tiles (radius 4) in winter. Consumes 3 mana.' },
@@ -606,6 +606,17 @@ export const POTIONS = {
         duration: 100,                // ticks the effect lasts
         cooldown: 400,                // ticks between uses
     },
+};
+
+// ASCII display characters for item categories. Used in inventory/equipment/craft displays when no skin sprite is active.
+// Each category maps to { char, color }. Individual items can override with their own 'char' and 'charColor' fields.
+export const ITEM_CHARS = {
+    weapon: { char: '/', color: '#cccccc' },
+    armor: { char: '[', color: '#6688cc' },
+    tool: { char: '\\', color: '#bb8844' },
+    artifact: { char: '*', color: '#cc44ff' },
+    potion: { char: '!', color: '#44cc44' },
+    tome: { char: '~', color: '#4488ff' },
 };
 
 // Raw food ingredients usable in cooking. Add new ones here rather than in resources.js.
@@ -1013,16 +1024,17 @@ export const GOLEM_TYPES = {
 
 // Raid system tuning. Used by combat.js. Raiders spawn at map edges and attack colonists.
 export const RAID_CONFIG = {
-    firstRaidTick: 1500,         // earliest tick a raid can happen
-    minInterval: 1200,           // minimum ticks between raids
-    maxInterval: 3000,           // maximum ticks between raids
-    baseRaiders: 2,              // minimum raiders per raid
-    wealthScaling: 0.005,        // extra raiders = wealth * this
-    raiderHp: 60,                // hit points per raider
-    raiderDamage: 6,             // base damage per hit (+ weapon bonus)
-    raiderSpeed: 0.4,            // movement speed (lower = slower)
-    fleeHpFraction: 0.25,        // individual raiders flee when their HP drops below this fraction
-    routThreshold: 0.75,         // group rout when 75% of raiders are dead or fleeing
+    firstRaidTick: 3000,         // earliest tick a raid can happen (~1 season in)
+    minInterval: 1500,           // minimum ticks between raids
+    maxInterval: 4000,           // maximum ticks between raids
+    baseRaiders: 1,              // minimum raiders per raid
+    wealthScaling: 0.003,        // extra raiders = wealth * this * timeFactor
+    timeScalingPeak: 18000,      // ticks to reach full raid strength (3 years)
+    raiderHp: 50,                // hit points per raider
+    raiderDamage: 5,             // base damage per hit (+ weapon bonus)
+    raiderSpeed: 0.35,           // movement speed (lower = slower)
+    fleeHpFraction: 0.3,         // individual raiders flee when their HP drops below this fraction
+    routThreshold: 0.65,         // group rout when 65% of raiders are dead or fleeing
     timeout: 600,                // ticks after which remaining raiders flee (safety valve)
 };
 
@@ -1045,6 +1057,7 @@ export const TRADER_EXCLUSIVE_ITEMS = {
     lodestone_of_prosperity: { type: 'artifact', name: 'Lodestone of Prosperity', tradeValue: 45 },
     hagglers_coin: { type: 'artifact', name: "Haggler's Coin", tradeValue: 40 },
     aegis_of_the_vanguard: { type: 'artifact', name: 'Aegis of the Vanguard', tradeValue: 60 },
+    crystal_capacitor: { type: 'consumable', name: 'Crystal Capacitor', tradeValue: 65, char: '◆', charColor: '#aa44ff', description: 'Use to permanently increase your mana crystal limit by 1.' },
 };
 
 // ----------------------------------------------------------------------------
@@ -1056,6 +1069,7 @@ export const DIMENSIONS = {
     crystal_caves: {
         name: 'Crystal Caves', difficulty: 1,
         duration: [220, 380], encounters: 3,
+        vis: { wall: 'stone_wall', floor: 'stone_floor' },
         loot: [
             { resource: 'stone', weight: 40, amount: [5, 12] },
             { resource: 'runite', weight: 30, amount: [2, 5] },
@@ -1091,6 +1105,7 @@ export const DIMENSIONS = {
     verdant_depths: {
         name: 'Verdant Depths', difficulty: 1,
         duration: [150, 280], encounters: 2,
+        vis: { wall: 'wood_wall', floor: 'wood_floor' },
         loot: [
             { resource: 'wood', weight: 50, amount: [8, 15] },
             { resource: 'wheat', weight: 20, amount: [5, 10] },
@@ -1126,6 +1141,7 @@ export const DIMENSIONS = {
     shadow_realm: {
         name: 'Shadow Realm', difficulty: 2,
         duration: [400, 650], encounters: 5,
+        vis: { wall: 'void_wall', floor: 'stone_floor' },
         loot: [
             { resource: 'void_essence', weight: 40, amount: [3, 7] },
             { resource: 'runite', weight: 25, amount: [3, 6] },
@@ -1158,12 +1174,14 @@ export const DIMENSIONS = {
                 { chance: 0.02, text: '{name} finds a sealed void reliquary!', loot: { resource: 'void_essence', amount: [6, 10] } },
                 { chance: 0.015, text: '{name} pulls a glowing lantern from the void — it never goes dark!', loot: { artifact: 'voidwalkers_lantern' } },
                 { chance: 0.015, text: '{name} wraps themselves in living shadow — a cloak of concealment!', loot: { artifact: 'cloak_of_shadows' } },
+                { chance: 0.02, text: '{name} finds a pulsing crystal device that hums with containment magic!', loot: { item: 'crystal_capacitor' } },
             ],
         },
     },
     arcane_library: {
         name: 'Arcane Library', difficulty: 1,
         duration: [180, 320], encounters: 2,
+        vis: { wall: 'stone_wall', floor: 'wood_floor' },
         loot: [
             { resource: 'tome_magic_missile', weight: 20, amount: [1, 1] },
             { resource: 'tome_heal', weight: 20, amount: [1, 1] },
@@ -1198,6 +1216,7 @@ export const DIMENSIONS = {
                 { chance: 0.05, text: '{name} discovers a sealed headmaster\'s vault — rare tome inside!', loot: { resource: 'tome_magic_missile', amount: [1, 1] } },
                 { chance: 0.04, text: '{name} finds a cache of enchanting runite!', loot: { resource: 'runite', amount: [3, 5] } },
                 { chance: 0.015, text: '{name} finds a glowing codex that shares its knowledge with all who stand near!', loot: { artifact: 'tome_of_shared_wisdom' } },
+                { chance: 0.02, text: '{name} discovers a crystalline apparatus in a forgotten research alcove — it amplifies mana storage!', loot: { item: 'crystal_capacitor' } },
             ],
         },
     },
@@ -1205,6 +1224,7 @@ export const DIMENSIONS = {
 
 export const EXPLORATION_CONFIG = {
     returnTimeMult: 1.3,
+    retreatTicks: 200,
     encounterSpacing: 0.2,
     baseFistDamage: 5,
     combatRoundTicks: 8,

@@ -367,6 +367,14 @@ export class Renderer {
                                 ctx.fillRect(px + cw - 4, py, 4, 4);
                                 lastColor = '';
                             }
+                            if (tile.pedestalArtifact) {
+                                const itemSprite = this.skinManager.getSprite('items', tile.pedestalArtifact);
+                                if (itemSprite) {
+                                    const iSize = Math.floor(cw * 0.6);
+                                    const iOff = Math.floor((cw - iSize) / 2);
+                                    ctx.drawImage(itemSprite, px + iOff, py + iOff, iSize, iSize);
+                                }
+                            }
                             spriteDrawn = true;
                         }
                         if (tile.designation) {

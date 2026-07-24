@@ -30,6 +30,7 @@ export function saveGame(game) {
             artifacts: game.resources.artifacts,
             potions: game.resources.potions,
             tomes: game.resources.tomes,
+            consumables: game.resources.consumables,
             _decayAccumulators: game.resources._decayAccumulators,
             reservedFoodstuffs: game.resources.reservedFoodstuffs,
         },
@@ -79,6 +80,8 @@ export function saveGame(game) {
             completed: [...game.research.completed],
             studyPoints: game.research.studyPoints,
         },
+
+        manaCrystalBonus: game.manaCrystalBonus || 0,
 
         tasks: game.taskQueue.getAll(),
         eventLog: game.eventLog.entries,
@@ -154,6 +157,7 @@ export function loadGame(game) {
     game.resources.artifacts = data.resources.artifacts || [];
     game.resources.potions = data.resources.potions || [];
     game.resources.tomes = data.resources.tomes || [];
+    game.resources.consumables = data.resources.consumables || [];
     game.resources._decayAccumulators = data.resources._decayAccumulators || {};
     game.resources.reservedFoodstuffs = data.resources.reservedFoodstuffs || {};
 
@@ -211,6 +215,8 @@ export function loadGame(game) {
             }
         }
     }
+
+    game.manaCrystalBonus = data.manaCrystalBonus || 0;
 
     game.taskQueue.tasks = data.tasks;
     game.taskQueue.syncIdCounter();

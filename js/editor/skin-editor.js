@@ -1,4 +1,4 @@
-import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS } from '../core/config.js';
+import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS } from '../core/config.js';
 
 const CANVAS_SIZES = [8, 16, 32, 64, 128];
 const STORAGE_PREFIX = 'convocation_skin_editor_';
@@ -212,7 +212,7 @@ class SkinEditor {
     }
 
     _buildCategoryFilter() {
-        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Floors', 'Farms', 'Effects'];
+        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects'];
         const container = document.getElementById('se-category-filter');
         container.innerHTML = categories.map(c =>
             `<button class="bp-cat${c === this.categoryFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
@@ -256,6 +256,27 @@ class SkinEditor {
                 }
                 for (const [key, def] of Object.entries(ANIMALS)) {
                     items.push({ key, char: def.char, color: def.color, desc: key, category: 'entities' });
+                }
+                break;
+            case 'Items':
+                for (const [key, def] of Object.entries(WEAPONS)) {
+                    if (key === 'fists') continue;
+                    items.push({ key, char: def.char || ITEM_CHARS.weapon.char, color: def.charColor || ITEM_CHARS.weapon.color, desc: `Weapon: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(ARMORS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.armor.char, color: def.charColor || ITEM_CHARS.armor.color, desc: `Armor: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(TOOLS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.tool.char, color: def.charColor || ITEM_CHARS.tool.color, desc: `Tool: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(ARTIFACTS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.artifact.char, color: def.charColor || ITEM_CHARS.artifact.color, desc: `Artifact: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(POTIONS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.potion.char, color: def.charColor || ITEM_CHARS.potion.color, desc: `Potion: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(SPELL_TOMES)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.tome.char, color: def.charColor || ITEM_CHARS.tome.color, desc: `Tome: ${def.name}`, category: 'items' });
                 }
                 break;
             case 'Floors':

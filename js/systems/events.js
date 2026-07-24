@@ -170,6 +170,7 @@ export class EventSystem {
         game.eventLog.add(game, `A wanderer named ${wanderer.name} approaches`, 'event', { type: 'position', x: edge.x, y: edge.y });
         if (game.settings.autoPauseEvent && !game.paused) {
             game.togglePause();
+            game._eventPaused = true;
         }
     }
 
@@ -220,6 +221,7 @@ export class EventSystem {
         game.eventLog.add(game, 'Trade caravan arrived', 'event', null);
         if (game.settings.autoPauseEvent && !game.paused) {
             game.togglePause();
+            game._eventPaused = true;
         }
     }
 
@@ -265,6 +267,7 @@ export class EventSystem {
                 if (item.type === 'weapon') game.resources.addWeapon({ ...item, key: data.exclusiveItem });
                 else if (item.type === 'armor') game.resources.addArmor({ ...item, key: data.exclusiveItem });
                 else if (item.type === 'artifact') game.resources.addArtifact({ ...item, key: data.exclusiveItem });
+                else if (item.type === 'consumable') game.resources.addConsumable({ key: data.exclusiveItem, name: item.name });
                 data.exclusiveItem = null;
             } else {
                 game.resources.add({ [res]: amt });

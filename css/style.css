@@ -1389,6 +1389,19 @@ body {
     line-height: 1.4;
 }
 .inv-delete:hover { background: #442222; border-color: #cc4444; }
+.inv-use {
+    background: transparent;
+    border: 1px solid #336633;
+    color: #44cc44;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 8px;
+    margin-left: 6px;
+    font-family: inherit;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.inv-use:hover { background: #223322; border-color: #44cc44; }
 
 .inv-reserve {
     background: transparent;

@@ -62,14 +62,35 @@ export class SkinManager {
             this._sprites.clear();
             this._activeSkin = 'ascii';
             this._colonistVariantCount = 0;
+            this._itemDataURLCache = null;
             return;
         }
         await this._loadSkin(skinName);
         this._activeSkin = skinName;
+        this._itemDataURLCache = null;
     }
 
     getSprite(category, key) {
         return this._sprites.get(category + ':' + key) || null;
+    }
+
+    getItemSprite(itemKey) {
+        return this._sprites.get('items:' + itemKey) || null;
+    }
+
+    getItemSpriteDataURL(itemKey) {
+        if (!this._itemDataURLCache) this._itemDataURLCache = new Map();
+        if (this._itemDataURLCache.has(itemKey)) return this._itemDataURLCache.get(itemKey);
+        const sprite = this.getItemSprite(itemKey);
+        if (!sprite) { this._itemDataURLCache.set(itemKey, null); return null; }
+        const c = document.createElement('canvas');
+        c.width = sprite.width || sprite.naturalWidth || 16;
+        c.height = sprite.height || sprite.naturalHeight || 16;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(sprite, 0, 0);
+        const url = c.toDataURL('image/png');
+        this._itemDataURLCache.set(itemKey, url);
+        return url;
     }
 
     getColonistSprite(colonistId, drafted) {

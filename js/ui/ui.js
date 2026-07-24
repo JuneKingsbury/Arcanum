@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -452,7 +452,9 @@ export class UI {
                         const status = p.hp <= 0 ? ' [DOWN]' : '';
                         const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
                         const shieldStr = p.shieldActive ? ' 🛡' : '';
-                        html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${shieldStr}${status}</div>`;
+                        const priority = p.artifact?.expedition?.targetPriority || 0;
+                        const threatStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'};font-size:0.85em;">[${priority > 0 ? '▲' : '▼'}Threat]</span>` : '';
+                        html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${shieldStr}${status}${threatStr}</div>`;
                     }
 
                     if (exp.combat) {
@@ -535,6 +537,13 @@ export class UI {
         let html = '';
         if (def.description) {
             html += `<div class="info-row" style="color:#999;font-size:11px;">${def.description}</div>`;
+        }
+        if (def.maxCount) {
+            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
+            const limit = def.maxCount + bonus;
+            let placed = 0;
+            for (const row of this.game.map) for (const t of row) if (t.structure === structure) placed++;
+            html += `<div class="info-row" style="color:#aa88ff;font-size:11px;">Placed: ${placed} / ${limit}</div>`;
         }
         if (def.power) {
             if (def.power.generates) {
@@ -659,10 +668,10 @@ export class UI {
             html += `<div class="info-row"><span style="color:#aa88ff">Mana: ${bar(colonist.mana / colonist.maxMana * 100)} ${Math.floor(colonist.mana)}/${colonist.maxMana}</span></div>`;
             html += `<div class="info-row">Magic: ${Object.entries(MAGIC_SKILLS).filter(([k]) => colonist.magicSkills[k] > 0).map(([k, def]) => `<span class="skill-tip" data-tip="${def.description}" style="color:#bb88ff">${def.name}:${colonist.magicSkills[k]}</span>`).join(' ')}</div>`;
         }
-        html += `<div class="info-row">Weapon: <span class="skill-tip" data-tip="${weaponTip}">${colonist.weapon?.name || 'Fists'}</span></div>`;
-        html += `<div class="info-row">Armor: <span class="skill-tip" data-tip="${armorTip}">${colonist.armor?.name || 'None'}</span></div>`;
-        html += `<div class="info-row">Tool: <span class="skill-tip" data-tip="${toolTip}">${colonist.tool?.name || 'None'}</span></div>`;
-        html += `<div class="info-row">Artifact: <span class="skill-tip" data-tip="${artifactTip}">${colonist.artifact?.name || 'None'}</span></div>`;
+        html += `<div class="info-row">Weapon: ${colonist.weapon ? this._itemIcon(colonist.weapon.key, 'weapon') : ''}<span class="skill-tip" data-tip="${weaponTip}">${colonist.weapon?.name || 'Fists'}</span></div>`;
+        html += `<div class="info-row">Armor: ${colonist.armor ? this._itemIcon(colonist.armor.key, 'armor') : ''}<span class="skill-tip" data-tip="${armorTip}">${colonist.armor?.name || 'None'}</span></div>`;
+        html += `<div class="info-row">Tool: ${colonist.tool ? this._itemIcon(colonist.tool.key, 'tool') : ''}<span class="skill-tip" data-tip="${toolTip}">${colonist.tool?.name || 'None'}</span></div>`;
+        html += `<div class="info-row">Artifact: ${colonist.artifact ? this._itemIcon(colonist.artifact.key, 'artifact') : ''}<span class="skill-tip" data-tip="${artifactTip}">${colonist.artifact?.name || 'None'}</span></div>`;
         if (colonist.equippedTome) {
             const tomeDef = SPELL_TOMES[colonist.equippedTome];
             const currentProgress = (colonist.tomeProgress && colonist.tomeProgress[colonist.equippedTome]) || 0;
@@ -952,7 +961,7 @@ export class UI {
             if (tile.pedestalArtifact) {
                 const artDef = ARTIFACTS[tile.pedestalArtifact];
                 const broken = tile.pedestalInactive ? ' <span style="color:#ff4444;">(No Power)</span>' : '';
-                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
+                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${this._itemIcon(tile.pedestalArtifact, 'artifact')}${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
                 html += this.getPedestalEffectDescription(artDef);
                 if (artDef?.pedestal?.radius && artDef.pedestal.radius !== 'global') {
                     html += `<div class="info-row">Radius: ${artDef.pedestal.radius} | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
@@ -1138,7 +1147,7 @@ export class UI {
             if (tile.pedestalArtifact) {
                 const artDef = ARTIFACTS[tile.pedestalArtifact];
                 const broken = tile.pedestalInactive ? ' <span style="color:#ff4444;">(No Power)</span>' : '';
-                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
+                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${this._itemIcon(tile.pedestalArtifact, 'artifact')}${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
                 html += this.getPedestalEffectDescription(artDef);
                 if (artDef?.pedestal?.radius && artDef.pedestal.radius !== 'global') {
                     html += `<div class="info-row">Radius: ${artDef.pedestal.radius} | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
@@ -1325,7 +1334,7 @@ export class UI {
             }).join(' + ');
             const outputStr = Object.entries(recipe.output).map(([k, v]) => {
                 const tip = this.getCraftOutputTip(k);
-                if (tip) return `<span class="skill-tip" data-tip="${tip}">${k.replace(/_/g, ' ')}${v > 1 ? ':' + v : ''}</span>`;
+                if (tip) return `${this._itemIcon(k)}<span class="skill-tip" data-tip="${tip}">${k.replace(/_/g, ' ')}${v > 1 ? ':' + v : ''}</span>`;
                 return `${k}:${v}`;
             }).join('+');
             const cls = canCraft ? 'craft-available' : 'craft-unavailable';
@@ -1372,10 +1381,11 @@ export class UI {
             const hungerColor = statColor(c.needs.hunger);
             const restColor = statColor(c.needs.rest);
             const hpColor = statColor(c.maxHp > 0 ? (c.hp / c.maxHp) * 100 : 100);
+            const weaponIcon = c.weapon ? this._itemIcon(c.weapon.key, 'weapon') : '';
             const weapon = c.weapon?.name || 'Fists';
             html += `<div class="hud-colonist" data-colonist-id="${c.id}">`;
             const needsDots = `<span class="hud-dots"><span style="color:${moodColor}">●</span><span style="color:${hungerColor}">●</span><span style="color:${restColor}">●</span><span style="color:${hpColor}">●</span></span>`;
-            html += `<span class="hud-name" style="color:${c.nameColor || '#ffff00'}">${c.name}</span> ${needsDots} <span class="hud-weapon">${weapon}</span> <span class="hud-state">${c.state}${c.drafted ? ' [D]' : ''}${c.guardMode ? ' [G]' : ''}</span>`;
+            html += `<span class="hud-name" style="color:${c.nameColor || '#ffff00'}">${c.name}</span> ${needsDots} <span class="hud-weapon">${weaponIcon}${weapon}</span> <span class="hud-state">${c.state}${c.drafted ? ' [D]' : ''}${c.guardMode ? ' [G]' : ''}</span>`;
             html += `<div class="hud-bars">Mood: <span style="color:${moodColor}">${c.mood.toFixed(0)} (${moodLevel})</span> | Hunger: <span style="color:${hungerColor}">${c.needs.hunger.toFixed(0)}</span> | Rest: <span style="color:${restColor}">${c.needs.rest.toFixed(0)}</span> | HP: <span style="color:${hpColor}">${Math.round(c.hp)}/${c.maxHp}</span></div>`;
             html += `</div>`;
         }
@@ -1690,6 +1700,7 @@ export class UI {
         const artifacts = this.game.resources.artifacts;
         const potions = this.game.resources.potions;
         const tomes = this.game.resources.tomes;
+        const consumables = this.game.resources.consumables;
         const tamed = this.game.tamedAnimals;
 
         const equipCount = weapons.length + armors.length + tools.length + artifacts.length;
@@ -1710,7 +1721,7 @@ export class UI {
         } else if (activeTab === 'equipment') {
             html += this._buildInvEquipment(weapons, armors, tools, artifacts);
         } else if (activeTab === 'consumables') {
-            html += this._buildInvConsumables(potions, tomes);
+            html += this._buildInvConsumables(potions, tomes, consumables);
         } else if (activeTab === 'animals') {
             html += this._buildInvAnimals(tamed);
         }
@@ -1759,13 +1770,13 @@ export class UI {
             weapons.forEach((w, i) => {
                 let stats = `Dmg: ${w.damage}`;
                 if (w.spellDamageBonus) stats += `, +${Math.round(w.spellDamageBonus * 100)}% spell`;
-                html += `<div class="inv-row"><span class="inv-name">${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Discard ${w.name}?')){window.game.discardWeapon(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(w.key, 'weapon')}${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Discard ${w.name}?')){window.game.discardWeapon(${i})}">x</button></div>`;
             });
         }
         if (armors.length > 0) {
             html += '<div class="info-row" style="color:#9966cc;margin-top:8px;margin-bottom:4px;"><b>Armor:</b></div>';
             armors.forEach((a, i) => {
-                html += `<div class="inv-row"><span class="inv-name">${a.name}</span><span class="inv-amount">-${Math.round(a.damageReduction * 100)}% dmg</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArmor(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(a.key, 'armor')}${a.name}</span><span class="inv-amount">-${Math.round(a.damageReduction * 100)}% dmg</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArmor(${i})}">x</button></div>`;
             });
         }
         if (tools.length > 0) {
@@ -1776,31 +1787,41 @@ export class UI {
                 if (t.choppingSpeed) stats.push(`+${Math.round((t.choppingSpeed-1)*100)}% chop`);
                 if (t.farmingSpeed) stats.push(`+${Math.round((t.farmingSpeed-1)*100)}% farm`);
                 if (t.moveSpeedBonus) stats.push(`+${Math.round(t.moveSpeedBonus*100)}% move`);
-                html += `<div class="inv-row"><span class="inv-name">${t.name}</span><span class="inv-amount">${stats.join(', ')}</span><button class="inv-delete" onclick="if(confirm('Discard ${t.name}?')){window.game.discardTool(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(t.key, 'tool')}${t.name}</span><span class="inv-amount">${stats.join(', ')}</span><button class="inv-delete" onclick="if(confirm('Discard ${t.name}?')){window.game.discardTool(${i})}">x</button></div>`;
             });
         }
         if (artifacts.length > 0) {
             html += '<div class="info-row" style="color:#ccaa44;margin-top:8px;margin-bottom:4px;"><b>Artifacts:</b></div>';
             artifacts.forEach((a, i) => {
                 const tip = this._getArtifactTooltip(a);
-                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${tip}">${a.name}</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArtifact(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${tip}">${this._itemIcon(a.key, 'artifact')}${a.name}</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArtifact(${i})}">x</button></div>`;
             });
         }
         if (!html) html = '<div class="info-row" style="color:#666;">No equipment in storage.</div>';
         return html;
     }
 
-    _buildInvConsumables(potions, tomes) {
+    _buildInvConsumables(potions, tomes, consumables) {
         let html = '';
+        if (consumables && consumables.length > 0) {
+            html += '<div class="info-row" style="color:#aa44ff;margin-bottom:4px;"><b>Usable Items:</b></div>';
+            for (let i = 0; i < consumables.length; i++) {
+                const c = consumables[i];
+                const def = TRADER_EXCLUSIVE_ITEMS[c.key];
+                const desc = def?.description || '';
+                const icon = this._itemIcon(c.key);
+                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${desc}">${icon}${c.name}</span><button class="inv-use" onclick="window.game.useConsumable(${i})">Use</button></div>`;
+            }
+        }
         if (potions.length > 0) {
-            html += '<div class="info-row" style="color:#cc88aa;margin-bottom:4px;"><b>Potions:</b></div>';
+            html += '<div class="info-row" style="color:#cc88aa;margin-top:8px;margin-bottom:4px;"><b>Potions:</b></div>';
             const potionCounts = {};
             for (const p of potions) {
                 potionCounts[p.type] = (potionCounts[p.type] || 0) + 1;
             }
             for (const [type, count] of Object.entries(potionCounts)) {
                 const def = POTIONS[type];
-                html += `<div class="inv-row"><span class="inv-name">${def ? def.name : type}</span><span class="inv-amount">x${count}</span></div>`;
+                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(type, 'potion')}${def ? def.name : type}</span><span class="inv-amount">x${count}</span></div>`;
             }
         }
         if (tomes.length > 0) {
@@ -1813,7 +1834,7 @@ export class UI {
                 const def = SPELL_TOMES[key];
                 const spell = def ? SPELLS[def.spell] : null;
                 const schoolName = spell ? MAGIC_SKILLS[spell.school]?.name : '';
-                html += `<div class="inv-row"><span class="inv-name">${def ? def.name : key}</span><span class="inv-amount">x${count}${schoolName ? ` (${schoolName})` : ''}</span></div>`;
+                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(key, 'tome')}${def ? def.name : key}</span><span class="inv-amount">x${count}${schoolName ? ` (${schoolName})` : ''}</span></div>`;
             }
         }
         if (!html) html = '<div class="info-row" style="color:#666;">No consumables.</div>';
@@ -1920,6 +1941,12 @@ export class UI {
         const s = this.game.settings;
         let html = '<div class="panel-close" data-panel-close="settings">&times;</div><h3>Settings</h3>';
 
+        html += `<div class="settings-section"><div class="settings-section-title">Save / Load</div>`;
+        html += `<div class="settings-row" style="gap:8px;">`;
+        html += `<button onclick="window.game.save()" class="settings-btn settings-btn-green">Save Game</button>`;
+        html += `<button onclick="window.game.exportSave()" class="settings-btn settings-btn-blue">Export Save</button>`;
+        html += `</div></div>`;
+
         html += `<div class="settings-section"><div class="settings-section-title">Visual</div>`;
         html += `<div class="settings-row">`;
         html += `<label for="set-skin">Tile Skin:</label>`;
@@ -1972,12 +1999,6 @@ export class UI {
         html += this._settingsCheck('set-minimap', s.showMinimap, 'window.game.settings.showMinimap=this.checked;document.getElementById("minimap-container").style.display=this.checked?"":"none"', 'Show minimap');
         html += this._settingsCheck('set-fps', s.showFps, 'window.game.settings.showFps=this.checked', 'Show FPS counter (top-right of game grid)');
         html += `</div>`;
-
-        html += `<div class="settings-section"><div class="settings-section-title">Save / Load</div>`;
-        html += `<div class="settings-row" style="gap:8px;">`;
-        html += `<button onclick="window.game.save()" class="settings-btn settings-btn-green">Save Game</button>`;
-        html += `<button onclick="window.game.exportSave()" class="settings-btn settings-btn-blue">Export Save</button>`;
-        html += `</div></div>`;
 
         html += `<div class="settings-section">`;
         html += `<button onclick="window.game.showGlossary()" class="settings-btn settings-btn-purple">View Glossary</button>`;
@@ -2086,6 +2107,7 @@ export class UI {
             if (tab === 'expeditions') {
                 const logEl = this.elements.arcanePanel.querySelector('.exp-log-container');
                 if (logEl) logEl.scrollTop = logEl.scrollHeight;
+                this._setupExpCheckboxLimits();
             }
         }
 
@@ -2194,7 +2216,9 @@ export class UI {
                         const color = p.hp <= 0 ? '#664444' : hpPct < 30 ? '#ff4444' : hpPct < 60 ? '#ffaa44' : '#88cc88';
                         const status = p.hp <= 0 ? ' [DOWN]' : '';
                         const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
-                        html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${status}</div>`;
+                        const priority = p.artifact?.expedition?.targetPriority || 0;
+                        const threatStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'};font-size:0.85em;">[${priority > 0 ? '▲' : '▼'}Threat]</span>` : '';
+                        html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${status}${threatStr}</div>`;
                     }
 
                     if (exp.combat) {
@@ -2247,20 +2271,24 @@ export class UI {
         const available = this.game.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
         let html = `<div class="arcane-section">`;
         html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Select Party</div>`;
-        html += `<div class="info-row" style="color:#888;">Choose colonists to send:</div>`;
+        html += `<div class="info-row" style="color:#888;">Choose up to 5 colonists:</div>`;
         for (const c of available) {
-            const weaponInfo = c.weapon ? ` (${c.weapon.name})` : ' (unarmed)';
-            html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}"> ${c.name}${weaponInfo} HP:${c.hp}/${c.maxHp}</label></div>`;
+            const dmg = c.weapon ? c.weapon.damage : 5;
+            const def = c.armor ? Math.round(c.armor.damageReduction * 100) : 0;
+            const priority = c.artifact?.expedition?.targetPriority || c.artifact?.combat?.targetPriority || 0;
+            const priorityStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'}">${priority > 0 ? '▲' : '▼'}Thr</span>` : '';
+            const defStr = def > 0 ? ` Def:${def}%` : '';
+            html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}" data-max="5"> ${c.name} <span style="color:#888;font-size:0.85em;">HP:${c.hp}/${c.maxHp} Dmg:${dmg}${defStr}${priorityStr}</span></label></div>`;
         }
         const packAnimals = (this.game.tamedAnimals || []).filter(a => {
             const def = TAMED_ANIMALS[a.type];
             return def && def.packAnimal && a.hp > 0 && !a.onExpedition;
         });
         if (packAnimals.length > 0) {
-            html += `<div class="info-row" style="color:#bbaa44;margin-top:6px;"><b>Pack Animals:</b></div>`;
+            html += `<div class="info-row" style="color:#bbaa44;margin-top:6px;"><b>Pack Animals (max 2):</b></div>`;
             for (const a of packAnimals) {
                 const def = TAMED_ANIMALS[a.type];
-                html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
+                html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}" data-max="2"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
             }
         }
         html += `<div class="info-actions" style="margin-top:8px;">`;
@@ -2268,6 +2296,21 @@ export class UI {
         html += `<button onclick="window.game.ui._arcaneExpSetup=null;window.game.ui._lastArcaneHtml='';window.game.ui.updateArcanePanel();" style="background:#333;color:#aaa;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:8px;">Cancel</button>`;
         html += `</div></div>`;
         return html;
+    }
+
+    _setupExpCheckboxLimits() {
+        const panel = this.elements.arcanePanel;
+        const enforce = (cls, max) => {
+            const boxes = panel.querySelectorAll('.' + cls);
+            if (!boxes.length) return;
+            const handler = () => {
+                const checked = panel.querySelectorAll('.' + cls + ':checked').length;
+                boxes.forEach(el => { if (!el.checked) el.disabled = checked >= max; });
+            };
+            boxes.forEach(cb => { cb.addEventListener('change', handler); });
+        };
+        enforce('exp-check', 5);
+        enforce('exp-pack-check', 2);
     }
 
     _renderExpeditionVis() {
@@ -2278,60 +2321,176 @@ export class UI {
         const expl = this.game.exploration;
         const exp = expl.expeditions.find(e => e.status === 'exploring' || e.status === 'returning');
         if (!exp) {
-            ctx.clearRect(0, 0, W, H);
-            return;
+            if (this._expVisState.finishing) {
+                this._expVisState.finishFrame = (this._expVisState.finishFrame || 0) + 1;
+                if (this._expVisState.finishFrame > 60) {
+                    this._expVisState.finishing = false;
+                    this._expVisState.finishExp = null;
+                    ctx.clearRect(0, 0, W, H);
+                    return;
+                }
+            } else if (this._expVisState.finishExp) {
+                this._expVisState.finishing = true;
+                this._expVisState.finishFrame = 0;
+            } else {
+                ctx.clearRect(0, 0, W, H);
+                return;
+            }
+        } else {
+            this._expVisState.finishExp = exp;
+            this._expVisState.finishing = false;
+            this._expVisState.finishFrame = 0;
         }
 
-        const elapsed = this.game.tick - exp.startTick;
-        const totalDur = Math.floor(exp.duration * 1.2);
-        const progress = Math.min(1, elapsed / totalDur);
+        const activeExp = exp || this._expVisState.finishExp;
+        if (!activeExp) { ctx.clearRect(0, 0, W, H); return; }
 
+        const elapsed = this.game.tick - activeExp.startTick;
+        const totalDur = Math.floor(activeExp.duration * 1.2);
+        let progress = Math.min(1, elapsed / totalDur);
+        if (!exp && this._expVisState.finishing) {
+            progress = 1;
+        }
+
+        const isRetreating = activeExp.status === 'returning' && !!activeExp.retreatTick;
+        let retreatProgress = 0;
+        if (isRetreating) {
+            const retreatDur = activeExp.retreatTick - activeExp.retreatStartTick;
+            const retreatElapsed = this.game.tick - activeExp.retreatStartTick;
+            retreatProgress = Math.min(1, Math.max(0, retreatElapsed / (retreatDur || 1)));
+        }
+
+        const dimDef = DIMENSIONS[activeExp.dimension];
+        const vis = dimDef?.vis || { wall: 'stone_wall', floor: 'stone_floor' };
         const dimColors = {
-            crystal_caves: { bg1: '#0a0a2a', bg2: '#1a1a4a', accent: '#4488ff' },
-            verdant_depths: { bg1: '#0a1a0a', bg2: '#1a3a1a', accent: '#44cc44' },
-            shadow_realm: { bg1: '#1a0a1a', bg2: '#2a1a2a', accent: '#aa44ff' },
-            arcane_library: { bg1: '#1a1a0a', bg2: '#2a2a1a', accent: '#ffcc44' },
+            crystal_caves: { accent: '#4488ff' },
+            verdant_depths: { accent: '#44cc44' },
+            shadow_realm: { accent: '#aa44ff' },
+            arcane_library: { accent: '#ffcc44' },
         };
-        const colors = dimColors[exp.dimensionKey] || dimColors.crystal_caves;
+        const colors = dimColors[activeExp.dimension] || dimColors.crystal_caves;
 
-        const grad = ctx.createLinearGradient(0, 0, W, 0);
-        grad.addColorStop(0, colors.bg1);
-        grad.addColorStop(1, colors.bg2);
-        ctx.fillStyle = grad;
+        const tileSize = 12;
+        const wallRows = 2;
+        const wallH = wallRows * tileSize;
+        const skinMgrVis = this.game.skinManager;
+        const useSkinVis = skinMgrVis && skinMgrVis.isActive;
+        const wallDef = BUILDINGS[vis.wall];
+        const floorDef = BUILDINGS[vis.floor];
+        const wallSprite = useSkinVis ? (skinMgrVis.getSprite('buildings', vis.wall) || skinMgrVis.getSprite('floors', vis.wall)) : null;
+        const floorSprite = useSkinVis ? (skinMgrVis.getSprite('floors', vis.floor) || skinMgrVis.getSprite('buildings', vis.floor)) : null;
+
+        ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, W, H);
 
+        const fullBlockChars = new Set(['█', '▓', '▒']);
+        for (let tx = 0; tx < W; tx += tileSize) {
+            for (let ty = 0; ty < wallH; ty += tileSize) {
+                if (wallSprite) {
+                    ctx.drawImage(wallSprite, tx, ty, tileSize, tileSize);
+                } else if (wallDef) {
+                    if (fullBlockChars.has(wallDef.char)) {
+                        ctx.fillStyle = wallDef.color;
+                        ctx.fillRect(tx, ty, tileSize, tileSize);
+                    } else {
+                        ctx.fillStyle = wallDef.bg || '#1a1a1a';
+                        ctx.fillRect(tx, ty, tileSize, tileSize);
+                        ctx.fillStyle = wallDef.color;
+                        ctx.font = `${tileSize}px monospace`;
+                        ctx.fillText(wallDef.char, tx, ty + tileSize - 1);
+                    }
+                }
+            }
+            for (let ty = wallH; ty < H - 14; ty += tileSize) {
+                if (floorSprite) {
+                    ctx.drawImage(floorSprite, tx, ty, tileSize, tileSize);
+                } else if (floorDef) {
+                    if (fullBlockChars.has(floorDef.char)) {
+                        ctx.fillStyle = floorDef.color;
+                        ctx.fillRect(tx, ty, tileSize, tileSize);
+                    } else {
+                        ctx.fillStyle = floorDef.bg || '#111';
+                        ctx.fillRect(tx, ty, tileSize, tileSize);
+                        ctx.fillStyle = floorDef.color;
+                        ctx.font = `${tileSize}px monospace`;
+                        ctx.fillText(floorDef.char, tx, ty + tileSize - 1);
+                    }
+                }
+            }
+        }
+
+        const floorTop = wallH;
+        const floorBottom = H - 14;
+        const diagSlope = 0.4;
+
         const roomCount = 8;
-        ctx.strokeStyle = '#333';
+        ctx.strokeStyle = '#111';
         ctx.lineWidth = 1;
         for (let i = 1; i < roomCount; i++) {
             const rx = (W / roomCount) * i;
             ctx.beginPath();
             ctx.moveTo(rx, 0);
-            ctx.lineTo(rx, H);
+            ctx.lineTo(rx, wallH);
+            ctx.lineTo(rx + (floorBottom - wallH) * diagSlope, floorBottom);
             ctx.stroke();
         }
 
+        const finishX = W - tileSize * 5;
+        const checkSize = 6;
+        for (let cy = 0; cy < floorTop; cy += checkSize) {
+            for (let cx = 0; cx < tileSize; cx += checkSize) {
+                const isWhite = ((cx / checkSize) + (cy / checkSize)) % 2 === 0;
+                ctx.fillStyle = isWhite ? '#ffffff' : '#111111';
+                ctx.fillRect(finishX + cx, cy, checkSize, checkSize);
+            }
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, floorTop, W, floorBottom - floorTop);
+        ctx.clip();
+        ctx.transform(1, 0, diagSlope, 1, -diagSlope * floorTop, 0);
+        for (let cy = floorTop; cy < floorBottom; cy += checkSize) {
+            for (let cx = 0; cx < tileSize; cx += checkSize) {
+                const isWhite = ((cx / checkSize) + (cy / checkSize)) % 2 === 0;
+                ctx.fillStyle = isWhite ? '#ffffff' : '#111111';
+                ctx.fillRect(finishX + cx, cy, checkSize, checkSize);
+            }
+        }
+        ctx.restore();
+
         ctx.fillStyle = '#222';
         ctx.fillRect(0, H - 14, W, 14);
-        ctx.fillStyle = colors.accent;
+        ctx.fillStyle = isRetreating ? '#ff4444' : colors.accent;
         ctx.globalAlpha = 0.6;
         ctx.fillRect(0, H - 14, W * progress, 14);
         ctx.globalAlpha = 1;
         ctx.fillStyle = '#ccc';
         ctx.font = '10px monospace';
-        ctx.fillText(`${Math.floor(progress * 100)}%`, W * progress - 20, H - 3);
+        ctx.fillText(isRetreating ? 'RETREATING' : `${Math.floor(progress * 100)}%`, W * progress - 20, H - 3);
 
-        const targetX = 30 + progress * (W - 80);
-        this._expVisState.partyX += (targetX - this._expVisState.partyX) * 0.1;
+        let targetX;
+        const finishLineX = W - tileSize * 5;
+        if (!exp && this._expVisState.finishing) {
+            targetX = W + 60;
+        } else if (isRetreating) {
+            const startX = 30 + progress * (finishLineX - 30);
+            targetX = startX * (1 - retreatProgress);
+        } else if (progress >= 1) {
+            targetX = W + 60;
+        } else {
+            targetX = 30 + progress * (finishLineX - 30);
+        }
+        const walkSpeed = (targetX > W) ? 0.05 : 0.1;
+        this._expVisState.partyX += (targetX - this._expVisState.partyX) * walkSpeed;
         const partyX = this._expVisState.partyX;
 
-        const party = exp.partySnapshot;
+        const party = activeExp.partySnapshot;
         const skinMgr = this.game.skinManager;
         const useSkins = skinMgr && skinMgr.isActive;
         for (let i = 0; i < party.length; i++) {
             const p = party[i];
-            const px = partyX + i * 14;
             const py = H / 2 + (i - party.length / 2) * 16;
+            const px = partyX + (py - H / 2) * diagSlope;
             const hpPct = p.maxHp > 0 ? p.hp / p.maxHp : 0;
             if (p.hp <= 0) {
                 ctx.globalAlpha = 0.4;
@@ -2363,21 +2522,53 @@ export class UI {
             ctx.globalAlpha = 1;
         }
 
-        if (exp.combat) {
-            const enemies = exp.combat.enemies.filter(e => e.hp > 0);
+        if (activeExp.packAnimals && activeExp.packAnimals.length > 0) {
+            for (let i = 0; i < activeExp.packAnimals.length; i++) {
+                const pa = activeExp.packAnimals[i];
+                const pay = H / 2 + (i - activeExp.packAnimals.length / 2) * 16;
+                const pax = partyX - 24 + (pay - H / 2) * diagSlope;
+                const animalDef = ANIMALS[pa.type];
+                if (useSkins) {
+                    const sprite = skinMgr.getSprite('entities', pa.type);
+                    if (sprite) {
+                        ctx.drawImage(sprite, pax - 6, pay - 6, 12, 12);
+                    } else {
+                        ctx.font = 'bold 12px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = animalDef?.color || '#bbaa44';
+                        ctx.fillText(animalDef?.char || 'a', pax, pay);
+                    }
+                } else {
+                    ctx.font = 'bold 12px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = animalDef?.color || '#bbaa44';
+                    ctx.fillText(animalDef?.char || 'a', pax, pay);
+                }
+            }
+        }
+
+        if (activeExp.combat) {
+            const enemies = activeExp.combat.enemies.filter(e => e.hp > 0);
+            const raiderSprite = useSkins ? skinMgr.getSprite('entities', 'raider') : null;
             for (let i = 0; i < enemies.length; i++) {
-                const ex = partyX + 60 + i * 16;
                 const ey = H / 2 + (i - enemies.length / 2) * 16;
-                ctx.beginPath();
-                ctx.moveTo(ex, ey - 7);
-                ctx.lineTo(ex - 6, ey + 5);
-                ctx.lineTo(ex + 6, ey + 5);
-                ctx.closePath();
-                ctx.fillStyle = '#ff3333';
-                ctx.fill();
-                ctx.strokeStyle = '#aa0000';
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                const ex = partyX + 60 + (ey - H / 2) * diagSlope;
+                if (raiderSprite) {
+                    ctx.drawImage(raiderSprite, ex - 7, ey - 7, 14, 14);
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(ex, ey - 7);
+                    ctx.lineTo(ex - 6, ey + 5);
+                    ctx.lineTo(ex + 6, ey + 5);
+                    ctx.closePath();
+                    ctx.fillStyle = '#ff3333';
+                    ctx.fill();
+                    ctx.strokeStyle = '#aa0000';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
             }
 
             if (Math.random() < 0.3) {
@@ -2390,11 +2581,41 @@ export class UI {
             }
         }
 
-        const logLen = exp.log.length;
+        const logLen = activeExp.log.length;
         if (logLen > this._expVisState.lastLogLen) {
-            const newEntries = exp.log.slice(this._expVisState.lastLogLen);
+            const newEntries = activeExp.log.slice(this._expVisState.lastLogLen);
             for (const entry of newEntries) {
-                if (entry.type === 'loot' || entry.type === 'success') {
+                const text = entry.text || '';
+                const isCast = text.includes('casts');
+                if (isCast && text.includes('heals')) {
+                    this._expVisState.effects.push({
+                        type: 'spell_heal',
+                        x: partyX + Math.random() * 20,
+                        y: H / 2 - 5 + Math.random() * 10,
+                        frame: 0, maxFrames: 30
+                    });
+                } else if (isCast && text.includes('shielded')) {
+                    this._expVisState.effects.push({
+                        type: 'spell_shield',
+                        x: partyX + Math.random() * 20,
+                        y: H / 2,
+                        frame: 0, maxFrames: 35
+                    });
+                } else if (isCast && (text.includes('damage') || text.includes('Hits'))) {
+                    this._expVisState.effects.push({
+                        type: 'spell_attack',
+                        x: partyX + 20,
+                        y: H / 2 - 10 + Math.random() * 20,
+                        frame: 0, maxFrames: 20
+                    });
+                } else if (isCast && text.includes('summon')) {
+                    this._expVisState.effects.push({
+                        type: 'spell_summon',
+                        x: partyX + 10 + Math.random() * 15,
+                        y: H / 2 - 10 + Math.random() * 20,
+                        frame: 0, maxFrames: 30
+                    });
+                } else if (entry.type === 'loot' || entry.type === 'success') {
                     this._expVisState.effects.push({
                         type: 'loot',
                         x: partyX + Math.random() * 20,
@@ -2447,9 +2668,65 @@ export class UI {
                 ctx.fillStyle = '#ff2222';
                 ctx.globalAlpha = alpha * 0.4;
                 ctx.fillRect(eff.x - 15, eff.y - 15, 30, 30);
+            } else if (eff.type === 'spell_heal') {
+                ctx.fillStyle = '#44ff44';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText('+', eff.x, eff.y - eff.frame * 0.8);
+            } else if (eff.type === 'spell_shield') {
+                ctx.strokeStyle = '#4488ff';
+                ctx.lineWidth = 2;
+                const r = 8 + eff.frame * 0.3;
+                ctx.beginPath();
+                ctx.arc(eff.x, eff.y, r, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (eff.type === 'spell_attack') {
+                ctx.fillStyle = '#aa44ff';
+                const bx = eff.x + eff.frame * 2.5;
+                ctx.beginPath();
+                ctx.moveTo(bx, eff.y);
+                ctx.lineTo(bx - 5, eff.y - 3);
+                ctx.lineTo(bx - 5, eff.y + 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#dd88ff';
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.fillRect(eff.x, eff.y - 1, eff.frame * 2.5, 2);
+            } else if (eff.type === 'spell_summon') {
+                ctx.fillStyle = '#ffaa22';
+                const pulse = Math.sin(eff.frame * 0.4) * 3;
+                ctx.beginPath();
+                ctx.arc(eff.x, eff.y, 5 + pulse, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ff8800';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             }
             ctx.globalAlpha = 1;
         }
+    }
+
+    _itemIcon(itemKey, categoryHint) {
+        const mgr = this.game.skinManager;
+        if (mgr && mgr.isActive) {
+            const url = mgr.getItemSpriteDataURL(itemKey);
+            if (url) return `<img src="${url}" style="width:14px;height:14px;vertical-align:middle;margin-right:2px;image-rendering:pixelated;">`;
+        }
+        const cat = categoryHint || this._getItemCategory(itemKey);
+        if (!cat) return '';
+        const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey]);
+        const ch = itemDef?.char || ITEM_CHARS[cat]?.char || '?';
+        const color = itemDef?.charColor || ITEM_CHARS[cat]?.color || '#aaa';
+        return `<span style="color:${color};font-weight:bold;margin-right:2px;">${ch}</span>`;
+    }
+
+    _getItemCategory(itemKey) {
+        if (WEAPONS[itemKey]) return 'weapon';
+        if (ARMORS[itemKey]) return 'armor';
+        if (TOOLS[itemKey]) return 'tool';
+        if (ARTIFACTS[itemKey]) return 'artifact';
+        if (POTIONS[itemKey]) return 'potion';
+        if (SPELL_TOMES[itemKey]) return 'tome';
+        return null;
     }
 
     getColonistTaskDescription(colonist) {
@@ -2509,7 +2786,8 @@ export class UI {
                 if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
             }
         }
-        return count >= def.maxCount;
+        const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
+        return count >= def.maxCount + bonus;
     }
 
     updateNotifications() {
