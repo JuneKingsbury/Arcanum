@@ -734,7 +734,8 @@ class Game {
         }
         const packChecks = panel.querySelectorAll('.exp-pack-check:checked');
         const packIds = Array.from(packChecks).map(cb => parseInt(cb.value));
-        const result = this.exploration.sendExpedition(this, dimensionKey, ids, packIds);
+        const difficulty = this.ui._expDifficulty || 1;
+        const result = this.exploration.sendExpedition(this, dimensionKey, ids, packIds, difficulty);
         if (result) {
             this.notifications.push({ text: `Expedition launched to ${result.dimensionName}!`, tick: this.tick, type: 'success' });
             this.ui._arcaneExpSetup = null;

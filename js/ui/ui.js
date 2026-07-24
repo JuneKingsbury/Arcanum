@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -2291,6 +2291,12 @@ export class UI {
                 html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}" data-max="2"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
             }
         }
+        html += `<div class="info-row" style="margin-top:10px;color:#ffaa33;font-weight:bold;">Difficulty</div>`;
+        html += `<div class="info-row" style="display:flex;align-items:center;gap:8px;">`;
+        html += `<input type="range" id="exp-difficulty" min="1" max="5" value="${this._expDifficulty || 1}" style="flex:1;accent-color:#ffaa33;">`;
+        html += `<span id="exp-diff-label" style="min-width:70px;color:#ffaa33;font-size:0.9em;"></span>`;
+        html += `</div>`;
+        html += `<div id="exp-diff-desc" style="color:#888;font-size:0.8em;padding:2px 4px;"></div>`;
         html += `<div class="info-actions" style="margin-top:8px;">`;
         html += `<button onclick="window.game.launchExpeditionFromPanel('${dimensionKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
         html += `<button onclick="window.game.ui._arcaneExpSetup=null;window.game.ui._lastArcaneHtml='';window.game.ui.updateArcanePanel();" style="background:#333;color:#aaa;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:8px;">Cancel</button>`;
@@ -2311,6 +2317,27 @@ export class UI {
         };
         enforce('exp-check', 5);
         enforce('exp-pack-check', 2);
+
+        const slider = panel.querySelector('#exp-difficulty');
+        const label = panel.querySelector('#exp-diff-label');
+        const desc = panel.querySelector('#exp-diff-desc');
+        if (slider && label && desc) {
+            const updateLabel = () => {
+                const lvl = parseInt(slider.value);
+                this._expDifficulty = lvl;
+                const d = EXPEDITION_DIFFICULTY[lvl];
+                label.textContent = `${lvl} - ${d.name}`;
+                const lootPct = Math.round((d.lootAmountMult - 1) * 100);
+                const rarePct = Math.round((d.rareLootMult - 1) * 100);
+                if (lvl === 1) {
+                    desc.textContent = 'Standard difficulty. No bonuses.';
+                } else {
+                    desc.textContent = `+${lootPct}% loot, +${rarePct}% rare find chance. Enemies & traps hit harder.`;
+                }
+            };
+            slider.addEventListener('input', updateLabel);
+            updateLabel();
+        }
     }
 
     _renderExpeditionVis() {
@@ -2480,7 +2507,7 @@ export class UI {
         } else {
             targetX = 30 + progress * (finishLineX - 30);
         }
-        const walkSpeed = (targetX > W) ? 0.05 : 0.1;
+        const walkSpeed = (targetX > W) ? 0.025 : 0.1;
         this._expVisState.partyX += (targetX - this._expVisState.partyX) * walkSpeed;
         const partyX = this._expVisState.partyX;
 

@@ -1,4 +1,4 @@
-import { DIMENSIONS, EXPLORATION_CONFIG, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { DIMENSIONS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
 let nextExpeditionId = 1;
@@ -27,7 +27,7 @@ export class ExplorationSystem {
         return results;
     }
 
-    sendExpedition(game, dimensionKey, colonistIds, packAnimalIds = []) {
+    sendExpedition(game, dimensionKey, colonistIds, packAnimalIds = [], difficulty = 1) {
         if (!this.canSend(game, dimensionKey)) return null;
         if (colonistIds.length === 0) return null;
 
@@ -91,7 +91,8 @@ export class ExplorationSystem {
             }
         }
         if (durationMult !== 1.0) duration = Math.floor(duration * durationMult);
-        const encounters = this._generateEncounters(dim);
+        const diffSettings = EXPEDITION_DIFFICULTY[difficulty] || EXPEDITION_DIFFICULTY[1];
+        const encounters = this._generateEncounters(dim, diffSettings);
 
         const expedition = {
             id: nextExpeditionId++,
@@ -114,10 +115,13 @@ export class ExplorationSystem {
                 : [{ tick: 0, text: `Party heading to Rift Gate`, type: 'info' }],
             combat: null,
             lastMicroEventTick: 0,
+            difficulty,
+            diffSettings,
         };
 
         this.expeditions.push(expedition);
-        game.eventLog.add(game, `Expedition assembling for ${dim.name}`, 'event', null);
+        const diffLabel = diffSettings.name !== 'Normal' ? ` (${diffSettings.name})` : '';
+        game.eventLog.add(game, `Expedition assembling for ${dim.name}${diffLabel}`, 'event', null);
         return expedition;
     }
 
@@ -260,43 +264,48 @@ export class ExplorationSystem {
         }
     }
 
-    _generateEncounters(dim) {
+    _generateEncounters(dim, diffSettings) {
         const encounters = [];
-        for (let i = 0; i < dim.encounters; i++) {
+        const totalEncounters = dim.encounters + (diffSettings.extraEncounters || 0);
+        for (let i = 0; i < totalEncounters; i++) {
             const isCombat = Math.random() < 0.6;
             if (isCombat) {
-                const count = randInt(dim.enemies.count[0], dim.enemies.count[1]);
+                const baseCount = randInt(dim.enemies.count[0], dim.enemies.count[1]);
+                const count = Math.max(1, Math.round(baseCount * diffSettings.enemyCountMult));
                 const enemies = [];
                 for (let j = 0; j < count; j++) {
+                    const baseHp = randInt(dim.enemies.hp[0], dim.enemies.hp[1]);
+                    const baseDmg = randInt(dim.enemies.damage[0], dim.enemies.damage[1]);
                     enemies.push({
-                        hp: randInt(dim.enemies.hp[0], dim.enemies.hp[1]),
+                        hp: Math.round(baseHp * diffSettings.enemyHpMult),
                         maxHp: 0,
-                        damage: randInt(dim.enemies.damage[0], dim.enemies.damage[1]),
+                        damage: Math.round(baseDmg * diffSettings.enemyDmgMult),
                     });
                 }
                 for (const e of enemies) e.maxHp = e.hp;
                 encounters.push({ type: 'combat', enemies });
             } else {
-                const lootEntry = this._rollLoot(dim);
+                const lootEntry = this._rollLoot(dim, diffSettings);
                 encounters.push({ type: 'loot', ...lootEntry });
             }
         }
         return encounters;
     }
 
-    _rollLoot(dim) {
+    _rollLoot(dim, diffSettings) {
+        const lootMult = diffSettings ? diffSettings.lootAmountMult : 1;
         const totalWeight = dim.loot.reduce((s, l) => s + l.weight, 0);
         let roll = Math.random() * totalWeight;
         for (const entry of dim.loot) {
             roll -= entry.weight;
             if (roll <= 0) {
                 if (entry.artifact) return { artifact: entry.artifact };
-                return { resource: entry.resource, amount: randInt(entry.amount[0], entry.amount[1]) };
+                return { resource: entry.resource, amount: Math.round(randInt(entry.amount[0], entry.amount[1]) * lootMult) };
             }
         }
         const fallback = dim.loot[0];
         if (fallback.artifact) return { artifact: fallback.artifact };
-        return { resource: fallback.resource, amount: randInt(fallback.amount[0], fallback.amount[1]) };
+        return { resource: fallback.resource, amount: Math.round(randInt(fallback.amount[0], fallback.amount[1]) * lootMult) };
     }
 
     _tryMicroEvent(exp, game) {
@@ -311,10 +320,11 @@ export class ExplorationSystem {
         const dim = DIMENSIONS[exp.dimension];
         const dimEvents = dim.events;
 
+        const ds = exp.diffSettings || EXPEDITION_DIFFICULTY[1];
         if (dimEvents && dimEvents.rare) {
             const rareEncounterMult = getPartyExpeditionEffect(exp.partySnapshot, 'rareEncounterMult');
             for (const rare of dimEvents.rare) {
-                if (Math.random() < rare.chance * rareEncounterMult) {
+                if (Math.random() < rare.chance * rareEncounterMult * ds.rareLootMult) {
                     const msg = rare.text.replace('{name}', member.name);
                     if (rare.loot.artifact) {
                         if (!exp.loot._artifacts) exp.loot._artifacts = [];
@@ -327,7 +337,7 @@ export class ExplorationSystem {
                         const itemName = TRADER_EXCLUSIVE_ITEMS[rare.loot.item]?.name || rare.loot.item;
                         this._addLog(exp, game, `${msg} (found ${itemName}!)`, 'loot');
                     } else {
-                        const amount = randInt(rare.loot.amount[0], rare.loot.amount[1]);
+                        const amount = Math.round(randInt(rare.loot.amount[0], rare.loot.amount[1]) * ds.lootAmountMult);
                         exp.loot[rare.loot.resource] = (exp.loot[rare.loot.resource] || 0) + amount;
                         this._addLog(exp, game, `${msg} (+${amount} ${rare.loot.resource.replace(/_/g, ' ')})`, 'loot');
                     }
@@ -341,7 +351,7 @@ export class ExplorationSystem {
         if (roll < EXPLORATION_CONFIG.trapChance) {
             const trapMult = getPartyExpeditionEffect(exp.partySnapshot, 'trapDamageMult');
             const baseDmg = randInt(EXPLORATION_CONFIG.trapDamageRange[0], EXPLORATION_CONFIG.trapDamageRange[1]);
-            const dmg = Math.floor(baseDmg * trapMult);
+            const dmg = Math.floor(baseDmg * trapMult * ds.trapDmgMult);
             member.hp -= dmg;
             const trapPool = (dimEvents && dimEvents.traps) || EXPLORATION_EVENTS.traps;
             const msg = pickRandom(trapPool).replace('{name}', member.name);
@@ -350,7 +360,7 @@ export class ExplorationSystem {
                 this._checkExpeditionRevive(exp, member, game);
             }
         } else if (roll < EXPLORATION_CONFIG.trapChance + EXPLORATION_CONFIG.findItemChance) {
-            const lootEntry = this._rollLoot(dim);
+            const lootEntry = this._rollLoot(dim, ds);
             const lootMult = getPartyExpeditionEffect(exp.partySnapshot, 'lootMult');
             const discPool = (dimEvents && dimEvents.discoveries) || EXPLORATION_EVENTS.discoveries;
             const msg = pickRandom(discPool).replace('{name}', member.name);
@@ -586,7 +596,8 @@ export class ExplorationSystem {
         if (survived > 0) {
             const dim = DIMENSIONS[exp.dimension];
             const lootMult = getPartyExpeditionEffect(exp.partySnapshot, 'lootMult');
-            const lootEntry = this._rollLoot(dim);
+            const dsCombat = exp.diffSettings || EXPEDITION_DIFFICULTY[1];
+            const lootEntry = this._rollLoot(dim, dsCombat);
             if (lootEntry.artifact) {
                 if (!exp.loot._artifacts) exp.loot._artifacts = [];
                 exp.loot._artifacts.push(lootEntry.artifact);

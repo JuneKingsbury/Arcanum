@@ -149,7 +149,7 @@ Press B to enter Build mode. Buildings are organized into 5 tabs (cycle with Tab
 ### Arcane
 - **Arcanum** (R) — Research station. Colonists study here to unlock the tech tree and progress spell tomes.
 - **Beast Circle** (A) — Required for taming creatures.
-- **Mana Crystal** (W) — Generates 10 mana for the leyline network.
+- **Mana Crystal** (W) — Generates 10 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
 - **Glowstone** (L) — Mana-powered light, radius 5. Consumes 2 mana.
 - **Enchanting Table** (P) — 2x crafting speed. Consumes 4 mana.
 - **Ember Ward** (H) — Warms radius 4 in winter. Consumes 3 mana.
@@ -254,7 +254,7 @@ Wolves are a special case. The taming UI shows your success chance and warns abo
 Melee combat is 1-tile range. Damage = base + weapon bonus. Colonists auto-defend when attacked. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning) attack at range automatically.
 
 ### Raids
-Raiders attack periodically (disabled in Peaceful Mode), scaling with colony wealth. They pathfind toward colonists, breaking through structures if needed. Individual raiders flee when their HP drops below 25%. If 75% of the raiding party is dead or fleeing, the rest rout. A long safety timeout ensures raiders eventually leave even in stalemates.
+Raiders attack periodically (disabled in Peaceful Mode), scaling with both colony wealth and time elapsed. Early raids are gentle (1 raider after the first season), with full raid strength ramping up over 3 in-game years. This gives new colonies breathing room to establish defenses. Individual raiders flee when their HP drops below 30%. If 65% of the raiding party is dead or fleeing, the rest rout. A safety timeout ensures raiders eventually leave in stalemates.
 
 ### Wave Defense (Void Nexus)
 Build a Void Nexus after researching Void Summoning, then click it to start a wave challenge. Each wave is harder (more enemies, more HP). Enemies pathfind to the nexus and will break through walls.
@@ -292,7 +292,18 @@ Golems cannot be drafted, cannot equip items or learn spells, and have fixed ski
 Build a Rift Gate after researching Planar Rift to send expeditions to other dimensions. This is one of the richest parts of the game — you can watch your colonists' journey unfold in real-time through the expedition event log.
 
 ### Sending an Expedition
-Click the Rift Gate, choose a dimension, select colonists (and optional pack animals), then launch. The party walks to the gate and enters the dimension. While exploring, colonists are removed from your workforce.
+Click the Rift Gate, choose a dimension, select colonists (up to 5) and optional pack animals (up to 2), set a difficulty level, then launch. The party walks to the gate and enters the dimension. While exploring, colonists are removed from your workforce.
+
+### Difficulty Levels
+Before launching, choose a difficulty from 1 (Normal) to 5 (Suicidal). Higher difficulty means tougher enemies, more encounters, and deadlier traps — but significantly more loot and dramatically higher chances for rare drops:
+
+| Level | Name | Loot Bonus | Rare Finds | Enemy Scaling |
+|---|---|---|---|---|
+| 1 | Normal | — | — | Standard |
+| 2 | Dangerous | +50% | +50% | +30% HP, +20% dmg |
+| 3 | Perilous | +100% | +150% | +70% HP, +50% dmg |
+| 4 | Deadly | +200% | +300% | +120% HP, +80% dmg |
+| 5 | Suicidal | +300% | +500% | +200% HP, +120% dmg |
 
 ### The Live Event Log
 Click the Rift Gate while an expedition is active to see a scrolling, color-coded log of everything happening to your party:
@@ -327,7 +338,7 @@ As your party explores, small events occur randomly:
 Each dimension has unique ambient text, trap descriptions, discovery messages, and rare encounters that can only happen there.
 
 ### Pack Animals & Survival
-Tamed okapi reduce expedition duration by 25% each (stacks, minimum 50% of base). Defeated colonists return at 1 HP — there's no permadeath. If the entire party falls, you still keep any loot found during the exploration (random discoveries and encounters), but miss the completion bonus for finishing the expedition.
+Tamed okapi (max 2 per expedition) reduce expedition duration by 25% each (stacks, minimum 50% of base). They appear as a separate line behind the party in the expedition visualization. Defeated colonists return at 1 HP — there's no permadeath. If the entire party falls, you still keep any loot found during the exploration (random discoveries and encounters), but miss the completion bonus for finishing the expedition.
 
 ---
 
@@ -351,6 +362,7 @@ Some items can only be obtained through trade:
 - **Hourglass of Diligence** — Artifact, work speed bonus (equipped/pedestal).
 - **Lodestone of Prosperity** — Artifact, +50% wanderer chance (global pedestal).
 - **Haggler's Coin** — Artifact, -15% trade markup (global pedestal).
+- **Crystal Capacitor** — Consumable. Permanently increases mana crystal build limit by 1. Also rarely found in Shadow Realm and Arcane Library expeditions.
 
 ---
 
@@ -508,8 +520,8 @@ The top bar shows colony resources and mana at a glance. Speed controls ([<] [||
 ### Inventory Panel (I)
 Tabbed into four categories for easy navigation:
 - **Resources** — Raw materials with quantities and food preservation info.
-- **Equipment** — Weapons, armor, tools, and artifacts in storage.
-- **Consumables** — Potions and spell tomes.
+- **Equipment** — Weapons, armor, tools, and artifacts in storage. Each item shows an ASCII icon (or sprite if skin is active).
+- **Consumables** — Potions, spell tomes, and usable items (Crystal Capacitor, etc.) with a Use button for one-time consumables.
 - **Animals** — Tamed creatures and their roles.
 
 ### Glossary

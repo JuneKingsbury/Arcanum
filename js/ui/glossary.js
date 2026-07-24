@@ -42,7 +42,7 @@ export const GLOSSARY = [
             ['Fence', '(|) Blocks movement like a wall but lighter to build.'],
             ['Arcanum', '(R) Required for researching new magic. Colonists study here to unlock the tech tree and progress spell tomes.'],
             ['Beast Circle', '(A) Required for binding creatures. Needs research: Beast Binding.'],
-            ['Mana Crystal', '(W) Generates 10 mana. Needs research: Ley Channeling.'],
+            ['Mana Crystal', '(W) Generates 10 mana. Limit 4 (upgradeable with Crystal Capacitor). Needs research: Ley Channeling.'],
             ['Glowstone', '(L) Mana-powered light, radius 5. Consumes 2 mana.'],
             ['Enchanting Table', '(P) 2x crafting speed. Consumes 4 mana.'],
             ['Ember Ward', '(H) Warms nearby tiles (radius 4) in winter. Consumes 3 mana.'],
@@ -117,7 +117,7 @@ export const GLOSSARY = [
             ['Ranged Magic', 'Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning) attack enemies at range automatically.'],
             ['Weapons', 'Fists (5 dmg), Wooden Club (10), Etched Axe (15), Runic Blade (22), Void Blade (30). Craft and equip for better defense.'],
             ['Armor', 'Void Armor (-30% damage taken). Craft with void essence. Equip from colonist info panel.'],
-            ['Raids', 'Raiders attack periodically (disabled in Peaceful Mode). Scale with colony wealth. Individual raiders flee below 25% HP; the group routs when 75% are dead or fleeing.'],
+            ['Raids', 'Raiders attack periodically (disabled in Peaceful Mode). Scale with colony wealth AND time — early raids are gentle (1-2 raiders), full strength ramps over 3 in-game years. Individual raiders flee below 30% HP; the group routs when 65% are dead or fleeing.'],
             ['Structure HP', 'Walls/doors/fences have HP. Enemies break through them. Auto-repairs when idle.'],
             ['Peaceful Mode', 'Disables raids, wolves, and pyromaniac fires. Void Nexus still works.'],
         ]
@@ -149,9 +149,10 @@ export const GLOSSARY = [
         title: 'Exploration (Rift Gate)',
         entries: [
             ['Rift Gate', '(Ω) Build after researching Planar Rift. Click to open the expedition panel. Consumes 6 mana.'],
-            ['Expeditions', 'Select colonists (and optional pack animals) and a dimension, then launch. Party walks to the gate, explores, and returns with loot. Watch the live event log to see what happens to your colonists in real-time.'],
+            ['Expeditions', 'Select colonists (max 5) and optional pack animals (max 2), choose a difficulty level (1-5), and launch. Higher difficulty means tougher enemies and traps but significantly more loot and rare finds. Party walks to the gate, explores, and returns with loot.'],
             ['Live Event Log', 'While an expedition is active, click the Rift Gate to see a scrolling log of events: combat rounds, trap encounters, item discoveries, and ambient observations. Each dimension has unique events.'],
-            ['Pack Animals', 'Tamed okapi can join expeditions as pack animals, reducing expedition duration by 25% each.'],
+            ['Pack Animals', 'Tamed okapi can join expeditions (max 2) as pack animals, reducing expedition duration by 25% each. Shown as a separate line behind the party in the expedition visualization.'],
+            ['Difficulty Levels', 'Choose 1-5 before launching:\n\n  1 Normal     Standard. No bonuses.\n  2 Dangerous  +50% loot, +50% rare. Enemies +30% HP/+20% dmg.\n  3 Perilous   +100% loot, +150% rare. Enemies +70% HP/+50% dmg.\n  4 Deadly     +200% loot, +300% rare. Enemies +120% HP/+80% dmg.\n  5 Suicidal   +300% loot, +500% rare. Enemies +200% HP/+120% dmg.'],
             ['Dimensions', 'Each has unique events, traps, and rare encounters:\n\n  Crystal Caves   Diff 1  220-380t  Stone, Runite\n  Verdant Depths  Diff 1  150-280t  Wood, Wheat, Berries\n  Arcane Library  Diff 1  180-320t  Spell Tomes, Runite  (Arcane Studies)\n  Shadow Realm    Diff 2  400-650t  Void Essence, Runite (Deep Delving)'],
             ['Encounters', 'Combat encounters resolve round-by-round in real-time. Colonists attack with equipped weapons; enemies strike back. Traps deal damage to random party members. Discoveries provide bonus loot.'],
             ['Loot on Defeat', 'Even if all party members are defeated, you keep any items found during exploration. You only lose the completion bonus for finishing the expedition.'],
@@ -214,7 +215,8 @@ export const GLOSSARY = [
         entries: [
             ['Barter System', 'When a caravan arrives, open the trade panel to barter any resources. Your offer value must meet or exceed request value.'],
             ['Trade Values', 'Each resource has a base value. You sell at 70% (discount) and buy at 140% (markup) of base value.'],
-            ['Exclusive Items', 'Traders occasionally carry rare items unavailable through crafting: Amulet of Fortune, Enchanted Blade, Wanderer\'s Cloak, Merchant\'s Ring.'],
+            ['Exclusive Items', 'Traders occasionally carry rare items unavailable through crafting: Amulet of Fortune, Enchanted Blade, Wanderer\'s Cloak, Merchant\'s Ring, Crystal Capacitor.'],
+            ['Crystal Capacitor', 'Consumable item from trades or rare expedition drops. Use from inventory to permanently increase mana crystal limit by 1.'],
         ]
     },
     {

@@ -1,4 +1,4 @@
-import { CONFIG, SKILLS, MAGIC_SKILLS, MANA_CONFIG, COLONIST_CONFIG } from './config.js';
+import { CONFIG, SKILLS, MAGIC_SKILLS, MANA_CONFIG, COLONIST_CONFIG, EXPEDITION_DIFFICULTY } from './config.js';
 import { syncColonistIdCounter } from '../entities/colonist.js';
 import { syncAnimalIdCounter } from '../entities/wildlife.js';
 import { syncTamedIdCounter } from '../entities/taming.js';
@@ -202,6 +202,7 @@ export function loadGame(game) {
             }
             if (!exp.combat) exp.combat = null;
             if (!exp.lastMicroEventTick) exp.lastMicroEventTick = 0;
+            if (!exp.diffSettings) exp.diffSettings = EXPEDITION_DIFFICULTY[exp.difficulty || 1];
             if (exp.partySnapshot) {
                 for (const p of exp.partySnapshot) {
                     if (!p.knownSpells) p.knownSpells = [];
