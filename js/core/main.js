@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -110,6 +110,7 @@ class Game {
         this.ui.updateModeDisplay(this.input);
 
         window.game = this;
+        window.RENDER_CONFIG = RENDER_CONFIG;
         this.gameLoop = this.gameLoop.bind(this);
     }
 
@@ -1600,6 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
+        RENDER_CONFIG.terrainDithering = document.getElementById('start-dither').checked;
         launchGame(game => Object.assign(game.settings, startSettings));
     });
 

@@ -29,6 +29,12 @@ export class Renderer {
         this._shotMap = new Map();
         this._effectMap = new Map();
 
+        // Terrain dithering
+        this._ditherCanvas = document.createElement('canvas');
+        this._ditherCtx = this._ditherCanvas.getContext('2d');
+        this._ditherMasks = null;
+        this._ditherTileSize = 0;
+
         this.measureFont(RENDER_CONFIG.fontSize);
     }
 
@@ -113,6 +119,98 @@ export class Renderer {
             return sm.getSprite('effects', 'snow') || sm.getSprite('terrain', tile.terrain);
         }
         return sm.getSprite('terrain', tile.terrain);
+    }
+
+    _generateDitherMasks() {
+        const cw = this.charWidth;
+        const ch = this.charHeight;
+        const depth = Math.max(3, Math.round(cw * RENDER_CONFIG.ditherDepth));
+        this._ditherTileSize = cw;
+        this._ditherMasks = {};
+
+        const bayer = [
+            [ 0,  8,  2, 10],
+            [12,  4, 14,  6],
+            [ 3, 11,  1,  9],
+            [15,  7, 13,  5],
+        ];
+
+        for (const dir of ['north', 'south', 'east', 'west']) {
+            const canvas = document.createElement('canvas');
+            canvas.width = cw;
+            canvas.height = ch;
+            const mctx = canvas.getContext('2d');
+            const imageData = mctx.createImageData(cw, ch);
+            const data = imageData.data;
+
+            for (let y = 0; y < ch; y++) {
+                for (let x = 0; x < cw; x++) {
+                    let edgeDist;
+                    if (dir === 'north') edgeDist = y;
+                    else if (dir === 'south') edgeDist = (ch - 1) - y;
+                    else if (dir === 'west') edgeDist = x;
+                    else edgeDist = (cw - 1) - x;
+
+                    if (edgeDist >= depth) continue;
+
+                    const t = edgeDist / depth;
+                    const intensity = 0.5 * (1 - t);
+                    const threshold = (bayer[y % 4][x % 4] + 0.5) / 16;
+                    if (intensity > threshold) {
+                        const idx = (y * cw + x) * 4;
+                        data[idx] = 255;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 255;
+                        data[idx + 3] = 255;
+                    }
+                }
+            }
+            mctx.putImageData(imageData, 0, 0);
+            this._ditherMasks[dir] = canvas;
+        }
+    }
+
+    _drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map) {
+        if (!RENDER_CONFIG.terrainDithering) return;
+        if (!this._ditherMasks || this._ditherTileSize !== cw) {
+            this._generateDitherMasks();
+        }
+
+        const baseTerrain = tile.terrain;
+        const dc = this._ditherCtx;
+        const dCanvas = this._ditherCanvas;
+
+        if (dCanvas.width !== cw || dCanvas.height !== ch) {
+            dCanvas.width = cw;
+            dCanvas.height = ch;
+        }
+
+        const directions = [
+            { dir: 'north', dx: 0, dy: -1 },
+            { dir: 'south', dx: 0, dy: 1 },
+            { dir: 'west', dx: -1, dy: 0 },
+            { dir: 'east', dx: 1, dy: 0 },
+        ];
+
+        for (const { dir, dx, dy } of directions) {
+            const nx = wx + dx;
+            const ny = wy + dy;
+            if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) continue;
+            const neighbor = map[ny][nx];
+            if (neighbor.terrain === baseTerrain) continue;
+
+            const neighborSprite = this.skinManager.getSprite('terrain', neighbor.terrain);
+            if (!neighborSprite) continue;
+
+            dc.clearRect(0, 0, cw, ch);
+            dc.globalCompositeOperation = 'source-over';
+            dc.drawImage(neighborSprite, 0, 0, cw, ch);
+            dc.globalCompositeOperation = 'destination-in';
+            dc.drawImage(this._ditherMasks[dir], 0, 0, cw, ch);
+            dc.globalCompositeOperation = 'source-over';
+
+            ctx.drawImage(dCanvas, px, py);
+        }
     }
 
     _resolveEffectSprite(effectOrKey) {
@@ -362,6 +460,9 @@ export class Renderer {
                                 if (ground) ctx.drawImage(ground, px, py, cw, ch);
                             }
                             ctx.drawImage(sprite, px, py, cw, ch);
+                            if (!tile.structure && !tile.resource && !tile.zone && !entity && !tile.floor) {
+                                this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map);
+                            }
                             if (entity && entity.type === 'colonist') {
                                 ctx.fillStyle = entity.color;
                                 ctx.fillRect(px + cw - 4, py, 4, 4);

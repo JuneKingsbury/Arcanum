@@ -1754,6 +1754,8 @@ export const RENDER_CONFIG = {
         autumn: { dawn: 0.22, dusk: 0.68 },   // 46% daylight
         default: { dawn: 0.20, dusk: 0.70 },  // 50% daylight (fallback)
     },
+    terrainDithering: true,          // enable terrain edge dithering in sprite mode
+    ditherDepth: 0.3,                // fraction of tile size for dithering depth
 };
 
 // Visual effects for combat, portals, and turret shots. Used by renderer, colonist, combat, waves, power.
