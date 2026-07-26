@@ -30,10 +30,9 @@ export class Renderer {
         this._effectMap = new Map();
 
         // Terrain dithering
-        this._ditherCanvas = document.createElement('canvas');
-        this._ditherCtx = this._ditherCanvas.getContext('2d');
         this._ditherMasks = null;
         this._ditherTileSize = 0;
+        this._ditherCache = new Map();
 
         this.measureFont(RENDER_CONFIG.fontSize);
     }
@@ -170,21 +169,35 @@ export class Renderer {
         }
     }
 
+    _getDitherTile(terrain, dir) {
+        const key = terrain + ':' + dir;
+        if (this._ditherCache.has(key)) return this._ditherCache.get(key);
+
+        const cw = this.charWidth;
+        const ch = this.charHeight;
+        const sprite = this.skinManager.getSprite('terrain', terrain);
+        if (!sprite) { this._ditherCache.set(key, null); return null; }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = cw;
+        canvas.height = ch;
+        const c = canvas.getContext('2d');
+        c.drawImage(sprite, 0, 0, cw, ch);
+        c.globalCompositeOperation = 'destination-in';
+        c.drawImage(this._ditherMasks[dir], 0, 0, cw, ch);
+
+        this._ditherCache.set(key, canvas);
+        return canvas;
+    }
+
     _drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map) {
         if (!RENDER_CONFIG.terrainDithering) return;
         if (!this._ditherMasks || this._ditherTileSize !== cw) {
             this._generateDitherMasks();
+            this._ditherCache.clear();
         }
 
         const baseTerrain = tile.terrain;
-        const dc = this._ditherCtx;
-        const dCanvas = this._ditherCanvas;
-
-        if (dCanvas.width !== cw || dCanvas.height !== ch) {
-            dCanvas.width = cw;
-            dCanvas.height = ch;
-        }
-
         const directions = [
             { dir: 'north', dx: 0, dy: -1 },
             { dir: 'south', dx: 0, dy: 1 },
@@ -199,17 +212,10 @@ export class Renderer {
             const neighbor = map[ny][nx];
             if (neighbor.terrain === baseTerrain) continue;
 
-            const neighborSprite = this.skinManager.getSprite('terrain', neighbor.terrain);
-            if (!neighborSprite) continue;
+            const cached = this._getDitherTile(neighbor.terrain, dir);
+            if (!cached) continue;
 
-            dc.clearRect(0, 0, cw, ch);
-            dc.globalCompositeOperation = 'source-over';
-            dc.drawImage(neighborSprite, 0, 0, cw, ch);
-            dc.globalCompositeOperation = 'destination-in';
-            dc.drawImage(this._ditherMasks[dir], 0, 0, cw, ch);
-            dc.globalCompositeOperation = 'source-over';
-
-            ctx.drawImage(dCanvas, px, py);
+            ctx.drawImage(cached, px, py);
         }
     }
 

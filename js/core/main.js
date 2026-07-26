@@ -173,6 +173,7 @@ class Game {
         await this.skinManager.switchSkin(skinName);
         this.settings.activeSkin = skinName;
         localStorage.setItem('convocation_skin', skinName);
+        this.renderer._ditherCache.clear();
     }
 
     gameLoop(timestamp) {
