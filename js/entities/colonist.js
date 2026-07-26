@@ -408,6 +408,7 @@ function tryAutocastSpells(colonist, game) {
         applySpellEffect(colonist, spell, game);
         grantCastXp(colonist, spell, game);
         applyThought(colonist, 'cast_spell', game.tick);
+        game.story.checkMilestone('first_spell_cast', game);
     }
 }
 
@@ -545,6 +546,7 @@ function updateIdle(colonist, game) {
     if (getMoodLevel(colonist.mood) === 'breaking') {
         colonist.state = 'wandering';
         colonist.stateTimer = COLONIST_CONFIG.breakingWanderDuration[0] + Math.floor(Math.random() * (COLONIST_CONFIG.breakingWanderDuration[1] - COLONIST_CONFIG.breakingWanderDuration[0]));
+        game.story.checkMilestone('first_mental_break', game);
         return;
     }
 
@@ -796,6 +798,7 @@ function completeTask(colonist, task, game) {
             game.roomsDirty = true;
             if (game.waves && game.waves.active) game.waves.invalidatePathPreview();
             applyThought(colonist, 'built_something', game.tick);
+            game.story.checkMilestone('first_building_placed', game);
             break;
         }
         case 'chop':
@@ -1221,6 +1224,7 @@ export function colonistTakeDamage(colonist, damage, game) {
             colonist.hp = 0;
             colonist.state = 'dead';
             game.eventLog.add(game, `${colonist.name} has died!`, 'danger', { type: 'colonist', id: colonist.id });
+            game.story.checkMilestone('first_colonist_death', game);
             if (game.settings.pauseOnDeath && !game.paused) {
                 game.paused = true;
                 game.notifications.push({ text: `${colonist.name} has died! (auto-paused)`, tick: game.tick, type: 'danger' });

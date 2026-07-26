@@ -628,6 +628,7 @@ export class ExplorationSystem {
         const allDefeated = exp.partySnapshot.every(p => p.hp <= 0);
         if (!allDefeated) {
             this.completedDimensions.add(exp.dimension);
+            game.story.checkMilestone(`dimension_${exp.dimension}`, game);
         }
         const gx = exp.gatePos.x;
         const gy = exp.gatePos.y;

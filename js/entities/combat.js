@@ -71,6 +71,7 @@ export class CombatSystem {
             this.raidActive = false;
             game.notifications.push({ text: 'Raid defeated!', tick: game.tick, type: 'success' });
             game.eventLog.add(game, 'Raid defeated!', 'success', null);
+            game.story.checkMilestone('first_raid_survived', game);
             return;
         }
 
@@ -114,6 +115,7 @@ export class CombatSystem {
             this.raidActive = false;
             game.notifications.push({ text: 'Raiders fled!', tick: game.tick, type: 'success' });
             game.eventLog.add(game, 'Raiders fled!', 'success', null);
+            game.story.checkMilestone('first_raid_survived', game);
         }
     }
 }

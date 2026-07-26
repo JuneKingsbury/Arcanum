@@ -150,6 +150,7 @@ export function completeTame(game, wildAnimalId) {
     game.tamedAnimals.push(tamed);
     game.notifications.push({ text: `Tamed a ${wildAnimal.type}!`, tick: game.tick, type: 'success' });
     game.eventLog.add(game, `Tamed a ${wildAnimal.type}`, 'success', { type: 'position', x: spawnX, y: spawnY });
+    game.story.checkMilestone('first_animal_tamed', game);
     return true;
 }
 

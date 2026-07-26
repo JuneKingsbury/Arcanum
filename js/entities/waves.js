@@ -216,6 +216,7 @@ export class WaveSystem {
             game.resources.add({ void_essence: bonusEssence });
             game.notifications.push({ text: `Wave ${this.currentWave} complete! +${bonusEssence} bonus void essence. Colony cap: ${this.getColonistCap()}`, tick: game.tick, type: 'success' });
             game.eventLog.add(game, `Wave ${this.currentWave} defeated! Colony can now support ${this.getColonistCap()} colonists.`, 'success', null);
+            game.story.checkMilestone('first_wave_completed', game);
         } else {
             game.notifications.push({ text: `Wave ${this.currentWave} failed — the Void Nexus was destroyed!`, tick: game.tick, type: 'danger' });
             game.eventLog.add(game, `The Void Nexus was destroyed during wave ${this.currentWave}!`, 'danger', { type: 'position', ...this.nexusPosition });

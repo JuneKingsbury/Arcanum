@@ -1358,6 +1358,194 @@ export const WAVE_CONFIG = {
     bonusEssencePerWave: 2,      // multiplied by wave number for completion bonus
 };
 
+// ============================================================================
+// STORY MILESTONES — SPOILER WARNING!
+// The text below contains narrative spoilers for Arcanum: Rifts & Ruins.
+// Do not read ahead if you want to experience the story organically in-game.
+// ============================================================================
+
+export const STORY_MILESTONES = {
+    // -----------------------------------------------------------------------
+    // Colony tab — narrative story beats about your colony's journey
+    // -----------------------------------------------------------------------
+    first_building: {
+        tab: 'colony',
+        title: 'First Foundation',
+        trigger: 'first_building_placed',
+        text: 'TODO: Write story text for placing your first building.',
+        order: 1,
+    },
+    colony_5: {
+        tab: 'colony',
+        title: 'A Settlement Forms',
+        trigger: 'colonist_count_5',
+        text: 'TODO: Write story text for reaching 5 colonists.',
+        order: 2,
+    },
+    colony_10: {
+        tab: 'colony',
+        title: 'A Thriving Community',
+        trigger: 'colonist_count_10',
+        text: 'TODO: Write story text for reaching 10 colonists.',
+        order: 3,
+    },
+    first_raid_survived: {
+        tab: 'colony',
+        title: 'Baptism of Steel',
+        trigger: 'first_raid_survived',
+        text: 'TODO: Write story text for surviving your first raid.',
+        order: 4,
+    },
+    first_mental_break: {
+        tab: 'colony',
+        title: 'The Breaking Point',
+        trigger: 'first_mental_break',
+        text: 'TODO: Write story text for first colonist mental break.',
+        order: 5,
+    },
+    first_death: {
+        tab: 'colony',
+        title: 'The First Marker',
+        trigger: 'first_colonist_death',
+        text: 'TODO: Write story text for first colonist death.',
+        order: 6,
+    },
+    first_tame: {
+        tab: 'colony',
+        title: 'Kindred Spirits',
+        trigger: 'first_animal_tamed',
+        text: 'TODO: Write story text for taming your first animal.',
+        order: 7,
+    },
+    first_trade: {
+        tab: 'colony',
+        title: 'Commerce Begins',
+        trigger: 'first_trade_completed',
+        text: 'TODO: Write story text for completing your first trade.',
+        order: 8,
+    },
+    first_spell: {
+        tab: 'colony',
+        title: 'The Spark of Magic',
+        trigger: 'first_spell_cast',
+        text: 'TODO: Write story text for casting your first spell.',
+        order: 9,
+    },
+    first_wave_complete: {
+        tab: 'colony',
+        title: 'Void Triumphant',
+        trigger: 'first_wave_completed',
+        text: 'TODO: Write story text for completing your first void wave.',
+        order: 10,
+    },
+
+    // -----------------------------------------------------------------------
+    // World tab — lore and worldbuilding (research unlocks)
+    // -----------------------------------------------------------------------
+    research_runecraft: {
+        tab: 'world',
+        title: 'Runecraft',
+        trigger: 'research_runecraft',
+        text: 'TODO: Write lore text for runecraft research.',
+        order: 1,
+    },
+    research_druidcraft: {
+        tab: 'world',
+        title: 'Druidcraft',
+        trigger: 'research_druidcraft',
+        text: 'TODO: Write lore text for druidcraft research.',
+        order: 2,
+    },
+    research_beast_binding: {
+        tab: 'world',
+        title: 'Beast Binding',
+        trigger: 'research_beast_binding',
+        text: 'TODO: Write lore text for beast binding research.',
+        order: 3,
+    },
+    research_ley_channeling: {
+        tab: 'world',
+        title: 'Ley Channeling',
+        trigger: 'research_ley_channeling',
+        text: 'TODO: Write lore text for ley channeling research.',
+        order: 4,
+    },
+    research_arcane_studies: {
+        tab: 'world',
+        title: 'Arcane Studies',
+        trigger: 'research_arcane_studies',
+        text: 'TODO: Write lore text for arcane studies research.',
+        order: 5,
+    },
+    research_void_summoning: {
+        tab: 'world',
+        title: 'Void Summoning',
+        trigger: 'research_void_summoning',
+        text: 'TODO: Write lore text for void summoning research.',
+        order: 6,
+    },
+    research_planar_rift: {
+        tab: 'world',
+        title: 'Planar Rift',
+        trigger: 'research_planar_rift',
+        text: 'TODO: Write lore text for planar rift research.',
+        order: 7,
+    },
+    research_deep_delving: {
+        tab: 'world',
+        title: 'Deep Delving',
+        trigger: 'research_deep_delving',
+        text: 'TODO: Write lore text for deep delving research.',
+        order: 8,
+    },
+    research_golem_craft: {
+        tab: 'world',
+        title: 'Golem Craft',
+        trigger: 'research_golem_craft',
+        text: 'TODO: Write lore text for golem craft research.',
+        order: 9,
+    },
+
+    // -----------------------------------------------------------------------
+    // World tab — lore and worldbuilding (dimension exploration)
+    // -----------------------------------------------------------------------
+    dim_crystal_caves: {
+        tab: 'world',
+        title: 'Crystal Caves',
+        trigger: 'dimension_crystal_caves',
+        text: 'TODO: Write lore text for exploring the Crystal Caves.',
+        order: 20,
+    },
+    dim_crystal_mines: {
+        tab: 'world',
+        title: 'Crystal Mines',
+        trigger: 'dimension_crystal_mines',
+        text: 'TODO: Write lore text for exploring the Crystal Mines.',
+        order: 21,
+    },
+    dim_verdant_depths: {
+        tab: 'world',
+        title: 'Verdant Depths',
+        trigger: 'dimension_verdant_depths',
+        text: 'TODO: Write lore text for exploring the Verdant Depths.',
+        order: 22,
+    },
+    dim_shadow_realm: {
+        tab: 'world',
+        title: 'Shadow Realm',
+        trigger: 'dimension_shadow_realm',
+        text: 'TODO: Write lore text for exploring the Shadow Realm.',
+        order: 23,
+    },
+    dim_arcane_library: {
+        tab: 'world',
+        title: 'Arcane Library',
+        trigger: 'dimension_arcane_library',
+        text: 'TODO: Write lore text for exploring the Arcane Library.',
+        order: 24,
+    },
+};
+
 // ----------------------------------------------------------------------------
 // Game world config
 // ----------------------------------------------------------------------------

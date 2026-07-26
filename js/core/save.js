@@ -85,6 +85,8 @@ export function saveGame(game) {
         manaCrystalBonus: game.manaCrystalBonus || 0,
         discoveredLoot: [...(game.discoveredLoot || [])],
 
+        story: { unlocked: [...game.story.unlocked] },
+
         tasks: game.taskQueue.getAll(),
         eventLog: game.eventLog.entries,
     };
@@ -222,6 +224,10 @@ export function loadGame(game) {
 
     game.manaCrystalBonus = data.manaCrystalBonus || 0;
     game.discoveredLoot = new Set(data.discoveredLoot || []);
+
+    if (data.story) {
+        game.story.unlocked = new Set(data.story.unlocked || []);
+    }
 
     game.taskQueue.tasks = data.tasks;
     game.taskQueue.syncIdCounter();

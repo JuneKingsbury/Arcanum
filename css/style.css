@@ -761,7 +761,7 @@ body {
 
 /* === POPUP PANELS === */
 
-#priority-panel, #craft-panel, #research-panel, #inventory-panel, #taming-panel, #settings-panel, #arcane-panel {
+#priority-panel, #craft-panel, #research-panel, #inventory-panel, #taming-panel, #settings-panel, #arcane-panel, #story-panel {
     display: none;
     position: fixed;
     top: 50%;
@@ -832,7 +832,7 @@ body {
     background: #3a2a2a;
 }
 
-#priority-panel h3, #craft-panel h3, #research-panel h3, #inventory-panel h3, #taming-panel h3, #settings-panel h3, #arcane-panel h3 {
+#priority-panel h3, #craft-panel h3, #research-panel h3, #inventory-panel h3, #taming-panel h3, #settings-panel h3, #arcane-panel h3, #story-panel h3 {
     color: #ffcc00;
     margin-bottom: 10px;
 }
@@ -1047,6 +1047,85 @@ body {
     padding: 3px 8px;
     font-family: inherit;
     border-radius: 3px;
+}
+
+#story-panel {
+    min-width: min(480px, 88vw);
+}
+
+.story-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #444;
+}
+
+.story-tab-btn {
+    padding: 6px 16px;
+    font-family: inherit;
+    font-size: 0.95em;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: #888;
+    cursor: pointer;
+    border-radius: 3px 3px 0 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.story-tab-btn:hover {
+    color: #ccc;
+    background: #1a1a2e;
+}
+
+.story-tab-btn.active {
+    color: #ffcc44;
+    background: #1a1a2e;
+    border-color: #444;
+}
+
+.story-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.story-entry {
+    padding: 10px 12px;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+
+.story-entry.unlocked {
+    background: #1a2a1e;
+    border-color: #3a5a3a;
+}
+
+.story-entry.locked {
+    background: #1a1a1a;
+    opacity: 0.6;
+}
+
+.story-entry-title {
+    color: #ffcc44;
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 0.95em;
+}
+
+.story-entry.locked .story-entry-title {
+    color: #666;
+}
+
+.story-entry-text {
+    color: #ccc;
+    font-size: 0.88em;
+    line-height: 1.6;
+}
+
+.story-entry.locked .story-entry-text {
+    color: #555;
+    font-style: italic;
 }
 
 .research-tabs {
@@ -1672,7 +1751,7 @@ body {
     .notif { padding: 1px 5px; font-size: 10px; }
 
     /* Bottom-sheet panels on mobile */
-    #priority-panel, #craft-panel, #research-panel, #inventory-panel, #taming-panel, #settings-panel, #arcane-panel {
+    #priority-panel, #craft-panel, #research-panel, #inventory-panel, #taming-panel, #settings-panel, #arcane-panel, #story-panel {
         top: auto;
         bottom: 0;
         left: 0;

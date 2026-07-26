@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -21,6 +21,9 @@ export class UI {
         this._arcaneExpSetup = null;
         this._lastArcaneHtml = '';
         this._expVisState = { lastLogLen: 0, effects: [], partyX: 0 };
+        this.storyPanelVisible = false;
+        this._storyTab = 'colony';
+        this._lastStoryHtml = '';
         this.elements = {};
         this.initElements();
     }
@@ -59,6 +62,16 @@ export class UI {
         this.elements.tamingPanel = document.getElementById('taming-panel');
         this.elements.settingsPanel = document.getElementById('settings-panel');
         this.elements.arcanePanel = document.getElementById('arcane-panel');
+        this.elements.storyPanel = document.getElementById('story-panel');
+
+        this.elements.storyPanel.addEventListener('click', (e) => {
+            const tab = e.target.closest('[data-story-tab]');
+            if (tab) {
+                this._storyTab = tab.dataset.storyTab;
+                this._lastStoryHtml = '';
+                this.updateStoryPanel();
+            }
+        });
 
         this.elements.arcanePanel.addEventListener('click', (e) => {
             const tab = e.target.closest('[data-arcane-tab]');
@@ -144,6 +157,7 @@ export class UI {
                     case 'inventory': this.toggleInventoryPanel(); break;
                     case 'settings': this.toggleSettingsPanel(); break;
                     case 'arcane': this.toggleArcanePanel(); break;
+                    case 'story': this.toggleStoryPanel(); break;
                 }
                 return;
             }
@@ -195,6 +209,7 @@ export class UI {
                 case 'taming': this.toggleTamingPanel(); break;
                 case 'settings': this.toggleSettingsPanel(); break;
                 case 'arcane': this.toggleArcanePanel(); break;
+                case 'story': this.toggleStoryPanel(); break;
             }
         });
 
@@ -234,6 +249,7 @@ export class UI {
         if (this.inventoryVisible) this.updateInventoryPanel();
         if (this.tamingPanelVisible) this.updateTamingPanel();
         if (this.arcanePanelVisible) this.updateArcanePanel();
+        if (this.storyPanelVisible) this.updateStoryPanel();
         if (this._viewingRiftGate) this._refreshRiftGateInfo();
         if (this._viewingColonistId != null) this._refreshColonistInfo();
     }
@@ -362,6 +378,7 @@ export class UI {
             html += `<span class="mode-opt" data-mode-action="tame">[T]Tame</span>`;
             html += `<span class="mode-opt" data-mode-action="inventory">[I]Inventory</span>`;
             html += `<span class="mode-opt" data-mode-action="arcane">[V]Portal</span>`;
+            html += `<span class="mode-opt" data-mode-action="story">[J]Story</span>`;
             html += '</span>';
         }
         this.elements.modeBar.innerHTML = html;
@@ -1223,7 +1240,7 @@ export class UI {
         const anyOpen = this.priorityPanelVisible || this.craftPanelVisible ||
             this.researchPanelVisible || this.inventoryVisible ||
             this.tamingPanelVisible || this.settingsPanelVisible ||
-            this.arcanePanelVisible;
+            this.arcanePanelVisible || this.storyPanelVisible;
         const overlay = document.getElementById('panel-overlay');
         if (overlay) overlay.classList.toggle('visible', anyOpen);
     }
@@ -1256,6 +1273,10 @@ export class UI {
         if (this.arcanePanelVisible) {
             this.arcanePanelVisible = false;
             this.elements.arcanePanel.style.display = 'none';
+        }
+        if (this.storyPanelVisible) {
+            this.storyPanelVisible = false;
+            this.elements.storyPanel.style.display = 'none';
         }
     }
 
@@ -2983,6 +3004,56 @@ export class UI {
         this.elements.eventPanel.innerHTML = html;
         const newScrollEl = this.elements.eventPanel.querySelector('.trade-columns');
         if (newScrollEl) newScrollEl.scrollTop = scrollTop;
+    }
+
+    toggleStoryPanel() {
+        const opening = !this.storyPanelVisible;
+        this._closeAllPanels();
+        this.storyPanelVisible = opening;
+        this._panelPause(opening);
+        this.elements.storyPanel.style.display = opening ? 'block' : 'none';
+        if (opening) {
+            this._lastStoryHtml = '';
+            this.updateStoryPanel();
+        }
+        this._updateOverlay();
+    }
+
+    updateStoryPanel() {
+        const tab = this._storyTab || 'colony';
+        const unlocked = this.game.story.unlocked;
+
+        let html = '<div class="panel-close" data-panel-close="story">&times;</div>';
+        html += '<h3 style="color:#ffcc44">Story</h3>';
+        html += '<div class="story-tabs">';
+        html += `<button class="story-tab-btn${tab === 'colony' ? ' active' : ''}" data-story-tab="colony">Colony</button>`;
+        html += `<button class="story-tab-btn${tab === 'world' ? ' active' : ''}" data-story-tab="world">World</button>`;
+        html += '</div>';
+
+        const entries = Object.entries(STORY_MILESTONES)
+            .filter(([, m]) => m.tab === tab)
+            .sort((a, b) => a[1].order - b[1].order);
+
+        html += '<div class="story-entries">';
+        for (const [key, milestone] of entries) {
+            if (unlocked.has(key)) {
+                html += `<div class="story-entry unlocked">`;
+                html += `<div class="story-entry-title">${milestone.title}</div>`;
+                html += `<div class="story-entry-text">${milestone.text}</div>`;
+                html += `</div>`;
+            } else {
+                html += `<div class="story-entry locked">`;
+                html += `<div class="story-entry-title">???</div>`;
+                html += `<div class="story-entry-text">This tale has yet to unfold...</div>`;
+                html += `</div>`;
+            }
+        }
+        html += '</div>';
+
+        if (html !== this._lastStoryHtml) {
+            this._lastStoryHtml = html;
+            this.elements.storyPanel.innerHTML = html;
+        }
     }
 }
 

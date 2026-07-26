@@ -186,6 +186,7 @@ export class EventSystem {
             game.addColonist(this.pendingEvent.data);
             game.notifications.push({ text: `${this.pendingEvent.data.name} joined!`, tick: game.tick, type: 'success' });
             game.eventLog.add(game, `${this.pendingEvent.data.name} joined the colony`, 'success', { type: 'colonist', id: this.pendingEvent.data.id });
+            game.story.checkPopulation(game);
             const t = THOUGHTS.new_colonist;
             for (const c of game.colonists) {
                 if (c.id !== this.pendingEvent.data.id) {
@@ -277,6 +278,7 @@ export class EventSystem {
         }
 
         game.notifications.push({ text: 'Trade complete!', tick: game.tick, type: 'success' });
+        game.story.checkMilestone('first_trade_completed', game);
         return true;
     }
 

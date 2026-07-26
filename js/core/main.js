@@ -30,6 +30,7 @@ import { MapIndex } from '../world/mapindex.js';
 import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
+import { StorySystem } from '../systems/story.js';
 
 class Game {
     constructor() {
@@ -70,6 +71,7 @@ class Game {
         this.waves = new WaveSystem();
         this.exploration = new ExplorationSystem();
         this.eventLog = new EventLog();
+        this.story = new StorySystem();
 
         this.manaCrystalBonus = 0;
         this.discoveredLoot = new Set();
@@ -674,6 +676,7 @@ class Game {
             const name = techKey.replace(/_/g, ' ');
             this.notifications.push({ text: `Unlocked: ${name}!`, tick: this.tick, type: 'success' });
             this.eventLog.add(this, `Research unlocked: ${name}`, 'success', null);
+            this.story.checkMilestone(`research_${techKey}`, this);
         }
     }
 
@@ -882,6 +885,7 @@ class Game {
         }
         grantCastXp(colonist, spell, this);
         addThought(colonist, 'Cast a spell', 3, 80, this.tick);
+        this.story.checkMilestone('first_spell_cast', this);
     }
 
     discardArtifact(index) { this._discardItem(index, 'artifacts'); }
@@ -1402,6 +1406,7 @@ function initPanelOverlay() {
         if (ui.inventoryVisible) ui.toggleInventoryPanel();
         if (ui.tamingPanelVisible) ui.toggleTamingPanel();
         if (ui.settingsPanelVisible) ui.toggleSettingsPanel();
+        if (ui.storyPanelVisible) ui.toggleStoryPanel();
     });
 }
 
