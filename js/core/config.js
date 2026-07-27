@@ -350,7 +350,9 @@ export const TASK_SPEED_STATS = {
     plant: 'farmingSpeed',
     harvest: 'farmingSpeed',
     craft: 'craftingSpeed',
-    cook: 'craftingSpeed',
+    cook: 'cookingSpeed',
+    build: 'buildSpeed',
+    research: 'researchSpeed',
 };
 
 // ----------------------------------------------------------------------------
@@ -482,6 +484,7 @@ export const RECIPES = {
     craft_runic_greatsword: { input: { runite: 4, iron: 2, planks: 2 }, output: { runic_greatsword: 1 }, skill: 'crafting', ticks: 50, station: 'workbench', research: 'masterwork', category: 'Equipment' },
     craft_void_dagger: { input: { void_essence: 3, runite: 1 }, output: { void_dagger: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
     craft_void_blade: { input: { void_essence: 6, runite: 2, planks: 1 }, output: { void_blade: 1 }, skill: 'crafting', ticks: 60, station: 'workbench', research: 'void_forging', category: 'Equipment' },
+    craft_wool_parka: { input: { wool: 4, leather: 1 }, output: { wool_parka: 1 }, skill: 'crafting', ticks: 16, station: 'workbench', category: 'Equipment' },
     craft_iron_brigandine: { input: { iron: 2 }, output: { iron_brigandine: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
     craft_leather_vest: { input: { leather: 3 }, output: { leather_vest: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Equipment' },
     craft_iron_chainmail: { input: { iron: 4, leather: 2 }, output: { iron_chainmail: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', category: 'Equipment' },
@@ -489,6 +492,7 @@ export const RECIPES = {
     craft_runic_plate: { input: { runite: 3, iron: 2, leather: 1 }, output: { runic_plate: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'runeforging', category: 'Equipment' },
     craft_void_armor: { input: { void_essence: 5, bricks: 2, planks: 1 }, output: { void_armor: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Equipment' },
     // Helmets
+    craft_wool_cap: { input: { wool: 3 }, output: { wool_cap: 1 }, skill: 'crafting', ticks: 10, station: 'workbench', category: 'Equipment' },
     craft_leather_cap: { input: { leather: 2 }, output: { leather_cap: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Equipment' },
     craft_iron_helmet: { input: { iron: 3 }, output: { iron_helmet: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Equipment' },
     craft_runic_helm: { input: { runite: 2, iron: 1 }, output: { runic_helm: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'runeforging', category: 'Equipment' },
@@ -546,7 +550,7 @@ export const RECIPES = {
 };
 
 // To add a weapon: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
-// Optional stat bonuses: miningSpeed, choppingSpeed, farmingSpeed (multipliers applied during those tasks).
+// Any stat can be placed on any equipment type. See README.md "Equipment Stat Reference" for the full list.
 export const WEAPONS = {
     fists: { name: 'Fists', damage: 5 },
     stone_spear: { name: 'Stone Spear', damage: 8 },
@@ -567,7 +571,9 @@ export const WEAPONS = {
 };
 
 // To add armor: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
+// Any stat can be placed on any equipment type. See README.md "Equipment Stat Reference" for the full list.
 export const ARMORS = {
+    wool_parka: { name: 'Wool Parka', damageReduction: 0.04, coldResistance: 0.7, hungerReduction: 0.1 },
     iron_brigandine: { name: 'Iron Brigandine', damageReduction: 0.08 },
     leather_vest: { name: 'Leather Vest', damageReduction: 0.10 },
     mana_weave_robe: { name: 'Mana-Weave Robe', damageReduction: 0.15, spellDamageBonus: 0.15 },
@@ -577,8 +583,9 @@ export const ARMORS = {
 };
 
 // To add a helmet: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
-// Helmet DR stacks multiplicatively with body armor DR.
+// Any stat can be placed on any equipment type. See README.md "Equipment Stat Reference" for the full list.
 export const HELMETS = {
+    wool_cap: { name: 'Wool Cap', damageReduction: 0.02, coldResistance: 0.4, moodBonus: 3 },
     leather_cap: { name: 'Leather Cap', damageReduction: 0.05 },
     iron_helmet: { name: 'Iron Helmet', damageReduction: 0.10 },
     runic_helm: { name: 'Runic Helm', damageReduction: 0.14 },
@@ -586,7 +593,7 @@ export const HELMETS = {
 };
 
 // To add a tool: add entry here + a recipe with output: { <key>: 1 }. Equipped in a separate slot from weapons.
-// Stat bonuses stack with weapon bonuses. moveSpeedBonus: reduces move cooldown (fraction, e.g. 0.3 = 30% faster).
+// Any stat can be placed on any equipment type. See README.md "Equipment Stat Reference" for the full list.
 export const TOOLS = {
     // Pickaxes — mining specialist
     stone_pickaxe: { name: 'Stone Pickaxe', miningSpeed: 1.25 },
@@ -611,18 +618,8 @@ export const TOOLS = {
 };
 
 // To add an artifact: add entry here + a recipe with output: { <key>: 1 }. Equipped in a dedicated artifact slot.
-// Artifacts are magical items with unique effects. Stat bonuses stack with weapon/tool bonuses.
-// Effect fields (all optional, data-driven — runtime reads these generically):
-//   moveSpeedBonus: flat addition to move speed (equipped)
-//   workSpeedBonus: flat addition to work speed multiplier (equipped)
-//   pedestal: { radius, manaCost, ...effects } — placed on pedestal building, applies in radius
-//     radius: number (Manhattan distance) or 'global' (colony-wide, no distance check)
-//     effects: blightImmunity, workSpeedBonus, damageBonusMult, lightRadius, skillGrowthBonus,
-//              wandererChanceMult, cookingBonusFood, tradeMarkupMult
-//   combat: { targetPriority, autoReviveHp, damageReduction } — applies during raids + waves (equipped)
-//   expedition: { lootMult, trapDamageMult, rareEncounterMult, partyDamageMult, durationMult, targetPriority, autoReviveHp, damageReduction }
-//   durability: { max, breakOnUse } — item breaks after triggered N times, needs anvil repair
-//   consumable: true — destroyed after one use
+// Artifacts support all generic stats plus artifact-only nested objects (pedestal, combat, expedition, durability, consumable).
+// See README.md "Equipment Stat Reference" for the full list of all available stats and effects.
 export const ARTIFACTS = {
     boots_of_haste: { name: 'Boots of Haste', moveSpeedBonus: 0.3 },
     seedkeepers_locket: {

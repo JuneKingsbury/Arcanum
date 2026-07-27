@@ -255,7 +255,7 @@ export class ExplorationSystem {
                     mana: c.mana || 0,
                     maxMana: c.maxMana || 0,
                     spellCooldowns: {},
-                    spellDamageBonus: c.weapon && c.weapon.spellDamageBonus ? c.weapon.spellDamageBonus : 0,
+                    spellDamageBonus: (c.weapon?.spellDamageBonus || 0) + (c.armor?.spellDamageBonus || 0) + (c.helmet?.spellDamageBonus || 0) + (c.tool?.spellDamageBonus || 0) + ((!c.artifactBroken && c.artifact?.spellDamageBonus) || 0),
                     shieldActive: false,
                     shieldReduction: 0,
                 };
@@ -429,8 +429,13 @@ export class ExplorationSystem {
             if (member.hp <= 0) continue;
             const target = combat.enemies.find(e => e.hp > 0);
             if (!target) break;
-            const weaponDmg = member.weapon ? member.weapon.damage : EXPLORATION_CONFIG.baseFistDamage;
-            const dmg = Math.floor((weaponDmg + randInt(0, 3)) * partyDmgMult);
+            let weaponDmg = member.weapon ? member.weapon.damage : EXPLORATION_CONFIG.baseFistDamage;
+            const memberItems = [member.weapon, member.armor, member.helmet, member.artifact].filter(Boolean);
+            for (const item of memberItems) { if (item !== member.weapon && item.damage) weaponDmg += item.damage; }
+            let dmg = Math.floor((weaponDmg + randInt(0, 3)) * partyDmgMult);
+            let critHit = false;
+            const critChance = memberItems.reduce((sum, it) => sum + (it.critChance || 0), 0);
+            if (critChance > 0 && Math.random() < critChance) { dmg *= 2; critHit = true; }
 
             if (Math.random() < 0.15) {
                 const msg = pickRandom(EXPLORATION_EVENTS.combatMiss)
@@ -439,13 +444,16 @@ export class ExplorationSystem {
                 this._addLog(exp, game, msg, 'combat');
             } else {
                 target.hp -= dmg;
-                const msg = pickRandom(EXPLORATION_EVENTS.combatHit)
+                const hitMsg = critHit ? `${member.name} lands a critical strike for ${dmg} damage!` : null;
+                const msg = hitMsg || pickRandom(EXPLORATION_EVENTS.combatHit)
                     .replace('{attacker}', member.name)
                     .replace('{target}', 'an enemy')
                     .replace('{dmg}', dmg);
                 this._addLog(exp, game, msg, 'combat');
                 if (target.hp <= 0) {
                     this._addLog(exp, game, `${member.name} slays a foe!`, 'success');
+                    const hpOnKill = memberItems.reduce((sum, it) => sum + (it.hpOnKill || 0), 0);
+                    if (hpOnKill > 0) member.hp = Math.min(member.maxHp, member.hp + hpOnKill);
                 }
             }
         }
@@ -463,15 +471,16 @@ export class ExplorationSystem {
                 if (score < bestScore) { bestScore = score; target = p; }
             }
             if (!target) break;
+            const targetItems = [target.weapon, target.armor, target.helmet, target.artifact].filter(Boolean);
+            const dodgeChance = targetItems.reduce((sum, it) => sum + (it.dodgeChance || 0), 0);
+            if (dodgeChance > 0 && Math.random() < dodgeChance) {
+                this._addLog(exp, game, `${target.name} dodges an attack!`, 'combat');
+                continue;
+            }
             let dmg = enemy.damage + randInt(0, 2);
-            if (target.armor) {
-                dmg = Math.max(1, Math.floor(dmg * (1 - target.armor.damageReduction)));
-            }
-            if (target.helmet) {
-                dmg = Math.max(1, Math.floor(dmg * (1 - target.helmet.damageReduction)));
-            }
-            if (target.artifact?.expedition?.damageReduction) {
-                dmg = Math.max(1, Math.floor(dmg * (1 - target.artifact.expedition.damageReduction)));
+            for (const item of targetItems) {
+                if (item.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.damageReduction)));
+                if (item.expedition?.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.expedition.damageReduction)));
             }
             if (target.shieldActive) {
                 dmg = Math.max(1, Math.floor(dmg * (1 - target.shieldReduction)));

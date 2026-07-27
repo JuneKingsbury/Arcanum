@@ -159,7 +159,7 @@ function updateRaider(raider, game) {
 
     const dist = manhattanDist(raider.x, raider.y, nearest.x, nearest.y);
     if (dist <= 1) {
-        colonistTakeDamage(nearest, raider.damage, game);
+        colonistTakeDamage(nearest, raider.damage, game, raider);
         return;
     }
 

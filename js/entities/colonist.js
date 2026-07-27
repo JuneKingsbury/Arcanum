@@ -180,13 +180,18 @@ export function updateColonist(colonist, game) {
 function updateNeeds(colonist, game) {
     let hungerMult = 1;
     if (colonist.traits.includes('iron_stomach')) hungerMult = TRAITS.iron_stomach.hungerDecayMult;
+    const hungerReduction = getEquipmentStat(colonist, 'hungerReduction');
+    if (hungerReduction > 0) hungerMult *= (1 - hungerReduction);
     colonist.needs.hunger = Math.max(0, colonist.needs.hunger - NEED_DECAY.hunger * hungerMult);
     colonist.needs.rest = Math.max(0, colonist.needs.rest - NEED_DECAY.rest);
 
     if (game.weather.season === 'winter' && !isIndoors(colonist, game.map)) {
         const warmed = game.power.isTileWarmed(game, colonist.x, colonist.y);
         if (!warmed) {
-            applyThought(colonist, 'freezing', game.tick);
+            const coldRes = getEquipmentStat(colonist, 'coldResistance');
+            if (coldRes <= 0 || Math.random() >= coldRes) {
+                applyThought(colonist, 'freezing', game.tick);
+            }
         }
     }
 }
@@ -195,6 +200,7 @@ function updateMana(colonist) {
     if (colonist.mana >= colonist.maxMana) return;
     const combinedLevel = Object.values(colonist.magicSkills).reduce((sum, lvl) => sum + lvl, 0);
     let regen = MANA_CONFIG.baseRegen + combinedLevel * MANA_CONFIG.regenPerMagicLevel;
+    regen += getEquipmentStat(colonist, 'manaRegen');
     if (colonist.state === 'sleeping') regen *= MANA_CONFIG.regenWhileSleeping;
     else if (colonist.state === 'idle') regen *= MANA_CONFIG.regenWhileIdle;
     colonist.mana = Math.min(colonist.maxMana, colonist.mana + regen);
@@ -298,6 +304,7 @@ function computeMood(colonist) {
     if (colonist.needs.hunger < COLONIST_CONFIG.hungerMoodThreshold) mood += COLONIST_CONFIG.hungerMoodPenalty;
     if (colonist.needs.rest < COLONIST_CONFIG.restMoodThreshold) mood += COLONIST_CONFIG.restMoodPenalty;
     if (colonist.assignedBed) mood += COLONIST_CONFIG.bedMoodBonus;
+    mood += getEquipmentStat(colonist, 'moodBonus');
     return Math.max(0, Math.min(100, mood));
 }
 
@@ -328,10 +335,21 @@ function getWorkSpeed(colonist, game) {
     return speed;
 }
 
+function getEquippedItems(colonist) {
+    const items = [];
+    if (colonist.weapon) items.push(colonist.weapon);
+    if (colonist.armor) items.push(colonist.armor);
+    if (colonist.helmet) items.push(colonist.helmet);
+    if (colonist.tool) items.push(colonist.tool);
+    if (colonist.artifact && !colonist.artifactBroken) items.push(colonist.artifact);
+    return items;
+}
+
 function getMoveSpeedBonus(colonist) {
     let bonus = 0;
-    if (colonist.tool && colonist.tool.moveSpeedBonus) bonus += colonist.tool.moveSpeedBonus;
-    if (colonist.artifact && colonist.artifact.moveSpeedBonus) bonus += colonist.artifact.moveSpeedBonus;
+    for (const item of getEquippedItems(colonist)) {
+        if (item.moveSpeedBonus) bonus += item.moveSpeedBonus;
+    }
     if (colonist.activeEffects) {
         for (const e of colonist.activeEffects) {
             if (e.type === 'speed' && e.moveSpeedBonus) bonus += e.moveSpeedBonus;
@@ -343,16 +361,37 @@ function getMoveSpeedBonus(colonist) {
 function getEquipmentWorkBonus(colonist, task) {
     let mult = 1.0;
     const statKey = TASK_SPEED_STATS[task.type];
-    const items = [colonist.weapon, colonist.tool, colonist.artifact];
-    for (const item of items) {
-        if (!item) continue;
+    for (const item of getEquippedItems(colonist)) {
         if (statKey && item[statKey]) mult *= item[statKey];
-    }
-    if (colonist.artifact && !colonist.artifactBroken) {
-        if (colonist.artifact.workSpeedBonus) mult *= (1 + colonist.artifact.workSpeedBonus);
+        if (item.workSpeedBonus) mult *= (1 + item.workSpeedBonus);
     }
     if (colonist.pedestalWorkBonus) mult *= (1 + colonist.pedestalWorkBonus);
     return mult;
+}
+
+function getEquipmentDamageReduction(colonist) {
+    let mult = 1;
+    for (const item of getEquippedItems(colonist)) {
+        if (item.damageReduction) mult *= (1 - item.damageReduction);
+        if (item.combat?.damageReduction) mult *= (1 - item.combat.damageReduction);
+    }
+    return mult;
+}
+
+function getEquipmentSpellBonus(colonist) {
+    let bonus = 0;
+    for (const item of getEquippedItems(colonist)) {
+        if (item.spellDamageBonus) bonus += item.spellDamageBonus;
+    }
+    return bonus;
+}
+
+function getEquipmentStat(colonist, stat) {
+    let total = 0;
+    for (const item of getEquippedItems(colonist)) {
+        if (item[stat]) total += item[stat];
+    }
+    return total;
 }
 
 function tryUsePotions(colonist, game) {
@@ -418,11 +457,13 @@ function tryAutocastSpells(colonist, game) {
         if (!spell || spell.castType !== 'auto') continue;
         if (colonist.disabledSpells && colonist.disabledSpells.includes(spellKey)) continue;
         if (colonist._spellCooldowns[spellKey] && game.tick - colonist._spellCooldowns[spellKey] < spell.cooldown) continue;
-        if (colonist.mana < spell.manaCost) continue;
+        const costReduction = getEquipmentStat(colonist, 'spellCostReduction');
+        const effectiveCost = Math.max(1, Math.floor(spell.manaCost * (1 - costReduction)));
+        if (colonist.mana < effectiveCost) continue;
 
         if (!shouldCastSpell(colonist, spell, game)) continue;
 
-        colonist.mana -= spell.manaCost;
+        colonist.mana -= effectiveCost;
         colonist._spellCooldowns[spellKey] = game.tick;
         applySpellEffect(colonist, spell, game);
         grantCastXp(colonist, spell, game);
@@ -466,7 +507,7 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let dmg = spell.damage;
-            const spellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0) + (colonist.helmet?.spellDamageBonus || 0);
+            const spellBonus = getEquipmentSpellBonus(colonist);
             if (spellBonus) dmg = Math.floor(dmg * (1 + spellBonus));
             target.hp -= dmg;
             game.combatEffects.push({ x: target.x, y: target.y, char: spell.projectileChar || '*', color: spell.projectileColor || '#ff44ff', ttl: 3 });
@@ -478,7 +519,7 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let aoeDmg = spell.damage;
-            const aoeSpellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0) + (colonist.helmet?.spellDamageBonus || 0);
+            const aoeSpellBonus = getEquipmentSpellBonus(colonist);
             if (aoeSpellBonus) aoeDmg = Math.floor(aoeDmg * (1 + aoeSpellBonus));
             const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.wildlife.filter(w => w.hostile)];
             for (const h of allHostiles) {
@@ -935,8 +976,11 @@ function completeTask(colonist, task, game) {
             if (task.targetAnimalId) {
                 const animal = game.wildlife.find(a => a.id === task.targetAnimalId);
                 if (animal && animal.hp > 0) {
-                    const weaponDmg = colonist.weapon ? colonist.weapon.damage : 5;
-                    animal.hp -= weaponDmg + (colonist.skills.animals || 1) * 2;
+                    let huntDmg = colonist.weapon ? colonist.weapon.damage : 5;
+                    for (const item of getEquippedItems(colonist)) {
+                        if (item !== colonist.weapon && item.damage) huntDmg += item.damage;
+                    }
+                    animal.hp -= huntDmg + (colonist.skills.animals || 1) * 2;
                 }
             }
             break;
@@ -950,16 +994,21 @@ function completeTask(colonist, task, game) {
             break;
         }
         case 'research': {
-            const completedKey = game.research.addProgress(colonist.skills.research + 2);
+            let researchPts = colonist.skills.research + 2;
+            const researchMult = getEquipmentStat(colonist, 'researchSpeed');
+            if (researchMult > 0) researchPts = Math.floor(researchPts * researchMult);
+            const completedKey = game.research.addProgress(researchPts);
             if (completedKey) {
                 const name = completedKey.replace(/_/g, ' ');
                 game.notifications.push({ text: `Research complete: ${name}!`, tick: game.tick, type: 'success' });
                 game.eventLog.add(game, `Research unlocked: ${name}`, 'success', null);
                 game.story.checkMilestone(`research_${completedKey}`, game);
             }
-            const tomeRate = game.research.activeResearch
+            let tomeRate = game.research.activeResearch
                 ? MAGIC_STUDY_CONFIG.studyTicksPerProgress
                 : MAGIC_STUDY_CONFIG.tomeStudyBonus;
+            const tomeSpeedMult = getEquipmentStat(colonist, 'tomeStudySpeed');
+            if (tomeSpeedMult > 0) tomeRate *= tomeSpeedMult;
             advanceTomeStudy(colonist, game, tomeRate);
             break;
         }
@@ -1140,12 +1189,22 @@ function updateFighting(colonist, game) {
         return;
     }
 
-    const weaponDmg = colonist.weapon ? colonist.weapon.damage : WEAPONS.fists.damage;
-    const dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+    let weaponDmg = colonist.weapon ? colonist.weapon.damage : WEAPONS.fists.damage;
+    for (const item of getEquippedItems(colonist)) {
+        if (item !== colonist.weapon && item.damage) weaponDmg += item.damage;
+    }
+    let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+    const critChance = getEquipmentStat(colonist, 'critChance');
+    if (critChance > 0 && Math.random() < critChance) {
+        dmg *= 2;
+        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
+    }
     target.hp -= dmg;
     game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
 
     if (target.hp <= 0) {
+        const hpOnKill = getEquipmentStat(colonist, 'hpOnKill');
+        if (hpOnKill > 0) colonist.hp = Math.min(colonist.maxHp, colonist.hp + hpOnKill);
         addThought(colonist, 'Won a fight', COLONIST_CONFIG.victoryMoodBonus, COLONIST_CONFIG.victoryMoodDuration, game.tick);
         colonist.state = 'idle';
     }
@@ -1235,14 +1294,15 @@ function isIndoors(colonist, map) {
     return tile && tile.roomId !== null;
 }
 
-export function colonistTakeDamage(colonist, damage, game) {
+export function colonistTakeDamage(colonist, damage, game, attacker) {
+    const dodgeChance = getEquipmentStat(colonist, 'dodgeChance');
+    if (dodgeChance > 0 && Math.random() < dodgeChance) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: '~', color: '#88ccff', ttl: 4 });
+        return;
+    }
     let mult = 1;
     if (colonist.traits.includes('tough')) mult = TRAITS.tough.damageTakenMult;
-    if (colonist.armor) mult *= (1 - colonist.armor.damageReduction);
-    if (colonist.helmet) mult *= (1 - colonist.helmet.damageReduction);
-    if (colonist.artifact && !colonist.artifactBroken) {
-        if (colonist.artifact.combat?.damageReduction) mult *= (1 - colonist.artifact.combat.damageReduction);
-    }
+    mult *= getEquipmentDamageReduction(colonist);
     if (colonist.activeEffects) {
         for (const e of colonist.activeEffects) {
             if (e.type === 'shield' && e.damageReduction) mult *= (1 - e.damageReduction);
@@ -1251,6 +1311,12 @@ export function colonistTakeDamage(colonist, damage, game) {
     const actualDmg = Math.floor(damage * mult);
     colonist.hp -= actualDmg;
     game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.damageTakenColor, ttl: COMBAT_VISUALS.hitTtl });
+
+    const thornsDamage = getEquipmentStat(colonist, 'thornsDamage');
+    if (thornsDamage > 0 && attacker && attacker.hp > 0) {
+        attacker.hp -= thornsDamage;
+        game.combatEffects.push({ x: attacker.x, y: attacker.y, char: '*', color: '#ff6644', ttl: 3 });
+    }
 
     if (colonist.state !== 'fighting' && colonist.state !== 'fleeing' && colonist.hp > 0) {
         game.eventLog.add(game, `${colonist.name} is under attack!`, 'danger', { type: 'colonist', id: colonist.id });

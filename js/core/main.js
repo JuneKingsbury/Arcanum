@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -495,6 +495,7 @@ class Game {
         const item = list.splice(index, 1)[0];
         if (c[slot]) this.resources[addMethod](c[slot]);
         c[slot] = item;
+        this._recalcEquipmentStats(c);
         this.notifications.push({ text: `${c.name} equipped ${item.name}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);
@@ -506,9 +507,20 @@ class Game {
         if (!c || !c[slot]) return;
         this.resources[addMethod](c[slot]);
         c[slot] = null;
+        this._recalcEquipmentStats(c);
         this.notifications.push({ text: `${c.name} unequipped ${label}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);
+    }
+
+    _recalcEquipmentStats(c) {
+        const baseHp = c.golem ? (GOLEM_TYPES[c.golem]?.hp || c.maxHp) : COLONIST_CONFIG.maxHp;
+        let bonus = 0;
+        for (const item of [c.weapon, c.armor, c.helmet, c.tool, c.artifact].filter(Boolean)) {
+            if (item.maxHpBonus) bonus += item.maxHpBonus;
+        }
+        c.maxHp = baseHp + bonus;
+        if (c.hp > c.maxHp) c.hp = c.maxHp;
     }
 
     _updateColonistRadiusHighlight(c) {

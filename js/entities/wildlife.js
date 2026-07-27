@@ -154,7 +154,7 @@ function updateHostileAnimal(animal, def, game) {
     const dist = manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y);
 
     if (dist <= 1) {
-        colonistTakeDamage(nearestColonist, def.damage, game);
+        colonistTakeDamage(nearestColonist, def.damage, game, animal);
     } else if (dist <= def.aggroRange) {
         moveToward(animal, nearestColonist, game.map);
     } else {

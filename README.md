@@ -64,6 +64,130 @@ Colonists have 5 gear slots, displayed in a person-shaped grid:
   - **Mattock** — Mining + Chopping (1.15x / 1.3x / 1.5x) — multi-purpose but weaker than specialists
 - **Artifact** — Special items with unique effects. Can be equipped for personal bonuses or placed on Artifact Pedestals for area-of-effect colony buffs. See the Artifacts section below.
 
+### Equipment Stat Reference
+
+Any of these stats can be placed on any equipment item in `config.js`. The runtime reads them generically from all equipped slots (weapon, armor, helmet, tool, artifact).
+
+#### Combat Stats
+
+| Stat | Type | Effect |
+|---|---|---|
+| `damage` | flat number | Melee attack damage. Weapon slot is base; other slots add bonus. |
+| `damageReduction` | 0-1 fraction | Reduces incoming damage (multiplicative across all slots). |
+| `critChance` | 0-1 fraction | Chance to deal double damage on hit. |
+| `dodgeChance` | 0-1 fraction | Chance to completely avoid incoming damage. |
+| `hpOnKill` | flat number | HP healed when killing an enemy. |
+| `thornsDamage` | flat number | Flat damage reflected back to attacker when hit. |
+| `spellDamageBonus` | 0-1 fraction | Additive bonus to spell damage multiplier (sums across all slots). |
+
+#### Magic Stats
+
+| Stat | Type | Effect |
+|---|---|---|
+| `manaRegen` | flat per-tick | Extra passive mana regeneration (added before state multipliers). |
+| `spellCostReduction` | 0-1 fraction | % reduction in spell mana costs (min cost 1). |
+| `tomeStudySpeed` | multiplier | Multiplier on tome learning progress per study cycle. |
+| `researchSpeed` | multiplier | Multiplier on research points contributed per study cycle. |
+
+#### Survival Stats
+
+| Stat | Type | Effect |
+|---|---|---|
+| `maxHpBonus` | flat number | Extra max HP (recalculated on equip/unequip). |
+| `moodBonus` | flat number | Passive mood boost (added to mood calculation). |
+| `hungerReduction` | 0-1 fraction | Fraction slower hunger decay (0.3 = 30% slower). |
+| `coldResistance` | 0-1 fraction | Chance to avoid the "freezing" thought in winter outdoors. |
+| `moveSpeedBonus` | 0-1 fraction | Fraction faster movement (capped at 0.8 total). |
+| `workSpeedBonus` | 0-1 fraction | Flat addition to work speed multiplier. |
+
+#### Work Speed Stats
+
+| Stat | Type | Effect |
+|---|---|---|
+| `miningSpeed` | multiplier | Mining task speed multiplier. |
+| `choppingSpeed` | multiplier | Chopping task speed multiplier. |
+| `farmingSpeed` | multiplier | Farming (plant/harvest) task speed multiplier. |
+| `craftingSpeed` | multiplier | Crafting task speed multiplier. |
+| `cookingSpeed` | multiplier | Cooking task speed multiplier. |
+| `buildSpeed` | multiplier | Building/construction task speed multiplier. |
+
+#### Artifact-Only Stats
+
+These are specific to the artifact slot and use nested objects:
+
+| Stat | Type | Effect |
+|---|---|---|
+| `pedestal: { radius, manaCost, ...effects }` | object | Area-of-effect when placed on a pedestal. |
+| `combat: { targetPriority, autoReviveHp, damageReduction }` | object | Combat-specific effects (raids + waves). |
+| `expedition: { lootMult, trapDamageMult, ... }` | object | Expedition-specific modifiers. |
+| `durability: { max, breakOnUse }` | object | Item breaks after N triggers, needs anvil repair. |
+| `consumable: true` | boolean | Destroyed after one use. |
+
+#### Example: Adding a New Item
+
+```javascript
+// In ARMORS:
+enchanted_cloak: { name: 'Enchanted Cloak', damageReduction: 0.12, spellDamageBonus: 0.1, coldResistance: 0.5 },
+
+// In WEAPONS:
+vampiric_blade: { name: 'Vampiric Blade', damage: 16, hpOnKill: 10, critChance: 0.15 },
+
+// In TOOLS:
+scholars_quill: { name: "Scholar's Quill", researchSpeed: 1.5, tomeStudySpeed: 1.3 },
+```
+
+#### Example: Adding a New Pedestal Effect (Area-of-Effect)
+
+Pedestal effects apply when an artifact is placed on a mana pedestal. They affect colonists or tiles within their radius each tick. Here's how to add a hypothetical `cropGrowthMult` effect that speeds up crop growth for nearby farm tiles:
+
+**Step 1: Define the artifact in `config.js`**
+
+```javascript
+// In ARTIFACTS:
+verdant_heart: {
+    name: 'Verdant Heart',
+    farmingSpeed: 1.2,  // carried bonus (generic stat)
+    pedestal: { radius: 4, manaCost: 1, cropGrowthMult: 1.5 },
+    expedition: { lootMult: 1.1 },
+},
+```
+
+The `pedestal` object defines the effect: `radius` (Manhattan distance), `manaCost` (per-tick mana drain), and any custom effect keys. Existing effects include `workSpeedBonus` (applied to colonists in range), `blightImmunity` (applied to crop tiles in range), and `wandererChanceMult` (global, `radius: 'global'`).
+
+**Step 2: Handle the effect in `js/core/main.js` (pedestal update loop)**
+
+Find the pedestal processing loop (search for `blightImmunity`). Add your tile-based effect alongside it:
+
+```javascript
+// After the blightImmunity block:
+if (def.pedestal.cropGrowthMult) {
+    for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.abs(dx) + Math.abs(dy) > radius) continue;
+            const ty = y + dy, tx = x + dx;
+            if (ty < 0 || ty >= game.map.length || tx < 0 || tx >= game.map[0].length) continue;
+            const cropTile = game.map[ty][tx];
+            if (cropTile.crop) cropTile.cropGrowthMult = (cropTile.cropGrowthMult || 1) * def.pedestal.cropGrowthMult;
+        }
+    }
+}
+```
+
+**Step 3: Consume the effect where relevant**
+
+In the crop growth tick (wherever crops advance), multiply by the tile's bonus:
+
+```javascript
+const growthBonus = tile.cropGrowthMult || 1;
+tile.crop.growth += baseGrowthRate * growthBonus;
+```
+
+Reset tile flags each tick (same as `blightImmune` is cleared/reapplied).
+
+**Pattern summary:** Colonist-targeted effects (like `workSpeedBonus`) iterate colonists in radius. Tile-targeted effects (like `blightImmunity`, `cropGrowthMult`) iterate map tiles in radius. Global effects (like `wandererChanceMult`) use `radius: 'global'` and are read directly from the artifact definition without distance checks.
+
+---
+
 ### Crafting Quality
 When equipment is crafted, a quality roll occurs based on the crafter's skill level:
 

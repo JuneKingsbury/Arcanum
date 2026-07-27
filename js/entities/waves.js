@@ -146,7 +146,7 @@ export class WaveSystem {
             if (score > bestScore) { bestScore = score; bestTarget = c; }
         }
         if (bestTarget) {
-            colonistTakeDamage(bestTarget, enemy.damage, game);
+            colonistTakeDamage(bestTarget, enemy.damage, game, enemy);
             return;
         }
 
