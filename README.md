@@ -50,11 +50,12 @@ Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early 
 - **Fleeing** — Colonists automatically disengage from combat when HP drops below 20, retreating until the threat is 8+ tiles away.
 
 ### Equipment
-Colonists have 4 gear slots:
+Colonists have 5 gear slots, displayed in a person-shaped grid:
 
 - **Weapon** — Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
 - **Magic Weapon** — Wands and staves trade melee power for spell amplification. Wooden Wand (+30% spell dmg), Runic Wand (+50%), Crystal Staff (+20%), Void Staff (+40%). Best for dedicated spellcasters.
-- **Armor** — Reduces incoming damage. Progression: Iron Helm (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
+- **Armor** — Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
+- **Helmet** — Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (10%) → Runic Helm (14%) → Void Crown (18%, +spell dmg).
 - **Tool** — Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
   - **Pickaxe** — Mining speed (1.25x / 1.45x / 1.7x)
   - **Axe** — Chopping speed (1.25x / 1.45x / 1.7x)

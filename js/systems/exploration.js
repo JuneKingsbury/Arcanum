@@ -249,7 +249,7 @@ export class ExplorationSystem {
                 const c = game.getColonist(id);
                 return {
                     id: c.id, name: c.name, hp: c.hp, maxHp: c.maxHp,
-                    weapon: c.weapon, armor: c.armor,
+                    weapon: c.weapon, armor: c.armor, helmet: c.helmet,
                     artifact: c.artifactBroken ? null : c.artifact,
                     knownSpells: c.knownSpells ? [...c.knownSpells] : [],
                     mana: c.mana || 0,
@@ -466,6 +466,9 @@ export class ExplorationSystem {
             let dmg = enemy.damage + randInt(0, 2);
             if (target.armor) {
                 dmg = Math.max(1, Math.floor(dmg * (1 - target.armor.damageReduction)));
+            }
+            if (target.helmet) {
+                dmg = Math.max(1, Math.floor(dmg * (1 - target.helmet.damageReduction)));
             }
             if (target.artifact?.expedition?.damageReduction) {
                 dmg = Math.max(1, Math.floor(dmg * (1 - target.artifact.expedition.damageReduction)));

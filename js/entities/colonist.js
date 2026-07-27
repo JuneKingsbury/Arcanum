@@ -1,4 +1,4 @@
-import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES } from '../core/config.js';
+import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
 import { FOODSTUFFS } from '../systems/resources.js';
@@ -92,6 +92,7 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         assignedBed: null,
         weapon: null,
         armor: null,
+        helmet: null,
         tool: null,
         artifact: null,
         drafted: false,
@@ -127,7 +128,7 @@ export function createGolem(type, x, y) {
         state: 'idle',
         currentTaskId: null, path: [], workProgress: 0,
         assignedBed: null,
-        weapon: null, armor: null, tool: null, artifact: null,
+        weapon: null, armor: null, helmet: null, tool: null, artifact: null,
         drafted: false, draftTarget: null,
         guardMode: false, guardPost: null,
         stateTimer: 0, wanderCooldown: 0, moveCooldown: 0,
@@ -466,7 +467,7 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let dmg = spell.damage;
-            const spellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0);
+            const spellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0) + (colonist.helmet?.spellDamageBonus || 0);
             if (spellBonus) dmg = Math.floor(dmg * (1 + spellBonus));
             target.hp -= dmg;
             game.combatEffects.push({ x: target.x, y: target.y, char: spell.projectileChar || '*', color: spell.projectileColor || '#ff44ff', ttl: 3 });
@@ -478,7 +479,7 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let aoeDmg = spell.damage;
-            const aoeSpellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0);
+            const aoeSpellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0) + (colonist.helmet?.spellDamageBonus || 0);
             if (aoeSpellBonus) aoeDmg = Math.floor(aoeDmg * (1 + aoeSpellBonus));
             const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.wildlife.filter(w => w.hostile)];
             for (const h of allHostiles) {
@@ -881,6 +882,11 @@ function completeTask(colonist, task, game) {
                         applyQuality(item, colonist, 'damageReduction');
                         game.resources.addArmor(item);
                         handled = true;
+                    } else if (HELMETS[key]) {
+                        const item = { ...HELMETS[key], key };
+                        applyQuality(item, colonist, 'damageReduction');
+                        game.resources.addHelmet(item);
+                        handled = true;
                     } else if (TOOLS[key]) {
                         const item = { ...TOOLS[key], key };
                         applyQuality(item, colonist, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
@@ -1225,6 +1231,7 @@ export function colonistTakeDamage(colonist, damage, game) {
     let mult = 1;
     if (colonist.traits.includes('tough')) mult = TRAITS.tough.damageTakenMult;
     if (colonist.armor) mult *= (1 - colonist.armor.damageReduction);
+    if (colonist.helmet) mult *= (1 - colonist.helmet.damageReduction);
     if (colonist.artifact && !colonist.artifactBroken) {
         if (colonist.artifact.combat?.damageReduction) mult *= (1 - colonist.artifact.combat.damageReduction);
     }

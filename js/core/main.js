@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -787,8 +787,11 @@ class Game {
 
     equipArmor(colonistId, index) { this._equipItem(colonistId, index, 'armor', 'armors', 'addArmor'); }
     unequipArmor(colonistId) { this._unequipItem(colonistId, 'armor', 'addArmor', 'armor'); }
+    equipHelmet(colonistId, index) { this._equipItem(colonistId, index, 'helmet', 'helmets', 'addHelmet'); }
+    unequipHelmet(colonistId) { this._unequipItem(colonistId, 'helmet', 'addHelmet', 'helmet'); }
     discardWeapon(index) { this._discardItem(index, 'weapons'); }
     discardArmor(index) { this._discardItem(index, 'armors'); }
+    discardHelmet(index) { this._discardItem(index, 'helmets'); }
     equipTool(colonistId, index) { this._equipItem(colonistId, index, 'tool', 'tools', 'addTool'); }
     unequipTool(colonistId) { this._unequipItem(colonistId, 'tool', 'addTool', 'tool'); }
     discardTool(index) { this._discardItem(index, 'tools'); }
@@ -958,6 +961,12 @@ class Game {
                 this.equipArmor(colonistId, 0);
             }
         }
+        if (this.resources.helmets.length > 0) {
+            this.resources.helmets.sort((a, b) => b.damageReduction - a.damageReduction);
+            if (!c.helmet || this.resources.helmets[0].damageReduction > c.helmet.damageReduction) {
+                this.equipHelmet(colonistId, 0);
+            }
+        }
         if (this.resources.tools.length > 0 && !c.tool) {
             this.equipTool(colonistId, 0);
         }
@@ -1085,6 +1094,13 @@ class Game {
                 if (!def) return;
                 this.resources.addArmor({ ...def, key });
                 this.notifications.push({ text: `[DEBUG] Granted armor: ${def.name}`, tick: this.tick, type: 'success' });
+                break;
+            }
+            case 'helmet': {
+                const def = HELMETS[key];
+                if (!def) return;
+                this.resources.addHelmet({ ...def, key });
+                this.notifications.push({ text: `[DEBUG] Granted helmet: ${def.name}`, tick: this.tick, type: 'success' });
                 break;
             }
             case 'tool': {

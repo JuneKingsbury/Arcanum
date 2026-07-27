@@ -1,4 +1,6 @@
 export const CHANGELOG = [
+    { date: '2026-07-27', message: 'Helmet slot: new headgear equipment slot with 4 helmets (Leather Cap, Iron Helmet, Runic Helm, Void Crown)' },
+    { date: '2026-07-27', message: 'Paper-doll equipment grid: colonist info shows gear in a person-shaped 2x3 layout — click slots to equip' },
     { date: '2026-07-27', message: 'Equipment expansion: 7 new weapons, 5 new armors across all progression tiers' },
     { date: '2026-07-27', message: 'New materials: iron ore (mining) and hides/leather (hunting) for mid-tier equipment' },
     { date: '2026-07-27', message: 'Tool system overhaul: 15 tools across 5 categories (Pickaxe, Axe, Sickle, Hammer, Mattock) × 3 material tiers (Stone → Iron → Runic)' },

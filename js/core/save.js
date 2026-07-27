@@ -26,6 +26,7 @@ export function saveGame(game) {
             stockpile: game.resources.stockpile,
             weapons: game.resources.weapons,
             armors: game.resources.armors,
+            helmets: game.resources.helmets,
             tools: game.resources.tools,
             artifacts: game.resources.artifacts,
             potions: game.resources.potions,
@@ -148,6 +149,8 @@ export function loadGame(game) {
         if (!c.disabledSpells) c.disabledSpells = [];
         if (c.equippedTome === undefined) c.equippedTome = null;
         if (!c.tomeProgress || typeof c.tomeProgress === 'number') c.tomeProgress = {};
+        if (c.helmet === undefined) c.helmet = null;
+        if (c.armor && c.armor.key === 'iron_helm') { c.armor.key = 'iron_brigandine'; c.armor.name = 'Iron Brigandine'; }
     }
     game.rebuildColonistIndex();
     game.wildlife = data.wildlife;
@@ -157,6 +160,10 @@ export function loadGame(game) {
     game.resources.stockpile = data.resources.stockpile;
     game.resources.weapons = data.resources.weapons;
     game.resources.armors = data.resources.armors || [];
+    for (const a of game.resources.armors) {
+        if (a.key === 'iron_helm') { a.key = 'iron_brigandine'; a.name = 'Iron Brigandine'; }
+    }
+    game.resources.helmets = data.resources.helmets || [];
     game.resources.tools = data.resources.tools || [];
     game.resources.artifacts = data.resources.artifacts || [];
     game.resources.potions = data.resources.potions || [];

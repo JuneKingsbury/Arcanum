@@ -460,12 +460,17 @@ export const RECIPES = {
     craft_runic_greatsword: { input: { runite: 4, iron: 2, planks: 2 }, output: { runic_greatsword: 1 }, skill: 'crafting', ticks: 50, station: 'workbench', research: 'masterwork', category: 'Equipment' },
     craft_void_dagger: { input: { void_essence: 3, runite: 1 }, output: { void_dagger: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
     craft_void_blade: { input: { void_essence: 6, runite: 2, planks: 1 }, output: { void_blade: 1 }, skill: 'crafting', ticks: 60, station: 'workbench', research: 'void_forging', category: 'Equipment' },
-    craft_iron_helm: { input: { iron: 2 }, output: { iron_helm: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
+    craft_iron_brigandine: { input: { iron: 2 }, output: { iron_brigandine: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
     craft_leather_vest: { input: { leather: 3 }, output: { leather_vest: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Equipment' },
     craft_iron_chainmail: { input: { iron: 4, leather: 2 }, output: { iron_chainmail: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', category: 'Equipment' },
     craft_mana_weave_robe: { input: { runite: 2, leather: 2, iron: 1 }, output: { mana_weave_robe: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'mana_weaving', category: 'Equipment' },
     craft_runic_plate: { input: { runite: 3, iron: 2, leather: 1 }, output: { runic_plate: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'runeforging', category: 'Equipment' },
     craft_void_armor: { input: { void_essence: 5, bricks: 2, planks: 1 }, output: { void_armor: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Equipment' },
+    // Helmets
+    craft_leather_cap: { input: { leather: 2 }, output: { leather_cap: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Equipment' },
+    craft_iron_helmet: { input: { iron: 3 }, output: { iron_helmet: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Equipment' },
+    craft_runic_helm: { input: { runite: 2, iron: 1 }, output: { runic_helm: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'runeforging', category: 'Equipment' },
+    craft_void_crown: { input: { void_essence: 4, runite: 1 }, output: { void_crown: 1 }, skill: 'crafting', ticks: 50, station: 'workbench', research: 'void_forging', category: 'Equipment' },
     // Pickaxes
     craft_stone_pickaxe: { input: { stone: 2, planks: 1 }, output: { stone_pickaxe: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Tools' },
     craft_iron_pickaxe: { input: { iron: 2, planks: 1 }, output: { iron_pickaxe: 1 }, skill: 'crafting', ticks: 20, station: 'workbench', category: 'Tools' },
@@ -541,12 +546,21 @@ export const WEAPONS = {
 
 // To add armor: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
 export const ARMORS = {
-    iron_helm: { name: 'Iron Helm', damageReduction: 0.08 },
+    iron_brigandine: { name: 'Iron Brigandine', damageReduction: 0.08 },
     leather_vest: { name: 'Leather Vest', damageReduction: 0.10 },
     mana_weave_robe: { name: 'Mana-Weave Robe', damageReduction: 0.15, spellDamageBonus: 0.15 },
     iron_chainmail: { name: 'Iron Chainmail', damageReduction: 0.18 },
     runic_plate: { name: 'Runic Plate', damageReduction: 0.24 },
     void_armor: { name: 'Void Armor', damageReduction: 0.3 },
+};
+
+// To add a helmet: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
+// Helmet DR stacks multiplicatively with body armor DR.
+export const HELMETS = {
+    leather_cap: { name: 'Leather Cap', damageReduction: 0.05 },
+    iron_helmet: { name: 'Iron Helmet', damageReduction: 0.10 },
+    runic_helm: { name: 'Runic Helm', damageReduction: 0.14 },
+    void_crown: { name: 'Void Crown', damageReduction: 0.18, spellDamageBonus: 0.10 },
 };
 
 // To add a tool: add entry here + a recipe with output: { <key>: 1 }. Equipped in a separate slot from weapons.
@@ -680,6 +694,7 @@ export const POTIONS = {
 export const ITEM_CHARS = {
     weapon: { char: '/', color: '#cccccc' },
     armor: { char: '[', color: '#6688cc' },
+    helmet: { char: '^', color: '#7799cc' },
     tool: { char: '\\', color: '#bb8844' },
     artifact: { char: '*', color: '#cc44ff' },
     potion: { char: '!', color: '#44cc44' },

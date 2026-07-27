@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -670,7 +670,8 @@ export class UI {
         ).join('<br>');
 
         const weaponTip = colonist.weapon ? `${colonist.weapon.damage} damage${colonist.weapon.miningSpeed ? `, +${Math.round((colonist.weapon.miningSpeed-1)*100)}% mining` : ''}${colonist.weapon.choppingSpeed ? `, +${Math.round((colonist.weapon.choppingSpeed-1)*100)}% chopping` : ''}` : 'No weapon equipped';
-        const armorTip = colonist.armor ? `${Math.round(colonist.armor.damageReduction * 100)}% damage reduction` : 'No armor equipped';
+        const armorTip = colonist.armor ? `${Math.round(colonist.armor.damageReduction * 100)}% damage reduction${colonist.armor.spellDamageBonus ? `, +${Math.round(colonist.armor.spellDamageBonus*100)}% spell dmg` : ''}` : 'No armor equipped';
+        const helmetTip = colonist.helmet ? `${Math.round(colonist.helmet.damageReduction * 100)}% damage reduction${colonist.helmet.spellDamageBonus ? `, +${Math.round(colonist.helmet.spellDamageBonus*100)}% spell dmg` : ''}` : 'No helmet equipped';
         const toolTip = colonist.tool ? Object.entries(colonist.tool).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => `${k}: ${typeof v === 'number' ? (v > 1 ? `+${Math.round((v-1)*100)}%` : `${Math.round(v*100)}%`) : v}`).join(', ') : 'No tool equipped';
         const artifactTip = colonist.artifact ? this._getArtifactTooltip(colonist.artifact) : 'No artifact equipped';
 
@@ -688,10 +689,38 @@ export class UI {
             html += `<div class="info-row"><span style="color:#aa88ff">Mana: ${bar(colonist.mana / colonist.maxMana * 100)} ${Math.floor(colonist.mana)}/${colonist.maxMana}</span></div>`;
             html += `<div class="info-row">Magic: ${Object.entries(MAGIC_SKILLS).filter(([k]) => colonist.magicSkills[k] > 0).map(([k, def]) => `<span class="skill-tip" data-tip="${def.description}" style="color:#bb88ff">${def.name}:${colonist.magicSkills[k]}</span>`).join(' ')}</div>`;
         }
-        html += `<div class="info-row">Weapon: ${colonist.weapon ? this._itemIcon(colonist.weapon.key, 'weapon') : ''}<span class="skill-tip" data-tip="${weaponTip}">${colonist.weapon?.name || 'Fists'}</span></div>`;
-        html += `<div class="info-row">Armor: ${colonist.armor ? this._itemIcon(colonist.armor.key, 'armor') : ''}<span class="skill-tip" data-tip="${armorTip}">${colonist.armor?.name || 'None'}</span></div>`;
-        html += `<div class="info-row">Tool: ${colonist.tool ? this._itemIcon(colonist.tool.key, 'tool') : ''}<span class="skill-tip" data-tip="${toolTip}">${colonist.tool?.name || 'None'}</span></div>`;
-        html += `<div class="info-row">Artifact: ${colonist.artifact ? this._itemIcon(colonist.artifact.key, 'artifact') : ''}<span class="skill-tip" data-tip="${artifactTip}">${colonist.artifact?.name || 'None'}</span></div>`;
+        const id = colonist.id;
+        const tomeName = colonist.equippedTome ? SPELL_TOMES[colonist.equippedTome]?.name : null;
+        const tomeTip = tomeName ? (() => { const p = (colonist.tomeProgress?.[colonist.equippedTome] || 0); return `${tomeName} (${Math.floor(p / SPELL_TOMES[colonist.equippedTome].learningWork * 100)}%)`; })() : 'No tome equipped';
+        const slotStyle = 'border:1px solid #444;border-radius:4px;padding:4px 2px;background:#1a1a2e;cursor:pointer;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+        html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:8px 0;text-align:center;">`;
+        // Row 1: Tome | Helmet | Artifact
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-tome-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Tome</div>`;
+        html += colonist.equippedTome ? `<span class="skill-tip" data-tip="${tomeTip}">${this._itemIcon(colonist.equippedTome, 'tome')}</span>` : `<span style="color:#333;font-size:14px">~</span>`;
+        html += `</div>`;
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-helmet-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Helmet</div>`;
+        html += colonist.helmet ? `<span class="skill-tip" data-tip="${helmetTip}">${this._itemIcon(colonist.helmet.key, 'helmet')}</span>` : `<span style="color:#333;font-size:14px">^</span>`;
+        html += `</div>`;
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-artifact-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Artifact</div>`;
+        html += colonist.artifact ? `<span class="skill-tip" data-tip="${artifactTip}">${this._itemIcon(colonist.artifact.key, 'artifact')}</span>` : `<span style="color:#333;font-size:14px">*</span>`;
+        html += `</div>`;
+        // Row 2: Weapon | Armor | Tool
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-weapon-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Weapon</div>`;
+        html += colonist.weapon ? `<span class="skill-tip" data-tip="${weaponTip}">${this._itemIcon(colonist.weapon.key, 'weapon')}</span>` : `<span style="color:#333;font-size:14px">/</span>`;
+        html += `</div>`;
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-armor-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Armor</div>`;
+        html += colonist.armor ? `<span class="skill-tip" data-tip="${armorTip}">${this._itemIcon(colonist.armor.key, 'armor')}</span>` : `<span style="color:#333;font-size:14px">[]</span>`;
+        html += `</div>`;
+        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-tool-${id}')?.click()">`;
+        html += `<div style="color:#666;font-size:10px">Tool</div>`;
+        html += colonist.tool ? `<span class="skill-tip" data-tip="${toolTip}">${this._itemIcon(colonist.tool.key, 'tool')}</span>` : `<span style="color:#333;font-size:14px">\\</span>`;
+        html += `</div>`;
+        html += `</div>`;
         if (colonist.equippedTome) {
             const tomeDef = SPELL_TOMES[colonist.equippedTome];
             const currentProgress = (colonist.tomeProgress && colonist.tomeProgress[colonist.equippedTome]) || 0;
@@ -750,6 +779,7 @@ export class UI {
         html += `<button onclick="window.game.undraftAll()">Undraft All</button>`;
         html += this.buildWeaponDropdown(colonist);
         html += this.buildArmorDropdown(colonist);
+        html += this.buildHelmetDropdown(colonist);
         html += this.buildToolDropdown(colonist);
         html += this.buildArtifactDropdown(colonist);
         html += this.buildTomeDropdown(colonist);
@@ -777,7 +807,7 @@ export class UI {
 
     buildWeaponDropdown(colonist) {
         const weapons = this.game.resources.weapons;
-        let html = `<select onchange="if(this.value==='unequip'){window.game.unequipWeapon(${colonist.id})}else if(this.value!==''){window.game.equipWeapon(${colonist.id},parseInt(this.value))}">`;
+        let html = `<select id="eq-weapon-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipWeapon(${colonist.id})}else if(this.value!==''){window.game.equipWeapon(${colonist.id},parseInt(this.value))}">`;
         html += `<option value="">Weapon: ${colonist.weapon?.name || 'Fists'}</option>`;
         if (colonist.weapon) {
             html += `<option value="unequip">Unequip ${colonist.weapon.name}</option>`;
@@ -794,7 +824,7 @@ export class UI {
 
     buildArmorDropdown(colonist) {
         const armors = this.game.resources.armors;
-        let html = `<select onchange="if(this.value==='unequip'){window.game.unequipArmor(${colonist.id})}else if(this.value!==''){window.game.equipArmor(${colonist.id},parseInt(this.value))}">`;
+        let html = `<select id="eq-armor-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipArmor(${colonist.id})}else if(this.value!==''){window.game.equipArmor(${colonist.id},parseInt(this.value))}">`;
         html += `<option value="">Armor: ${colonist.armor?.name || 'None'}</option>`;
         if (colonist.armor) {
             html += `<option value="unequip">Unequip ${colonist.armor.name}</option>`;
@@ -809,9 +839,26 @@ export class UI {
         return html;
     }
 
+    buildHelmetDropdown(colonist) {
+        const helmets = this.game.resources.helmets;
+        let html = `<select id="eq-helmet-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipHelmet(${colonist.id})}else if(this.value!==''){window.game.equipHelmet(${colonist.id},parseInt(this.value))}">`;
+        html += `<option value="">Helmet: ${colonist.helmet?.name || 'None'}</option>`;
+        if (colonist.helmet) {
+            html += `<option value="unequip">Unequip ${colonist.helmet.name}</option>`;
+        }
+        helmets.forEach((h, i) => {
+            html += `<option value="${i}">${h.name} (${Math.round(h.damageReduction * 100)}% DR)</option>`;
+        });
+        if (helmets.length === 0 && !colonist.helmet) {
+            html += `<option disabled>No helmets available</option>`;
+        }
+        html += `</select>`;
+        return html;
+    }
+
     buildToolDropdown(colonist) {
         const tools = this.game.resources.tools;
-        let html = `<select onchange="if(this.value==='unequip'){window.game.unequipTool(${colonist.id})}else if(this.value!==''){window.game.equipTool(${colonist.id},parseInt(this.value))}">`;
+        let html = `<select id="eq-tool-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipTool(${colonist.id})}else if(this.value!==''){window.game.equipTool(${colonist.id},parseInt(this.value))}">`;
         html += `<option value="">Tool: ${colonist.tool?.name || 'None'}</option>`;
         if (colonist.tool) {
             html += `<option value="unequip">Unequip ${colonist.tool.name}</option>`;
@@ -829,7 +876,7 @@ export class UI {
 
     buildArtifactDropdown(colonist) {
         const artifacts = this.game.resources.artifacts;
-        let html = `<select onchange="if(this.value==='unequip'){window.game.unequipArtifact(${colonist.id})}else if(this.value!==''){window.game.equipArtifact(${colonist.id},parseInt(this.value))}">`;
+        let html = `<select id="eq-artifact-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipArtifact(${colonist.id})}else if(this.value!==''){window.game.equipArtifact(${colonist.id},parseInt(this.value))}">`;
         html += `<option value="">Artifact: ${colonist.artifact?.name || 'None'}</option>`;
         if (colonist.artifact) {
             html += `<option value="unequip">Unequip ${colonist.artifact.name}</option>`;
@@ -847,7 +894,7 @@ export class UI {
 
     buildTomeDropdown(colonist) {
         const tomes = this.game.resources.tomes || [];
-        let html = `<select onchange="if(this.value==='unequip'){window.game.unequipTome(${colonist.id})}else if(this.value!==''){window.game.equipTome(${colonist.id},parseInt(this.value))}">`;
+        let html = `<select id="eq-tome-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipTome(${colonist.id})}else if(this.value!==''){window.game.equipTome(${colonist.id},parseInt(this.value))}">`;
         const currentTome = colonist.equippedTome ? SPELL_TOMES[colonist.equippedTome]?.name : 'None';
         html += `<option value="">Tome: ${currentTome}</option>`;
         if (colonist.equippedTome) {
@@ -1728,7 +1775,8 @@ export class UI {
         const consumables = this.game.resources.consumables;
         const tamed = this.game.tamedAnimals;
 
-        const equipCount = weapons.length + armors.length + tools.length + artifacts.length;
+        const helmets = this.game.resources.helmets;
+        const equipCount = weapons.length + armors.length + helmets.length + tools.length + artifacts.length;
         const consumeCount = potions.length + tomes.length;
 
         let html = '<div class="panel-close" data-panel-close="inventory">&times;</div><h3>Inventory</h3>';
@@ -1744,7 +1792,7 @@ export class UI {
         if (activeTab === 'resources') {
             html += this._buildInvResources(r);
         } else if (activeTab === 'equipment') {
-            html += this._buildInvEquipment(weapons, armors, tools, artifacts);
+            html += this._buildInvEquipment(weapons, armors, helmets, tools, artifacts);
         } else if (activeTab === 'consumables') {
             html += this._buildInvConsumables(potions, tomes, consumables);
         } else if (activeTab === 'animals') {
@@ -1794,7 +1842,7 @@ export class UI {
         return colors[item.quality] || '#cccccc';
     }
 
-    _buildInvEquipment(weapons, armors, tools, artifacts) {
+    _buildInvEquipment(weapons, armors, helmets, tools, artifacts) {
         let html = '';
         if (weapons.length > 0) {
             html += '<div class="info-row" style="color:#cc8888;margin-bottom:4px;"><b>Weapons:</b></div>';
@@ -1812,6 +1860,14 @@ export class UI {
                 let stats = `-${Math.round(a.damageReduction * 100)}% dmg`;
                 if (a.spellDamageBonus) stats += `, +${Math.round(a.spellDamageBonus * 100)}% spell`;
                 html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(a)}">${this._itemIcon(a.key, 'armor')}${a.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${a.name.replace(/'/g, "\\\\'")}?')){window.game.discardArmor(${i})}">♻</button></div>`;
+            });
+        }
+        if (helmets.length > 0) {
+            html += '<div class="info-row" style="color:#7799cc;margin-top:8px;margin-bottom:4px;"><b>Helmets:</b></div>';
+            helmets.forEach((h, i) => {
+                let stats = `-${Math.round(h.damageReduction * 100)}% dmg`;
+                if (h.spellDamageBonus) stats += `, +${Math.round(h.spellDamageBonus * 100)}% spell`;
+                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(h)}">${this._itemIcon(h.key, 'helmet')}${h.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${h.name.replace(/'/g, "\\\\'")}?')){window.game.discardHelmet(${i})}">♻</button></div>`;
             });
         }
         if (tools.length > 0) {
@@ -2844,7 +2900,7 @@ export class UI {
         }
         const cat = categoryHint || this._getItemCategory(itemKey);
         if (!cat) return '';
-        const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey]);
+        const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || HELMETS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey]);
         const ch = itemDef?.char || ITEM_CHARS[cat]?.char || '?';
         const color = itemDef?.charColor || ITEM_CHARS[cat]?.color || '#aaa';
         return `<span style="color:${color};font-weight:bold;margin-right:2px;">${ch}</span>`;
@@ -2853,6 +2909,7 @@ export class UI {
     _getItemCategory(itemKey) {
         if (WEAPONS[itemKey]) return 'weapon';
         if (ARMORS[itemKey]) return 'armor';
+        if (HELMETS[itemKey]) return 'helmet';
         if (TOOLS[itemKey]) return 'tool';
         if (ARTIFACTS[itemKey]) return 'artifact';
         if (POTIONS[itemKey]) return 'potion';

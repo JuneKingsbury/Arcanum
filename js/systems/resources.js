@@ -11,6 +11,7 @@ export class ResourceManager {
         this.stockpile = { ...CONFIG.START_RESOURCES };
         this.weapons = [];
         this.armors = [];
+        this.helmets = [];
         this.tools = [];
         this.artifacts = [];
         this.potions = [];
@@ -100,6 +101,16 @@ export class ResourceManager {
         if (this.armors.length === 0) return null;
         this.armors.sort((a, b) => b.damageReduction - a.damageReduction);
         return this.armors.shift();
+    }
+
+    addHelmet(helmet) {
+        this.helmets.push(helmet);
+    }
+
+    takeHelmet() {
+        if (this.helmets.length === 0) return null;
+        this.helmets.sort((a, b) => b.damageReduction - a.damageReduction);
+        return this.helmets.shift();
     }
 
     addTool(tool) {
