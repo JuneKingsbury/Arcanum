@@ -50,6 +50,7 @@ class BlueprintEditor {
 
         this._buildDOM();
         this._bindEvents();
+        this._autoRestore();
     }
 
     show() {
@@ -184,11 +185,11 @@ class BlueprintEditor {
         document.getElementById('bp-load-select').addEventListener('change', (e) => this._loadBlueprint(e.target.value));
         document.getElementById('bp-new-building').addEventListener('click', () => this._showNewBuildingForm());
 
-        document.getElementById('bp-name').addEventListener('input', (e) => { this.blueprintName = e.target.value; });
-        document.getElementById('bp-id').addEventListener('input', (e) => { this.blueprintId = e.target.value; });
-        document.getElementById('bp-struct-research').addEventListener('input', (e) => { this.structureResearch = e.target.value; });
-        document.getElementById('bp-struct-effects').addEventListener('input', (e) => { this.structureEffects = e.target.value; });
-        document.getElementById('bp-struct-desc').addEventListener('input', (e) => { this.structureDescription = e.target.value; });
+        document.getElementById('bp-name').addEventListener('input', (e) => { this.blueprintName = e.target.value; this._autoSave(); });
+        document.getElementById('bp-id').addEventListener('input', (e) => { this.blueprintId = e.target.value; this._autoSave(); });
+        document.getElementById('bp-struct-research').addEventListener('input', (e) => { this.structureResearch = e.target.value; this._autoSave(); });
+        document.getElementById('bp-struct-effects').addEventListener('input', (e) => { this.structureEffects = e.target.value; this._autoSave(); });
+        document.getElementById('bp-struct-desc').addEventListener('input', (e) => { this.structureDescription = e.target.value; this._autoSave(); });
 
         // Tool buttons
         this.container.querySelectorAll('.bp-tool').forEach(btn => {
@@ -292,6 +293,7 @@ class BlueprintEditor {
                 after.set(key, this.grid[y][x] ? { ...this.grid[y][x] } : null);
             }
             this._lastAction = { before: this._strokeCells, after, undone: false };
+            this._autoSave();
         }
         this._strokeCells = null;
     }
@@ -929,5 +931,53 @@ class BlueprintEditor {
         this.coreCell = null;
         this.selectedCell = null;
         this.reqOverrides = {};
+    }
+
+    _autoSave() {
+        try {
+            const data = {
+                grid: this._serializeGrid(),
+                coreCell: this.coreCell,
+                reqOverrides: this.reqOverrides,
+                customBuildings: this.customBuildings,
+                blueprintName: this.blueprintName,
+                blueprintId: this.blueprintId,
+                structureResearch: this.structureResearch,
+                structureEffects: this.structureEffects,
+                structureDescription: this.structureDescription,
+                camera: this.camera,
+                zoom: this.zoom,
+            };
+            localStorage.setItem(STORAGE_KEY + '_autosave', JSON.stringify(data));
+        } catch {}
+    }
+
+    _autoRestore() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY + '_autosave');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (!data || !data.grid || !data.grid.length) return;
+            this._deserializeGrid(data.grid);
+            this.coreCell = data.coreCell || null;
+            this.reqOverrides = data.reqOverrides || {};
+            this.customBuildings = data.customBuildings || [];
+            this.blueprintName = data.blueprintName || '';
+            this.blueprintId = data.blueprintId || '';
+            this.structureResearch = data.structureResearch || '';
+            this.structureEffects = data.structureEffects || '';
+            this.structureDescription = data.structureDescription || '';
+            if (data.camera) this.camera = data.camera;
+            if (data.zoom) this.zoom = data.zoom;
+            document.getElementById('bp-name').value = this.blueprintName;
+            document.getElementById('bp-id').value = this.blueprintId;
+            const resEl = document.getElementById('bp-struct-research');
+            const effEl = document.getElementById('bp-struct-effects');
+            const descEl = document.getElementById('bp-struct-desc');
+            if (resEl) resEl.value = this.structureResearch;
+            if (effEl) effEl.value = this.structureEffects;
+            if (descEl) descEl.value = this.structureDescription;
+            this._buildPalette();
+        } catch {}
     }
 }

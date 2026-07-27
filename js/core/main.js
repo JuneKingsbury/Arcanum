@@ -1696,6 +1696,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.getElementById('start-realm-editor').addEventListener('click', () => {
+        import('../editor/realm-editor.js').then(({ launchRealmEditor }) => {
+            launchRealmEditor();
+        });
+    });
+
+    document.getElementById('start-entity-editor').addEventListener('click', () => {
+        import('../editor/entity-editor.js').then(({ launchEntityEditor }) => {
+            launchEntityEditor();
+        });
+    });
+
+    document.getElementById('start-equipment-editor').addEventListener('click', () => {
+        import('../editor/equipment-editor.js').then(({ launchEquipmentEditor }) => {
+            launchEquipmentEditor();
+        });
+    });
+
     const importFileInput = document.getElementById('import-file');
     document.getElementById('import-game').addEventListener('click', () => {
         importFileInput.click();

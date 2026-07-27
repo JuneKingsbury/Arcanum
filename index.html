@@ -141,14 +141,35 @@
             <div style="color:#ffcc00; font-weight:bold; font-size:14px;">Dev Tools</div>
             <button onclick="document.getElementById('devtools-panel').style.display='none';document.getElementById('modal-backdrop').style.display='none'" style="background:none; border:none; color:#aaa; font-size:18px; cursor:pointer;">&times;</button>
         </div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
-            <button id="start-blueprint" style="padding:8px 12px; text-align:left;">Blueprint Editor <span style="color:#888; font-size:11px;">— Design building layouts</span></button>
-            <button id="start-skin-editor" style="padding:8px 12px; text-align:left;">Skin Editor <span style="color:#888; font-size:11px;">— Create custom tile skins</span></button>
-        </div>
+        <table style="width:100%; border-collapse:collapse;">
+            <tr>
+                <td style="padding:4px 8px 4px 0;"><button id="start-blueprint" style="width:100%;padding:6px 10px;">Blueprint</button></td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Design building layouts visually on a grid</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px 4px 0;"><button id="start-skin-editor" style="width:100%;padding:6px 10px;">Skin</button></td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Pixel art editor for custom tile sprites</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px 4px 0;"><button id="start-realm-editor" style="width:100%;padding:6px 10px;">Realm</button></td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Create expedition realms with loot, enemies, and events</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px 4px 0;"><button id="start-entity-editor" style="width:100%;padding:6px 10px;">Entity</button></td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Define animals and creatures with taming behaviors</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px 4px 0;"><button id="start-equipment-editor" style="width:100%;padding:6px 10px;">Equipment</button></td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Create weapons, armor, tools, and artifacts</td>
+            </tr>
+        </table>
     </div>
 
     <div id="blueprint-editor" style="display:none;"></div>
     <div id="skin-editor" style="display:none;"></div>
+    <div id="realm-editor" style="display:none;"></div>
+    <div id="entity-editor" style="display:none;"></div>
+    <div id="equipment-editor" style="display:none;"></div>
 
     <div id="game-container">
         <div id="status-bar">
