@@ -25,6 +25,9 @@ export const CONFIG = {
     STOCKPILE_ALERTS: { wood: 5, stone: 5, food: 5 },
 };
 
+// Day/night boundary as fraction of TICKS_PER_DAY. Used for trait speed bonuses and behavior.
+export const DAY_NIGHT = { nightStart: 0.7, dayStart: 0.2 };
+
 // Characters and colors for non-building tiles (farms, snow, entities, designations).
 // These get merged with BUILDINGS chars/colors to form TILE_CHARS and TILE_COLORS.
 const BASE_TILE_CHARS = {
@@ -107,6 +110,14 @@ export const EVENTS = {
         notification: '{name} is feeling inspired!',
         logMessage: '{name} is feeling inspired!', logType: 'success',
     },
+};
+
+// Fire event tuning. Used by events.js fire spread and lifespan logic.
+export const FIRE_CONFIG = {
+    initialLifespan: 20,    // ticks a newly ignited tile burns
+    spreadChance: 0.05,     // per-tick probability of spreading to an adjacent tile
+    spreadTimerMin: 15,     // minimum lifespan for a fire that spreads
+    spreadTimerMax: 25,     // maximum lifespan for a fire that spreads
 };
 
 // To add a trade: add an entry here. Caravan event auto-generates choices from this.
@@ -330,6 +341,17 @@ export const QUALITY_TIERS = [
 ];
 
 export const SALVAGE_RATE = 0.5;
+
+// Maps task types to the equipment stat property that provides a speed bonus.
+// Used by colonist.js getEquipmentWorkBonus() to avoid hardcoded if/else chains.
+export const TASK_SPEED_STATS = {
+    mine: 'miningSpeed',
+    chop: 'choppingSpeed',
+    plant: 'farmingSpeed',
+    harvest: 'farmingSpeed',
+    craft: 'craftingSpeed',
+    cook: 'craftingSpeed',
+};
 
 // ----------------------------------------------------------------------------
 // Building & Crafting config
@@ -1844,6 +1866,15 @@ export const RENDER_CONFIG = {
     },
     terrainDithering: true,          // enable terrain edge dithering in sprite mode
     ditherDepth: 0.3,                // fraction of tile size for dithering depth
+    draftedPulsePeriod: 20,          // tick period for drafted colonist color pulse
+    draftedPulseDuty: 10,            // ticks within period that pulse is "on"
+    spellGlowPeriod: 16,             // tick period for active spell buff glow
+    spellGlowDuty: 8,                // ticks within period that glow is "on"
+    riftPulsePeriod: 20,             // tick period for rift gate active pulse
+    riftPulseDuty: 10,               // ticks within period that pulse is "on"
+    healthBarGreenThreshold: 0.5,    // above this % HP → green bar
+    healthBarYellowThreshold: 0.25,  // above this % HP → yellow bar (below → red)
+    healthBarColors: { green: '#00ff00', yellow: '#ffaa00', red: '#ff3333' },
 };
 
 // Visual effects for combat, portals, and turret shots. Used by renderer, colonist, combat, waves, power.
@@ -1876,4 +1907,14 @@ export const COMBAT_VISUALS = {
     spellDivinationChar: '?',
     spellDivinationColor: '#ccaaff',
     spellRangePreviewBg: '#1a0033', // background for targeting range preview tiles
+};
+
+// Colors for exploration/event log entry types. Used by ui.js _expLogColor().
+export const LOG_COLORS = {
+    danger: '#ff5555',
+    combat: '#ff8844',
+    success: '#88ff88',
+    loot: '#ffcc44',
+    ambient: '#777777',
+    default: '#aaddff',
 };

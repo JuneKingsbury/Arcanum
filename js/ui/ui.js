@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -519,14 +519,7 @@ export class UI {
     }
 
     _expLogColor(type) {
-        switch (type) {
-            case 'danger': return '#ff5555';
-            case 'combat': return '#ff8844';
-            case 'success': return '#88ff88';
-            case 'loot': return '#ffcc44';
-            case 'ambient': return '#777777';
-            default: return '#aaddff';
-        }
+        return LOG_COLORS[type] || LOG_COLORS.default;
     }
 
     _spellTooltip(spell) {
@@ -805,90 +798,143 @@ export class UI {
         this.elements.infoPanel.innerHTML = this.buildColonistInfoHtml(colonist);
     }
 
-    buildWeaponDropdown(colonist) {
-        const weapons = this.game.resources.weapons;
-        let html = `<select id="eq-weapon-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipWeapon(${colonist.id})}else if(this.value!==''){window.game.equipWeapon(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">Weapon: ${colonist.weapon?.name || 'Fists'}</option>`;
-        if (colonist.weapon) {
-            html += `<option value="unequip">Unequip ${colonist.weapon.name}</option>`;
+    _buildEquipDropdown(colonist, { slot, listName, label, fallback, equipFn, unequipFn, statRenderer }) {
+        const items = this.game.resources[listName];
+        const current = colonist[slot];
+        let html = `<select id="eq-${slot}-${colonist.id}" onchange="if(this.value==='unequip'){window.game.${unequipFn}(${colonist.id})}else if(this.value!==''){window.game.${equipFn}(${colonist.id},parseInt(this.value))}">`;
+        html += `<option value="">${label}: ${current?.name || fallback}</option>`;
+        if (current) {
+            html += `<option value="unequip">Unequip ${current.name}</option>`;
         }
-        weapons.forEach((w, i) => {
-            html += `<option value="${i}">${w.name} (${w.damage} dmg)</option>`;
+        items.forEach((item, i) => {
+            const stats = statRenderer(item);
+            html += `<option value="${i}">${item.name}${stats ? ` (${stats})` : ''}</option>`;
         });
-        if (weapons.length === 0 && !colonist.weapon) {
-            html += `<option disabled>No weapons available</option>`;
+        if (items.length === 0 && !current) {
+            html += `<option disabled>No ${label.toLowerCase()}s available</option>`;
         }
         html += `</select>`;
         return html;
+    }
+
+    buildWeaponDropdown(colonist) {
+        return this._buildEquipDropdown(colonist, {
+            slot: 'weapon', listName: 'weapons', label: 'Weapon', fallback: 'Fists',
+            equipFn: 'equipWeapon', unequipFn: 'unequipWeapon',
+            statRenderer: w => `${w.damage} dmg`,
+        });
     }
 
     buildArmorDropdown(colonist) {
-        const armors = this.game.resources.armors;
-        let html = `<select id="eq-armor-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipArmor(${colonist.id})}else if(this.value!==''){window.game.equipArmor(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">Armor: ${colonist.armor?.name || 'None'}</option>`;
-        if (colonist.armor) {
-            html += `<option value="unequip">Unequip ${colonist.armor.name}</option>`;
-        }
-        armors.forEach((a, i) => {
-            html += `<option value="${i}">${a.name} (${Math.round(a.damageReduction * 100)}% DR)</option>`;
+        return this._buildEquipDropdown(colonist, {
+            slot: 'armor', listName: 'armors', label: 'Armor', fallback: 'None',
+            equipFn: 'equipArmor', unequipFn: 'unequipArmor',
+            statRenderer: a => `${Math.round(a.damageReduction * 100)}% DR`,
         });
-        if (armors.length === 0 && !colonist.armor) {
-            html += `<option disabled>No armor available</option>`;
-        }
-        html += `</select>`;
-        return html;
     }
 
     buildHelmetDropdown(colonist) {
-        const helmets = this.game.resources.helmets;
-        let html = `<select id="eq-helmet-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipHelmet(${colonist.id})}else if(this.value!==''){window.game.equipHelmet(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">Helmet: ${colonist.helmet?.name || 'None'}</option>`;
-        if (colonist.helmet) {
-            html += `<option value="unequip">Unequip ${colonist.helmet.name}</option>`;
-        }
-        helmets.forEach((h, i) => {
-            html += `<option value="${i}">${h.name} (${Math.round(h.damageReduction * 100)}% DR)</option>`;
+        return this._buildEquipDropdown(colonist, {
+            slot: 'helmet', listName: 'helmets', label: 'Helmet', fallback: 'None',
+            equipFn: 'equipHelmet', unequipFn: 'unequipHelmet',
+            statRenderer: h => `${Math.round(h.damageReduction * 100)}% DR`,
         });
-        if (helmets.length === 0 && !colonist.helmet) {
-            html += `<option disabled>No helmets available</option>`;
-        }
-        html += `</select>`;
-        return html;
     }
 
     buildToolDropdown(colonist) {
-        const tools = this.game.resources.tools;
-        let html = `<select id="eq-tool-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipTool(${colonist.id})}else if(this.value!==''){window.game.equipTool(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">Tool: ${colonist.tool?.name || 'None'}</option>`;
-        if (colonist.tool) {
-            html += `<option value="unequip">Unequip ${colonist.tool.name}</option>`;
-        }
-        tools.forEach((t, i) => {
-            const stats = Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/');
-            html += `<option value="${i}">${t.name}${stats ? ` (${stats})` : ''}</option>`;
+        return this._buildEquipDropdown(colonist, {
+            slot: 'tool', listName: 'tools', label: 'Tool', fallback: 'None',
+            equipFn: 'equipTool', unequipFn: 'unequipTool',
+            statRenderer: t => Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/'),
         });
-        if (tools.length === 0 && !colonist.tool) {
-            html += `<option disabled>No tools available</option>`;
-        }
-        html += `</select>`;
-        return html;
     }
 
     buildArtifactDropdown(colonist) {
-        const artifacts = this.game.resources.artifacts;
-        let html = `<select id="eq-artifact-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipArtifact(${colonist.id})}else if(this.value!==''){window.game.equipArtifact(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">Artifact: ${colonist.artifact?.name || 'None'}</option>`;
-        if (colonist.artifact) {
-            html += `<option value="unequip">Unequip ${colonist.artifact.name}</option>`;
-        }
-        artifacts.forEach((a, i) => {
-            const stats = Object.entries(a).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? (v < 1 ? `${Math.round(v*100)}%` : `+${Math.round((v-1)*100)}%`) : '').filter(Boolean).join('/');
-            html += `<option value="${i}">${a.name}${stats ? ` (${stats})` : ''}</option>`;
+        return this._buildEquipDropdown(colonist, {
+            slot: 'artifact', listName: 'artifacts', label: 'Artifact', fallback: 'None',
+            equipFn: 'equipArtifact', unequipFn: 'unequipArtifact',
+            statRenderer: a => Object.entries(a).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? (v < 1 ? `${Math.round(v*100)}%` : `+${Math.round((v-1)*100)}%`) : '').filter(Boolean).join('/'),
         });
-        if (artifacts.length === 0 && !colonist.artifact) {
-            html += `<option disabled>No artifacts available</option>`;
+    }
+
+    _buildBedInfoHtml(tile, x, y) {
+        let html = '';
+        const assigned = this.game.colonists.find(c =>
+            c.assignedBed && c.assignedBed.x === x && c.assignedBed.y === y && c.hp > 0
+        );
+        if (assigned) {
+            html += `<div class="info-row">Assigned to: ${assigned.name}</div>`;
+            html += `<div class="info-actions"><button onclick="window.game.unassignBed(${x},${y})">Unassign</button></div>`;
+        } else {
+            html += `<div class="info-row">Unassigned bed</div>`;
+            html += `<div class="info-actions">`;
+            html += `<label>Assign: </label>`;
+            html += `<select id="bed-assign-select" onchange="window.game.assignBedFromSelect(${x},${y},this.value)">`;
+            html += `<option value="">-- Select colonist --</option>`;
+            for (const c of this.game.colonists) {
+                if (c.hp <= 0) continue;
+                const hasBed = c.assignedBed ? ` (has bed)` : '';
+                html += `<option value="${c.id}">${c.name}${hasBed}</option>`;
+            }
+            html += `</select></div>`;
         }
-        html += `</select>`;
+        return html;
+    }
+
+    _buildNexusInfoHtml() {
+        let html = '';
+        const waves = this.game.waves;
+        html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
+        html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
+        if (waves.active) {
+            html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
+        }
+        html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('defense')" style="background:#6622aa;color:white;">Open Portal Panel</button></div>`;
+        return html;
+    }
+
+    _buildPedestalInfoHtml(tile, x, y) {
+        let html = '';
+        if (tile.pedestalArtifact) {
+            const artDef = ARTIFACTS[tile.pedestalArtifact];
+            const broken = tile.pedestalInactive ? ' <span style="color:#ff4444;">(No Power)</span>' : '';
+            html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${this._itemIcon(tile.pedestalArtifact, 'artifact')}${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
+            html += this.getPedestalEffectDescription(artDef);
+            if (artDef?.pedestal?.radius && artDef.pedestal.radius !== 'global') {
+                html += `<div class="info-row">Radius: ${artDef.pedestal.radius} | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
+            } else if (artDef?.pedestal?.radius === 'global') {
+                html += `<div class="info-row">Effect: Colony-wide | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
+            }
+            html += `<div class="info-actions"><button onclick="window.game.retrievePedestalArtifact(${x},${y})">Retrieve Artifact</button></div>`;
+        } else {
+            html += `<div class="info-row" style="color:#888;">Empty — place an artifact</div>`;
+            const available = this.game.resources.artifacts.filter(a => a.pedestal);
+            if (available.length > 0) {
+                html += `<div class="info-actions"><select id="pedestal-select">`;
+                for (const art of available) {
+                    html += `<option value="${art.key}">${art.name}</option>`;
+                }
+                html += `</select>`;
+                html += `<button onclick="window.game.placePedestalArtifact(${x},${y},document.getElementById('pedestal-select').value)">Place</button></div>`;
+            } else {
+                html += `<div class="info-row" style="color:#666;">No artifacts with pedestal effects in inventory</div>`;
+            }
+        }
+        return html;
+    }
+
+    _buildRiftGateInfoHtml() {
+        let html = '';
+        html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Rift Gate</div>`;
+        const expl = this.game.exploration;
+        if (expl.expeditions.length > 0) {
+            const exp = expl.expeditions[0];
+            const elapsed = this.game.tick - (exp.startTick || this.game.tick);
+            const totalDur = Math.floor((exp.duration || 1) * 1.2);
+            const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
+            html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
+        }
+        html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
         return html;
     }
 
@@ -993,77 +1039,19 @@ export class UI {
         if (tile.onFire) html += `<div class="info-row fire">ON FIRE!</div>`;
 
         if (tile.structure === 'bed') {
-            const assigned = this.game.colonists.find(c =>
-                c.assignedBed && c.assignedBed.x === x && c.assignedBed.y === y && c.hp > 0
-            );
-            if (assigned) {
-                html += `<div class="info-row">Assigned to: ${assigned.name}</div>`;
-                html += `<div class="info-actions"><button onclick="window.game.unassignBed(${x},${y})">Unassign</button></div>`;
-            } else {
-                html += `<div class="info-row">Unassigned bed</div>`;
-                html += `<div class="info-actions">`;
-                html += `<label>Assign: </label>`;
-                html += `<select id="bed-assign-select" onchange="window.game.assignBedFromSelect(${x},${y},this.value)">`;
-                html += `<option value="">-- Select colonist --</option>`;
-                for (const c of this.game.colonists) {
-                    if (c.hp <= 0) continue;
-                    const hasBed = c.assignedBed ? ` (has bed)` : '';
-                    html += `<option value="${c.id}">${c.name}${hasBed}</option>`;
-                }
-                html += `</select>`;
-                html += `</div>`;
-            }
+            html += this._buildBedInfoHtml(tile, x, y);
         }
 
         if (tile.structure === 'void_nexus') {
-            const waves = this.game.waves;
-            html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
-            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
-            if (waves.active) {
-                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
-            }
-            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('defense')" style="background:#6622aa;color:white;">Open Portal Panel</button></div>`;
+            html += this._buildNexusInfoHtml();
         }
 
         if (tile.structure === 'artifact_pedestal') {
-            if (tile.pedestalArtifact) {
-                const artDef = ARTIFACTS[tile.pedestalArtifact];
-                const broken = tile.pedestalInactive ? ' <span style="color:#ff4444;">(No Power)</span>' : '';
-                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${this._itemIcon(tile.pedestalArtifact, 'artifact')}${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
-                html += this.getPedestalEffectDescription(artDef);
-                if (artDef?.pedestal?.radius && artDef.pedestal.radius !== 'global') {
-                    html += `<div class="info-row">Radius: ${artDef.pedestal.radius} | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
-                } else if (artDef?.pedestal?.radius === 'global') {
-                    html += `<div class="info-row">Effect: Colony-wide | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
-                }
-                html += `<div class="info-actions"><button onclick="window.game.retrievePedestalArtifact(${x},${y})">Retrieve Artifact</button></div>`;
-            } else {
-                html += `<div class="info-row" style="color:#888;">Empty — place an artifact</div>`;
-                const available = this.game.resources.artifacts.filter(a => a.pedestal);
-                if (available.length > 0) {
-                    html += `<div class="info-actions"><select id="pedestal-select">`;
-                    for (const art of available) {
-                        html += `<option value="${art.key}">${art.name}</option>`;
-                    }
-                    html += `</select>`;
-                    html += `<button onclick="window.game.placePedestalArtifact(${x},${y},document.getElementById('pedestal-select').value)">Place</button></div>`;
-                } else {
-                    html += `<div class="info-row" style="color:#666;">No artifacts with pedestal effects in inventory</div>`;
-                }
-            }
+            html += this._buildPedestalInfoHtml(tile, x, y);
         }
 
         if (tile.structure === 'rift_gate') {
-            html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Rift Gate</div>`;
-            const expl = this.game.exploration;
-            if (expl.expeditions.length > 0) {
-                const exp = expl.expeditions[0];
-                const elapsed = this.game.tick - (exp.startTick || this.game.tick);
-                const totalDur = Math.floor((exp.duration || 1) * 1.2);
-                const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
-                html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
-            }
-            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
+            html += this._buildRiftGateInfoHtml();
         }
 
         if (tile.structure === 'golem_forge') {
@@ -1180,76 +1168,19 @@ export class UI {
         if (tile.roomId !== null) html += `<div class="info-row">Room #${tile.roomId}</div>`;
 
         if (tile.structure === 'bed') {
-            const assigned = this.game.colonists.find(c =>
-                c.assignedBed && c.assignedBed.x === x && c.assignedBed.y === y && c.hp > 0
-            );
-            if (assigned) {
-                html += `<div class="info-row">Assigned to: ${assigned.name}</div>`;
-                html += `<div class="info-actions"><button onclick="window.game.unassignBed(${x},${y})">Unassign</button></div>`;
-            } else {
-                html += `<div class="info-row">Unassigned bed</div>`;
-                html += `<div class="info-actions">`;
-                html += `<label>Assign: </label>`;
-                html += `<select id="bed-assign-select" onchange="window.game.assignBedFromSelect(${x},${y},this.value)">`;
-                html += `<option value="">-- Select colonist --</option>`;
-                for (const c of this.game.colonists) {
-                    if (c.hp <= 0) continue;
-                    const hasBed = c.assignedBed ? ` (has bed)` : '';
-                    html += `<option value="${c.id}">${c.name}${hasBed}</option>`;
-                }
-                html += `</select></div>`;
-            }
+            html += this._buildBedInfoHtml(tile, x, y);
         }
 
         if (tile.structure === 'void_nexus') {
-            const waves = this.game.waves;
-            html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
-            html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
-            if (waves.active) {
-                html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
-            }
-            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('defense')" style="background:#6622aa;color:white;">Open Portal Panel</button></div>`;
+            html += this._buildNexusInfoHtml();
         }
 
         if (tile.structure === 'artifact_pedestal') {
-            if (tile.pedestalArtifact) {
-                const artDef = ARTIFACTS[tile.pedestalArtifact];
-                const broken = tile.pedestalInactive ? ' <span style="color:#ff4444;">(No Power)</span>' : '';
-                html += `<div class="info-row" style="color:#ccaa44;">Artifact: ${this._itemIcon(tile.pedestalArtifact, 'artifact')}${artDef?.name || tile.pedestalArtifact}${broken}</div>`;
-                html += this.getPedestalEffectDescription(artDef);
-                if (artDef?.pedestal?.radius && artDef.pedestal.radius !== 'global') {
-                    html += `<div class="info-row">Radius: ${artDef.pedestal.radius} | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
-                } else if (artDef?.pedestal?.radius === 'global') {
-                    html += `<div class="info-row">Effect: Colony-wide | Mana: -${artDef.pedestal.manaCost || 0}</div>`;
-                }
-                html += `<div class="info-actions"><button onclick="window.game.retrievePedestalArtifact(${x},${y})">Retrieve Artifact</button></div>`;
-            } else {
-                html += `<div class="info-row" style="color:#888;">Empty — place an artifact</div>`;
-                const available = this.game.resources.artifacts.filter(a => a.pedestal);
-                if (available.length > 0) {
-                    html += `<div class="info-actions"><select id="pedestal-select">`;
-                    for (const art of available) {
-                        html += `<option value="${art.key}">${art.name}</option>`;
-                    }
-                    html += `</select>`;
-                    html += `<button onclick="window.game.placePedestalArtifact(${x},${y},document.getElementById('pedestal-select').value)">Place</button></div>`;
-                } else {
-                    html += `<div class="info-row" style="color:#666;">No artifacts with pedestal effects in inventory</div>`;
-                }
-            }
+            html += this._buildPedestalInfoHtml(tile, x, y);
         }
 
         if (tile.structure === 'rift_gate') {
-            html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Rift Gate</div>`;
-            const expl = this.game.exploration;
-            if (expl.expeditions.length > 0) {
-                const exp = expl.expeditions[0];
-                const elapsed = this.game.tick - (exp.startTick || this.game.tick);
-                const totalDur = Math.floor((exp.duration || 1) * 1.2);
-                const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
-                html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
-            }
-            html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
+            html += this._buildRiftGateInfoHtml();
         }
 
         if (tile.structure === 'golem_forge') {

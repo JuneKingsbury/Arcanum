@@ -1081,43 +1081,19 @@ class Game {
     }
 
     cheatSpawnItem(category, key) {
-        switch (category) {
-            case 'weapon': {
-                const def = WEAPONS[key];
-                if (!def) return;
-                this.resources.addWeapon({ ...def, key });
-                this.notifications.push({ text: `[DEBUG] Granted weapon: ${def.name}`, tick: this.tick, type: 'success' });
-                break;
-            }
-            case 'armor': {
-                const def = ARMORS[key];
-                if (!def) return;
-                this.resources.addArmor({ ...def, key });
-                this.notifications.push({ text: `[DEBUG] Granted armor: ${def.name}`, tick: this.tick, type: 'success' });
-                break;
-            }
-            case 'helmet': {
-                const def = HELMETS[key];
-                if (!def) return;
-                this.resources.addHelmet({ ...def, key });
-                this.notifications.push({ text: `[DEBUG] Granted helmet: ${def.name}`, tick: this.tick, type: 'success' });
-                break;
-            }
-            case 'tool': {
-                const def = TOOLS[key];
-                if (!def) return;
-                this.resources.addTool({ ...def, key });
-                this.notifications.push({ text: `[DEBUG] Granted tool: ${def.name}`, tick: this.tick, type: 'success' });
-                break;
-            }
-            case 'artifact': {
-                const def = ARTIFACTS[key];
-                if (!def) return;
-                this.resources.addArtifact({ ...def, key });
-                this.notifications.push({ text: `[DEBUG] Granted artifact: ${def.name}`, tick: this.tick, type: 'success' });
-                break;
-            }
-        }
+        const SPAWN_MAP = {
+            weapon: { config: WEAPONS, add: 'addWeapon' },
+            armor: { config: ARMORS, add: 'addArmor' },
+            helmet: { config: HELMETS, add: 'addHelmet' },
+            tool: { config: TOOLS, add: 'addTool' },
+            artifact: { config: ARTIFACTS, add: 'addArtifact' },
+        };
+        const entry = SPAWN_MAP[category];
+        if (!entry) return;
+        const def = entry.config[key];
+        if (!def) return;
+        this.resources[entry.add]({ ...def, key });
+        this.notifications.push({ text: `[DEBUG] Granted ${category}: ${def.name}`, tick: this.tick, type: 'success' });
     }
 
     cheatAddResource(key, amount) {

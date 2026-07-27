@@ -1,4 +1,4 @@
-import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES } from '../core/config.js';
+import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
 import { FOODSTUFFS } from '../systems/resources.js';
@@ -316,7 +316,7 @@ function getWorkSpeed(colonist, game) {
     if (colonist.traits.includes('lazy')) speed *= TRAITS.lazy.workSpeedMult;
 
     const t = game.timeOfDay / CONFIG.TICKS_PER_DAY;
-    const isNight = t > 0.7 || t < 0.2;
+    const isNight = t > DAY_NIGHT.nightStart || t < DAY_NIGHT.dayStart;
     if (colonist.traits.includes('night_owl')) {
         speed *= isNight ? TRAITS.night_owl.nightSpeedMult : TRAITS.night_owl.daySpeedMult;
     }
@@ -341,13 +341,11 @@ function getMoveSpeedBonus(colonist) {
 
 function getEquipmentWorkBonus(colonist, task) {
     let mult = 1.0;
+    const statKey = TASK_SPEED_STATS[task.type];
     const items = [colonist.weapon, colonist.tool, colonist.artifact];
     for (const item of items) {
         if (!item) continue;
-        if (task.type === 'mine' && item.miningSpeed) mult *= item.miningSpeed;
-        if (task.type === 'chop' && item.choppingSpeed) mult *= item.choppingSpeed;
-        if ((task.type === 'plant' || task.type === 'harvest') && item.farmingSpeed) mult *= item.farmingSpeed;
-        if ((task.type === 'craft' || task.type === 'cook') && item.craftingSpeed) mult *= item.craftingSpeed;
+        if (statKey && item[statKey]) mult *= item[statKey];
     }
     if (colonist.artifact && !colonist.artifactBroken) {
         if (colonist.artifact.workSpeedBonus) mult *= (1 + colonist.artifact.workSpeedBonus);

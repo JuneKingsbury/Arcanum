@@ -1,4 +1,4 @@
-import { CONFIG } from '../core/config.js';
+import { CONFIG, RENDER_CONFIG } from '../core/config.js';
 
 export class OverlayRenderer {
     constructor(container) {
@@ -90,6 +90,8 @@ export class OverlayRenderer {
         ctx.restore();
     }
 
+    // Renders a 2px-tall HP bar above the entity tile. Color auto-selects based
+    // on HP percentage: green (>50%), yellow (25-50%), red (<25%).
     _renderHealthBar(ctx, overlay, cw, ch, camera) {
         const sx = (overlay.x - camera.x) * cw;
         const sy = (overlay.y - camera.y) * ch;
@@ -101,11 +103,12 @@ export class OverlayRenderer {
         const barY = sy - 1;
 
         const pct = overlay.max > 0 ? overlay.current / overlay.max : 0;
+        const colors = RENDER_CONFIG.healthBarColors;
 
         ctx.fillStyle = '#333333';
         ctx.fillRect(barX, barY, barWidth, barHeight);
 
-        ctx.fillStyle = overlay.color || (pct > 0.5 ? '#00ff00' : pct > 0.25 ? '#ffaa00' : '#ff3333');
+        ctx.fillStyle = overlay.color || (pct > RENDER_CONFIG.healthBarGreenThreshold ? colors.green : pct > RENDER_CONFIG.healthBarYellowThreshold ? colors.yellow : colors.red);
         ctx.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, pct)), barHeight);
     }
 
@@ -126,9 +129,12 @@ export class OverlayRenderer {
         ctx.restore();
     }
 
+    // Renders a Manhattan-distance radius highlight (filled area + border outline).
+    // Used when selecting pedestals, turrets, or heaters to visualize their effect range.
     _renderRadiusHighlight(ctx, highlight, cw, ch, camera) {
         const { x, y, radius, color } = highlight;
         ctx.save();
+        // Fill all tiles within Manhattan distance
         ctx.fillStyle = color;
         for (let dy = -radius; dy <= radius; dy++) {
             for (let dx = -radius; dx <= radius; dx++) {
@@ -139,6 +145,9 @@ export class OverlayRenderer {
                 ctx.fillRect(sx, sy, cw, ch);
             }
         }
+        // Draw border segments only on edges where the adjacent cell in that direction
+        // falls outside the radius — this produces a clean diamond-shaped outline.
+        // Appending 'cc' (80% alpha) to the hex color gives a semi-transparent border.
         const borderColor = color.slice(0, 7) + 'cc';
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 1.5;

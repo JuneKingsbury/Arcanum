@@ -120,6 +120,10 @@ export class Renderer {
         return sm.getSprite('terrain', tile.terrain);
     }
 
+    // Generates per-direction alpha masks for terrain edge dithering using ordered
+    // (Bayer matrix) dithering. Each mask is a 1-tile canvas with white pixels where
+    // the neighbor terrain should "bleed through". The 4x4 Bayer matrix provides a
+    // perceptually even dot pattern that avoids banding artifacts at low densities.
     _generateDitherMasks() {
         const cw = this.charWidth;
         const ch = this.charHeight;
@@ -127,6 +131,7 @@ export class Renderer {
         this._ditherTileSize = cw;
         this._ditherMasks = {};
 
+        // 4x4 Bayer threshold matrix — values 0-15 define the order pixels "turn on"
         const bayer = [
             [ 0,  8,  2, 10],
             [12,  4, 14,  6],
@@ -144,6 +149,7 @@ export class Renderer {
 
             for (let y = 0; y < ch; y++) {
                 for (let x = 0; x < cw; x++) {
+                    // Distance from the edge that faces the neighbor tile
                     let edgeDist;
                     if (dir === 'north') edgeDist = y;
                     else if (dir === 'south') edgeDist = (ch - 1) - y;
@@ -152,8 +158,10 @@ export class Renderer {
 
                     if (edgeDist >= depth) continue;
 
+                    // t=0 at edge, t=1 at depth boundary — intensity fades as we move inward
                     const t = edgeDist / depth;
                     const intensity = 0.5 * (1 - t);
+                    // Normalize Bayer value to 0..1 range (+0.5 centers the threshold)
                     const threshold = (bayer[y % 4][x % 4] + 0.5) / 16;
                     if (intensity > threshold) {
                         const idx = (y * cw + x) * 4;
@@ -190,6 +198,9 @@ export class Renderer {
         return canvas;
     }
 
+    // Draws dithered terrain transitions on edges where a tile borders a different
+    // terrain type. For each cardinal neighbor with a different terrain, composites
+    // the neighbor's sprite through the directional dither mask (from _generateDitherMasks).
     _drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map) {
         if (!RENDER_CONFIG.terrainDithering) return;
         if (!this._ditherMasks || this._ditherTileSize !== cw) {
@@ -289,6 +300,8 @@ export class Renderer {
         ctx.fillStyle = RENDER_CONFIG.bgColor;
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // --- Build entity/effect lookup maps (flat key = y*MAP_WIDTH + x) ---
+        // These let the tile loop do O(1) lookups instead of scanning arrays per tile.
         const entityMap = this._entityMap;
         entityMap.clear();
         for (const a of wildlife) {
@@ -312,11 +325,11 @@ export class Renderer {
         for (const c of colonists) {
             if (c.hp > 0 && !c.onExpedition) {
                 const drafted = c.drafted;
-                const pulse = drafted && (game.tick % 20 < 10);
+                const pulse = drafted && (game.tick % RENDER_CONFIG.draftedPulsePeriod < RENDER_CONFIG.draftedPulseDuty);
                 let color;
                 if (drafted) {
                     color = pulse ? '#ff4444' : '#ff8888';
-                } else if (c.activeEffects && c.activeEffects.some(e => e.source === 'spell') && game.tick % 16 < 8) {
+                } else if (c.activeEffects && c.activeEffects.some(e => e.source === 'spell') && game.tick % RENDER_CONFIG.spellGlowPeriod < RENDER_CONFIG.spellGlowDuty) {
                     color = COMBAT_VISUALS.spellBuffColor;
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
@@ -367,6 +380,11 @@ export class Renderer {
             }
         }
 
+        // --- Tile rendering loop ---
+        // Iterates over the visible viewport, drawing each tile as either a sprite
+        // (skin active) or an ASCII character. Layering order for sprites:
+        //   ground → structure/entity → dither → artifact overlay → designation tint
+        // Effects (combat hits, shots, portals) draw as overlays on top of the base.
         let lastColor = '';
         for (let sy = 0; sy < CONFIG.VIEWPORT_HEIGHT; sy++) {
             for (let sx = 0; sx < CONFIG.VIEWPORT_WIDTH; sx++) {
@@ -389,7 +407,7 @@ export class Renderer {
                 }
 
                 if (tile.structure === 'rift_gate' && game.exploration && game.exploration.expeditions.length > 0) {
-                    color = game.tick % 20 < 10 ? '#33ccff' : '#1a6688';
+                    color = game.tick % RENDER_CONFIG.riftPulsePeriod < RENDER_CONFIG.riftPulseDuty ? '#33ccff' : '#1a6688';
                 }
 
                 const tileKey = wy * CONFIG.MAP_WIDTH + wx;
@@ -441,6 +459,9 @@ export class Renderer {
                     lastColor = '';
                 }
 
+                // Sprite rendering: overlays (effects, shots, portals) take priority over
+                // the base sprite. "Furniture" structures need ground drawn beneath them
+                // because their sprite doesn't fill the full tile.
                 let spriteDrawn = false;
                 if (this.skinManager.isActive) {
                     let overlaySprite = null;
@@ -470,6 +491,8 @@ export class Renderer {
                                 this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map);
                             }
                             if (entity && entity.type === 'colonist') {
+                                // 4x4 pixel color indicator in top-right corner of the tile
+                                // so colonists are distinguishable even with identical sprites
                                 ctx.fillStyle = entity.color;
                                 ctx.fillRect(px + cw - 4, py, 4, 4);
                                 lastColor = '';
@@ -567,12 +590,17 @@ export class Renderer {
             ctx.restore();
         }
 
-        // Night overlay: precompute light grid to avoid O(viewport * sources) per tile
+        // --- Night overlay ---
+        // Renders darkness as a per-tile alpha overlay. Uses a precomputed "light grid"
+        // (Float32Array) so cost is O(viewport + sources*radius²) instead of
+        // O(viewport * sources). Darkness is quantized into discrete alpha steps
+        // (nightGradientSteps) to minimize fillStyle changes on the canvas context.
         const darkness = game.settings.showNightLighting ? this.getNightDarkness(game.timeOfDay, game.weather.season) : 0;
         if (darkness > 0) {
             const lightSources = this._getLightSources(game, camera);
             const steps = RENDER_CONFIG.nightGradientSteps;
             const [nr, ng, nb] = RENDER_CONFIG.nightOverlayColor;
+            // Pre-build the style strings for each quantized darkness level
             const darkStyles = [];
             for (let i = 1; i <= steps; i++) {
                 darkStyles.push(`rgba(${nr},${ng},${nb},${(darkness * i / steps).toFixed(3)})`);
@@ -581,7 +609,9 @@ export class Renderer {
             const vw = CONFIG.VIEWPORT_WIDTH;
             const vh = CONFIG.VIEWPORT_HEIGHT;
 
-            // Build a flat light-level grid by stamping each source's radius
+            // Light grid: each cell holds the max illumination (0..1) from any source.
+            // Sources stamp their radius using Manhattan distance (matches the game's
+            // tile-based movement so light feels consistent with gameplay distances).
             if (!this._lightGrid || this._lightGrid.length < vw * vh) {
                 this._lightGrid = new Float32Array(vw * vh);
             }
@@ -602,6 +632,9 @@ export class Renderer {
                     for (let sx = xStart; sx <= xEnd; sx++) {
                         const dist = dy + Math.abs(sx - localX);
                         if (dist > r) continue;
+                        // Linear falloff: 1.0 at source, 0.0 at radius edge.
+                        // The "+1" avoids falloff=0 exactly at dist==r (would leave a
+                        // hard dark ring at the light boundary).
                         const falloff = 1 - (dist / (r + 1));
                         const idx = rowOff + sx;
                         if (falloff > lightGrid[idx]) lightGrid[idx] = falloff;
@@ -609,6 +642,7 @@ export class Renderer {
                 }
             }
 
+            // Draw the darkness overlay — skip fully-lit tiles (shade < 1)
             let lastDarkStyle = '';
             for (let sy = 0; sy < vh; sy++) {
                 const rowOff = sy * vw;
@@ -672,12 +706,17 @@ export class Renderer {
     }
 }
 
+// Bresenham's line algorithm — returns the tile coordinates between two points
+// (exclusive of start, exclusive of end). Used for turret beam rendering to
+// determine which tiles a shot passes through.
 function getLinePoints(x0, y0, x1, y1) {
     const points = [];
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
     const sy = y0 < y1 ? 1 : -1;
+    // Error term: accumulates the deviation from the ideal line. When it
+    // exceeds the threshold in a dimension, we step in that direction.
     let err = dx - dy;
     let cx = x0, cy = y0;
     while (cx !== x1 || cy !== y1) {

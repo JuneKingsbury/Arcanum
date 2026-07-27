@@ -1,4 +1,4 @@
-import { CONFIG, EVENTS, CARAVAN_TRADES, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { CONFIG, EVENTS, CARAVAN_TRADES, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, FIRE_CONFIG } from '../core/config.js';
 import { createColonist, addThought } from '../entities/colonist.js';
 import { createAnimal } from '../entities/wildlife.js';
 import { getPedestalEffect } from './artifacts.js';
@@ -301,7 +301,7 @@ export class EventSystem {
         }
         if (fireX >= 0) {
             game.map[fireY][fireX].onFire = true;
-            game.map[fireY][fireX].fireTimer = 20;
+            game.map[fireY][fireX].fireTimer = FIRE_CONFIG.initialLifespan;
             if (game.mapIndex) game.mapIndex.addFire(fireX, fireY);
             game.notifications.push({ text: 'Fire has broken out!', tick: game.tick, type: 'danger' });
             game.eventLog.add(game, 'Fire has broken out!', 'danger', { type: 'position', x: fireX, y: fireY });
@@ -397,7 +397,7 @@ export function updateFires(game) {
             }
         }
 
-        if (tile.onFire && Math.random() < 0.05) {
+        if (tile.onFire && Math.random() < FIRE_CONFIG.spreadChance) {
             const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
             const dir = dirs[Math.floor(Math.random() * 4)];
             const nx = x + dir[0], ny = y + dir[1];
@@ -405,7 +405,7 @@ export function updateFires(game) {
                 const neighbor = game.map[ny][nx];
                 if (!neighbor.onFire && (neighbor.resource?.type === 'tree' || (neighbor.structure && neighbor.structure !== 'wall'))) {
                     neighbor.onFire = true;
-                    neighbor.fireTimer = 15 + Math.floor(Math.random() * 10);
+                    neighbor.fireTimer = FIRE_CONFIG.spreadTimerMin + Math.floor(Math.random() * (FIRE_CONFIG.spreadTimerMax - FIRE_CONFIG.spreadTimerMin));
                     game.mapIndex.addFire(nx, ny);
                 }
             }
@@ -449,7 +449,7 @@ function _updateFiresFallback(game) {
                 }
             }
 
-            if (Math.random() < 0.05) {
+            if (Math.random() < FIRE_CONFIG.spreadChance) {
                 const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
                 const dir = dirs[Math.floor(Math.random() * 4)];
                 const nx = x + dir[0], ny = y + dir[1];
@@ -457,7 +457,7 @@ function _updateFiresFallback(game) {
                     const neighbor = game.map[ny][nx];
                     if (!neighbor.onFire && (neighbor.resource?.type === 'tree' || (neighbor.structure && neighbor.structure !== 'wall'))) {
                         neighbor.onFire = true;
-                        neighbor.fireTimer = 15 + Math.floor(Math.random() * 10);
+                        neighbor.fireTimer = FIRE_CONFIG.spreadTimerMin + Math.floor(Math.random() * (FIRE_CONFIG.spreadTimerMax - FIRE_CONFIG.spreadTimerMin));
                     }
                 }
             }
