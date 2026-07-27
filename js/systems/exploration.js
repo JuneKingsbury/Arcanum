@@ -1,4 +1,4 @@
-import { DIMENSIONS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
 let nextExpeditionId = 1;
@@ -7,11 +7,11 @@ export class ExplorationSystem {
     constructor() {
         this.expeditions = [];
         this.completedExpeditions = [];
-        this.completedDimensions = new Set();
+        this.completedRealms = new Set();
     }
 
-    canSend(game, dimensionKey) {
-        const dim = DIMENSIONS[dimensionKey];
+    canSend(game, realmKey) {
+        const dim = REALMS[realmKey];
         if (!dim) return false;
         if (dim.research && !game.research.isResearched(dim.research)) return false;
         if (!game.power || !game.power.powered) return false;
@@ -19,21 +19,21 @@ export class ExplorationSystem {
         return true;
     }
 
-    getAvailableDimensions(game) {
+    getAvailableRealms(game) {
         const results = [];
-        for (const [key, dim] of Object.entries(DIMENSIONS)) {
+        for (const [key, dim] of Object.entries(REALMS)) {
             if (dim.research && !game.research.isResearched(dim.research)) continue;
-            if (dim.requiresDimension && !this.completedDimensions.has(dim.requiresDimension)) continue;
+            if (dim.requiresRealm && !this.completedRealms.has(dim.requiresRealm)) continue;
             results.push({ key, ...dim });
         }
         return results;
     }
 
-    sendExpedition(game, dimensionKey, colonistIds, packAnimalIds = [], difficulty = 1) {
-        if (!this.canSend(game, dimensionKey)) return null;
+    sendExpedition(game, realmKey, colonistIds, packAnimalIds = [], difficulty = 1) {
+        if (!this.canSend(game, realmKey)) return null;
         if (colonistIds.length === 0) return null;
 
-        const dim = DIMENSIONS[dimensionKey];
+        const dim = REALMS[realmKey];
         const party = [];
 
         const cappedColonists = colonistIds.slice(0, 5);
@@ -98,8 +98,8 @@ export class ExplorationSystem {
 
         const expedition = {
             id: nextExpeditionId++,
-            dimension: dimensionKey,
-            dimensionName: dim.name,
+            realm: realmKey,
+            realmName: dim.name,
             partyIds: party.map(c => c.id),
             packAnimals,
             partySnapshot: [],
@@ -260,8 +260,8 @@ export class ExplorationSystem {
                     shieldReduction: 0,
                 };
             });
-            this._addLog(exp, game, `Party entered ${DIMENSIONS[exp.dimension].name}`, 'info');
-            game.eventLog.add(game, `Expedition entered ${exp.dimensionName}`, 'event', null);
+            this._addLog(exp, game, `Party entered ${REALMS[exp.realm].name}`, 'info');
+            game.eventLog.add(game, `Expedition entered ${exp.realmName}`, 'event', null);
             exp.lastMicroEventTick = game.tick;
         }
     }
@@ -319,7 +319,7 @@ export class ExplorationSystem {
         if (alive.length === 0) return;
 
         const member = alive[randInt(0, alive.length - 1)];
-        const dim = DIMENSIONS[exp.dimension];
+        const dim = REALMS[exp.realm];
         const dimEvents = dim.events;
 
         const ds = exp.diffSettings || EXPEDITION_DIFFICULTY[1];
@@ -390,7 +390,7 @@ export class ExplorationSystem {
         if (encounter.type === 'loot') {
             exp.loot[encounter.resource] = (exp.loot[encounter.resource] || 0) + encounter.amount;
             const member = exp.partySnapshot.find(p => p.hp > 0) || exp.partySnapshot[0];
-            const dim = DIMENSIONS[exp.dimension];
+            const dim = REALMS[exp.realm];
             const discPool = (dim.events && dim.events.discoveries) || EXPLORATION_EVENTS.discoveries;
             const msg = pickRandom(discPool).replace('{name}', member.name);
             this._addLog(exp, game, `${msg} (+${encounter.amount} ${encounter.resource.replace(/_/g, ' ')})`, 'loot');
@@ -599,7 +599,7 @@ export class ExplorationSystem {
     _finishCombat(exp, game) {
         const survived = exp.partySnapshot.filter(p => p.hp > 0).length;
         if (survived > 0) {
-            const dim = DIMENSIONS[exp.dimension];
+            const dim = REALMS[exp.realm];
             const lootMult = getPartyExpeditionEffect(exp.partySnapshot, 'lootMult');
             const dsCombat = exp.diffSettings || EXPEDITION_DIFFICULTY[1];
             const lootEntry = this._rollLoot(dim, dsCombat);
@@ -630,8 +630,8 @@ export class ExplorationSystem {
 
         const allDefeated = exp.partySnapshot.every(p => p.hp <= 0);
         if (!allDefeated) {
-            this.completedDimensions.add(exp.dimension);
-            game.story.checkMilestone(`dimension_${exp.dimension}`, game);
+            this.completedRealms.add(exp.realm);
+            game.story.checkMilestone(`realm_${exp.realm}`, game);
         }
         const gx = exp.gatePos.x;
         const gy = exp.gatePos.y;
@@ -672,13 +672,13 @@ export class ExplorationSystem {
         }
         if (game.discoveredLoot) {
             for (const res of Object.keys(exp.loot)) {
-                game.discoveredLoot.add(`${exp.dimension}:${res}`);
+                game.discoveredLoot.add(`${exp.realm}:${res}`);
             }
             for (const artKey of artifacts) {
-                game.discoveredLoot.add(`${exp.dimension}:${artKey}`);
+                game.discoveredLoot.add(`${exp.realm}:${artKey}`);
             }
             for (const itemKey of items) {
-                game.discoveredLoot.add(`${exp.dimension}:${itemKey}`);
+                game.discoveredLoot.add(`${exp.realm}:${itemKey}`);
             }
         }
         const parts = Object.entries(exp.loot).map(([k, v]) => `${v} ${k}`);
@@ -691,10 +691,10 @@ export class ExplorationSystem {
         const lootSummary = parts.join(', ');
         if (!allDefeated) {
             this._addLog(exp, game, `Returned with: ${lootSummary || 'nothing'}`, 'success');
-            game.eventLog.add(game, `Expedition returned from ${exp.dimensionName}: ${lootSummary || 'nothing'}`, 'event', null);
+            game.eventLog.add(game, `Expedition returned from ${exp.realmName}: ${lootSummary || 'nothing'}`, 'event', null);
         } else {
             this._addLog(exp, game, `Party defeated — salvaged: ${lootSummary || 'nothing'}`, 'danger');
-            game.eventLog.add(game, `Expedition to ${exp.dimensionName} failed — salvaged: ${lootSummary || 'nothing'}`, 'warning', null);
+            game.eventLog.add(game, `Expedition to ${exp.realmName} failed — salvaged: ${lootSummary || 'nothing'}`, 'warning', null);
         }
 
         this.completedExpeditions.push(exp);

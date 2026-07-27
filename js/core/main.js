@@ -705,7 +705,7 @@ class Game {
         }
     }
 
-    showExpeditionSetup(dimensionKey) {
+    showExpeditionSetup(realmKey) {
         const available = this.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
         if (available.length === 0) {
             this.notifications.push({ text: 'No colonists available for expedition', tick: this.tick, type: 'danger' });
@@ -728,22 +728,22 @@ class Game {
                 html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
             }
         }
-        html += `<div class="info-actions"><button onclick="window.game.launchExpedition('${dimensionKey}')" style="background:#1a4466;color:#88ddff;">Launch</button></div>`;
+        html += `<div class="info-actions"><button onclick="window.game.launchExpedition('${realmKey}')" style="background:#1a4466;color:#88ddff;">Launch</button></div>`;
         this.ui.elements.infoPanel.innerHTML = html;
     }
 
-    showExpeditionSetupInPanel(dimensionKey) {
+    showExpeditionSetupInPanel(realmKey) {
         const available = this.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
         if (available.length === 0) {
             this.notifications.push({ text: 'No colonists available for expedition', tick: this.tick, type: 'danger' });
             return;
         }
-        this.ui._arcaneExpSetup = dimensionKey;
+        this.ui._arcaneExpSetup = realmKey;
         this.ui._lastArcaneHtml = '';
         this.ui.updateArcanePanel();
     }
 
-    launchExpeditionFromPanel(dimensionKey) {
+    launchExpeditionFromPanel(realmKey) {
         const panel = this.ui.elements.arcanePanel;
         const checks = panel.querySelectorAll('.exp-check:checked');
         const ids = Array.from(checks).map(cb => parseInt(cb.value));
@@ -754,9 +754,9 @@ class Game {
         const packChecks = panel.querySelectorAll('.exp-pack-check:checked');
         const packIds = Array.from(packChecks).map(cb => parseInt(cb.value));
         const difficulty = this.ui._expDifficulty || 1;
-        const result = this.exploration.sendExpedition(this, dimensionKey, ids, packIds, difficulty);
+        const result = this.exploration.sendExpedition(this, realmKey, ids, packIds, difficulty);
         if (result) {
-            this.notifications.push({ text: `Expedition launched to ${result.dimensionName}!`, tick: this.tick, type: 'success' });
+            this.notifications.push({ text: `Expedition launched to ${result.realmName}!`, tick: this.tick, type: 'success' });
             this.ui._arcaneExpSetup = null;
             this.ui._lastArcaneHtml = '';
             this.ui._expVisState = { lastLogLen: 0, effects: [], partyX: 0 };
@@ -766,7 +766,7 @@ class Game {
         }
     }
 
-    launchExpedition(dimensionKey) {
+    launchExpedition(realmKey) {
         const checks = this.ui.elements.infoPanel.querySelectorAll('.exp-check:checked');
         const ids = Array.from(checks).map(cb => parseInt(cb.value));
         if (ids.length === 0) {
@@ -775,9 +775,9 @@ class Game {
         }
         const packChecks = this.ui.elements.infoPanel.querySelectorAll('.exp-pack-check:checked');
         const packIds = Array.from(packChecks).map(cb => parseInt(cb.value));
-        const result = this.exploration.sendExpedition(this, dimensionKey, ids, packIds);
+        const result = this.exploration.sendExpedition(this, realmKey, ids, packIds);
         if (result) {
-            this.notifications.push({ text: `Expedition launched to ${result.dimensionName}!`, tick: this.tick, type: 'success' });
+            this.notifications.push({ text: `Expedition launched to ${result.realmName}!`, tick: this.tick, type: 'success' });
             this.ui._viewingRiftGate = true;
             this.ui._viewingColonistId = null;
         } else {

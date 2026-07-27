@@ -49,7 +49,7 @@ export const GLOSSARY = [
             ['Ember Ward', '(H) Warms nearby tiles (radius 4) in winter. Consumes 3 mana.'],
             ['Arcane Sentinel', '(X) Auto-attacks hostile enemies in range 4. Consumes 3 mana.'],
             ['Ice Box', '(I) Magical preservation. Reduces food spoilage by 40%. Consumes 1 mana.'],
-            ['Rift Gate', '(Ω) Opens portals to alternate dimensions for exploration. Consumes 6 mana. Requires Planar Rift research.'],
+            ['Rift Gate', '(Ω) Opens portals to other realms for exploration. Consumes 6 mana. Requires Planar Rift research.'],
             ['Void Nexus', '(V) Click to start wave defense. Needs research: Void Summoning.'],
             ['Void Wall', '(▓) Reinforced wall (120 HP). Needs research: Void Forging.'],
             ['Void Door', '(▒) Reinforced door (80 HP). Colonists pass, enemies must break. Needs research: Void Forging.'],
@@ -149,7 +149,7 @@ export const GLOSSARY = [
             ['Equipped Effects', 'Some artifacts provide bonuses when equipped on a colonist: move speed, work speed, combat priority, or damage reduction. Expedition effects apply when the colonist is on an expedition.'],
             ['Durability & Repair', 'Certain powerful artifacts (Ward of the Sentinel) break after use. Broken artifacts provide no effects. Repair at an Anvil (requires Runeforging research) — costs 1 runite.'],
             ['Artifact List', 'All artifacts and their primary effects:\n\n  Boots of Haste          +30% move speed (equipped)\n  Seedkeeper\'s Locket     Blight immunity radius 5 (pedestal)\n  Hourglass of Diligence  +25% work (equip) / +15% work radius 4 (pedestal)\n  Lodestone of Prosperity +50% wanderer chance (global pedestal)\n  Cornucopia Charm        +1 bonus food per cook (global pedestal)\n  Compass of Greed        +50% loot, +20% trap dmg (expedition)\n  Voidwalker\'s Lantern    2x rare encounters (expedition) / light r6 (pedestal)\n  Map Fragment            -30% expedition duration (consumable)\n  Ward of the Sentinel    Auto-revive at 50% HP, breaks after use\n  Drum of Rallying        +15% damage radius 8 (pedestal/expedition)\n  Cloak of Shadows        Enemies avoid targeting (combat/expedition)\n  Aegis of the Vanguard   Enemies focus you, -30% damage taken (tank)\n  Haggler\'s Coin          -15% trade markup (global pedestal)\n  Tome of Shared Wisdom   +10% skill growth radius 5 (pedestal)'],
-            ['Sources', 'Expedition loot (dimension-specific rares + Map Fragments everywhere), Trader exclusive items, and crafting (Ward of the Sentinel via Void Forging).'],
+            ['Sources', 'Expedition loot (realm-specific rares + Map Fragments everywhere), Trader exclusive items, and crafting (Ward of the Sentinel via Void Forging).'],
         ]
     },
     {
@@ -157,10 +157,10 @@ export const GLOSSARY = [
         entries: [
             ['Rift Gate', '(Ω) Build after researching Planar Rift. Click to open the expedition panel. Consumes 6 mana.'],
             ['Expeditions', 'Select colonists (max 5) and optional pack animals (max 2), choose a difficulty level (1-5), and launch. Higher difficulty means tougher enemies and traps but significantly more loot and rare finds. Party walks to the gate, explores, and returns with loot.'],
-            ['Live Event Log', 'While an expedition is active, click the Rift Gate to see a scrolling log of events: combat rounds, trap encounters, item discoveries, and ambient observations. Each dimension has unique events.'],
+            ['Live Event Log', 'While an expedition is active, click the Rift Gate to see a scrolling log of events: combat rounds, trap encounters, item discoveries, and ambient observations. Each realm has unique events.'],
             ['Pack Animals', 'Tamed okapi can join expeditions (max 2) as pack animals, reducing expedition duration by 25% each. Shown as a separate line behind the party in the expedition visualization.'],
             ['Difficulty Levels', 'Choose 1-5 before launching:\n\n  1 Normal     Standard. No bonuses.\n  2 Dangerous  +50% loot, +50% rare. Enemies +30% HP/+20% dmg.\n  3 Perilous   +100% loot, +150% rare. Enemies +70% HP/+50% dmg.\n  4 Deadly     +200% loot, +300% rare. Enemies +120% HP/+80% dmg.\n  5 Suicidal   +300% loot, +500% rare. Enemies +200% HP/+120% dmg.'],
-            ['Dimensions', 'Each has unique events, traps, and rare encounters:\n\n  Crystal Caves   Diff 1  220-380t  Stone, Runite\n  Verdant Depths  Diff 1  150-280t  Wood, Wheat, Berries\n  Arcane Library  Diff 1  180-320t  Spell Tomes, Runite  (Arcane Studies)\n  Shadow Realm    Diff 2  400-650t  Void Essence, Runite (Deep Delving)'],
+            ['Realms', 'Four chains of three realms each, unlocking deeper travel:\n\n  Crystal:  Caves (1) → Mines (2) → Depths (3)\n  Verdant:  Depths (1) → Fungal Hollows (2) → Primeval Canopy (3)\n  Arcane:   Library (2) → University (3) → Laboratory (4)  [Arcane Studies]\n  Shadow:   Realm (3) → Void Abyss (4) → Oblivion Rift (5) [Deep Delving]'],
             ['Encounters', 'Combat encounters resolve round-by-round in real-time. Colonists attack with equipped weapons; enemies strike back. Traps deal damage to random party members. Discoveries provide bonus loot.'],
             ['Loot on Defeat', 'Even if all party members are defeated, you keep any items found during exploration. You only lose the completion bonus for finishing the expedition.'],
         ]

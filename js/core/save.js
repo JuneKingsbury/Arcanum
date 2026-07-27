@@ -75,7 +75,7 @@ export function saveGame(game) {
         exploration: {
             expeditions: game.exploration.expeditions,
             completedExpeditions: game.exploration.completedExpeditions,
-            completedDimensions: [...(game.exploration.completedDimensions || [])],
+            completedRealms: [...(game.exploration.completedRealms || [])],
         },
 
         research: {
@@ -207,8 +207,9 @@ export function loadGame(game) {
     if (data.exploration) {
         game.exploration.expeditions = data.exploration.expeditions || [];
         game.exploration.completedExpeditions = data.exploration.completedExpeditions || [];
-        game.exploration.completedDimensions = new Set(data.exploration.completedDimensions || []);
+        game.exploration.completedRealms = new Set(data.exploration.completedRealms || data.exploration.completedDimensions || []);
         for (const exp of [...game.exploration.expeditions, ...game.exploration.completedExpeditions]) {
+            if (exp.dimension && !exp.realm) { exp.realm = exp.dimension; exp.realmName = exp.dimensionName; }
             if (exp.log && exp.log.length > 0 && typeof exp.log[0] === 'string') {
                 exp.log = exp.log.map(text => ({ tick: 0, text, type: 'info' }));
             }

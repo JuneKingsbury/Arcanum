@@ -391,7 +391,7 @@ export const BUILDINGS = {
     enchanting_table:  { char: 'P', color: '#bb88ff', cost: { planks: 4, stone: 3 }, work: 35, structureType: 'furniture', category: 'Production', research: 'arcane_infusion', power: { consumes: 4, speedMult: 2.0 }, description: '2x crafting speed. Consumes 4 mana.' },
     ember_ward:        { char: 'H', color: '#ff8844', cost: { stone: 4, planks: 2 }, work: 28, structureType: 'furniture', category: 'Arcane', research: 'ember_magic', power: { consumes: 3, warmRadius: 4 }, description: 'Warms nearby tiles (radius 4) in winter. Consumes 3 mana.' },
     ice_box:           { char: 'I', color: '#88ccff', cost: { runite: 2, stone: 4, planks: 2, void_essence: 2 }, work: 40, structureType: 'furniture', category: 'Furniture', research: 'alchemy', power: { consumes: 1 }, description: 'Magically chills food — reduces spoilage by 40%. Consumes 1 mana.' },
-    rift_gate:         { char: 'Ω', color: '#33ccff', cost: { runite: 4, stone: 6, planks: 4, void_essence: 8 }, work: 60, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'planar_rift', maxCount: 1, power: { consumes: 6 }, description: 'Send exploration parties to alternate dimensions. Consumes 6 mana.' },
+    rift_gate:         { char: 'Ω', color: '#33ccff', cost: { runite: 4, stone: 6, planks: 4, void_essence: 8 }, work: 60, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'planar_rift', maxCount: 1, power: { consumes: 6 }, description: 'Send exploration parties to other realms. Consumes 6 mana.' },
     golem_forge:       { char: 'Ğ', color: '#cc8833', cost: { stone: 8, runite: 4, planks: 4 }, work: 50, structureType: 'furniture', category: 'Production', research: 'golem_craft', description: 'Animate stone golems. Click to craft.' },
     forge_core:        { char: '⚒', color: '#ff8844', cost: { stone: 6, runite: 3, planks: 3 }, work: 40, structureType: 'furniture', category: 'Arcane', research: 'masterwork', description: 'Core of the Great Forge. Surround with walls + door to activate (2.5x equipment crafting).' },
     ritual_core:       { char: '◎', color: '#aa44ff', cost: { runite: 5, void_essence: 3, planks: 4 }, work: 50, structureType: 'furniture', category: 'Arcane', research: 'advanced_arcana', description: 'Core of the Ritual Circle. Place altars around it to activate (-30% spell cooldowns).' },
@@ -1070,7 +1070,7 @@ export const RESEARCH = {
     void_summoning: { name: 'Void Summoning', cost: 300, requires: ['ley_channeling', 'warding'], tab: 'void', description: 'Open portals to summon waves of enemies' },
     void_forging: { name: 'Void Forging', cost: 380, requires: ['void_summoning', 'runeforging'], tab: 'void', description: 'Forge void essence into powerful gear' },
     planar_rift: { name: 'Planar Rift', cost: 400, requires: ['void_summoning', 'ley_channeling'], tab: 'void', description: 'Open stable rifts for exploration expeditions' },
-    deep_delving: { name: 'Deep Delving', cost: 550, requires: ['planar_rift'], tab: 'void', description: 'Access deeper, more dangerous dimensions' },
+    deep_delving: { name: 'Deep Delving', cost: 550, requires: ['planar_rift'], tab: 'void', description: 'Access deeper, more dangerous realms' },
 };
 
 // Auto-derive unlocks from the 'research' field on buildings, recipes, and crops.
@@ -1169,10 +1169,11 @@ export const TRADER_EXCLUSIVE_ITEMS = {
 // Nexus & Exploration config
 // ----------------------------------------------------------------------------
 
-// Exploration / alternate dimensions. Used by exploration.js.
-export const DIMENSIONS = {
+// Exploration / realms. Used by exploration.js.
+export const REALMS = {
     crystal_caves: {
         name: 'Crystal Caves', difficulty: 1,
+        chain: 'crystal', chainOrder: 1,
         duration: [220, 380], encounters: 3,
         vis: { wall: 'stone_wall', floor: 'stone_floor' },
         loot: [
@@ -1209,9 +1210,10 @@ export const DIMENSIONS = {
     },
     crystal_mines: {
         name: 'Crystal Mines', difficulty: 2,
+        chain: 'crystal', chainOrder: 2,
         duration: [350, 550], encounters: 4,
         vis: { wall: 'stone_wall', floor: 'stone_floor' },
-        requiresDimension: 'crystal_caves',
+        requiresRealm: 'crystal_caves',
         loot: [
             { resource: 'runite', weight: 35, amount: [4, 9] },
             { resource: 'stone', weight: 25, amount: [6, 14] },
@@ -1249,6 +1251,7 @@ export const DIMENSIONS = {
     },
     verdant_depths: {
         name: 'Verdant Depths', difficulty: 1,
+        chain: 'verdant', chainOrder: 1,
         duration: [150, 280], encounters: 2,
         vis: { wall: 'wood_wall', floor: 'wood_floor' },
         loot: [
@@ -1284,7 +1287,8 @@ export const DIMENSIONS = {
         },
     },
     shadow_realm: {
-        name: 'Shadow Realm', difficulty: 2,
+        name: 'Shadow Realm', difficulty: 3,
+        chain: 'shadow', chainOrder: 1,
         duration: [400, 650], encounters: 5,
         vis: { wall: 'void_wall', floor: 'stone_floor' },
         loot: [
@@ -1324,7 +1328,8 @@ export const DIMENSIONS = {
         },
     },
     arcane_library: {
-        name: 'Arcane Library', difficulty: 1,
+        name: 'Arcane Library', difficulty: 2,
+        chain: 'arcane', chainOrder: 1,
         duration: [180, 320], encounters: 2,
         vis: { wall: 'stone_wall', floor: 'wood_floor' },
         loot: [
@@ -1362,6 +1367,307 @@ export const DIMENSIONS = {
                 { chance: 0.04, text: '{name} finds a cache of enchanting runite!', loot: { resource: 'runite', amount: [3, 5] } },
                 { chance: 0.015, text: '{name} finds a glowing codex that shares its knowledge with all who stand near!', loot: { artifact: 'tome_of_shared_wisdom' } },
                 { chance: 0.02, text: '{name} discovers a crystalline apparatus in a forgotten research alcove — it amplifies mana storage!', loot: { item: 'crystal_capacitor' } },
+            ],
+        },
+    },
+    crystal_depths: {
+        name: 'Crystal Depths', difficulty: 3,
+        chain: 'crystal', chainOrder: 3,
+        duration: [500, 750], encounters: 6,
+        vis: { wall: 'stone_wall', floor: 'stone_floor' },
+        requiresRealm: 'crystal_mines',
+        loot: [
+            { resource: 'runite', weight: 40, amount: [6, 14] },
+            { resource: 'void_essence', weight: 25, amount: [3, 7] },
+            { resource: 'stone', weight: 15, amount: [8, 18] },
+            { artifact: 'ward_of_the_sentinel', weight: 3 },
+        ],
+        enemies: { hp: [100, 160], damage: [11, 17], count: [4, 7] },
+        events: {
+            ambient: [
+                '{name} feels immense pressure from the rock above.',
+                'Crystals here grow in impossible spirals, defying gravity.',
+                '{name} passes through a chamber lit entirely by runite veins.',
+                'The air is thick with mineral dust that sparkles in torchlight.',
+                'A low vibration pulses through the stone — something massive shifts below.',
+                '{name} notices the crystals here are warm to the touch.',
+            ],
+            discoveries: [
+                '{name} cracks open a massive geode — a motherlode of runite!',
+                'A sealed dwarven vault still holds its treasures.',
+                '{name} finds a vein of crystal so pure it hums with energy.',
+            ],
+            traps: [
+                'A crystal stalactite shatters and rains razor shards on {name}!',
+                '{name} triggers a pressure plate — the walls begin closing!',
+                'Superheated steam vents from a crack, scalding {name}!',
+                'The floor collapses into a crystal-lined sinkhole beneath {name}!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} discovers the legendary Crystal Heart — a massive runite formation!', loot: { resource: 'runite', amount: [10, 18] } },
+                { chance: 0.03, text: '{name} finds a sealed primordial chamber full of void-infused crystal!', loot: { resource: 'void_essence', amount: [6, 12] } },
+                { chance: 0.015, text: '{name} pries a shimmering gem from the deepest wall — it pulses with protective energy!', loot: { artifact: 'crystal_aegis' } },
+                { chance: 0.01, text: '{name} uncovers an ancient crystalline forge still burning with arcane fire!', loot: { artifact: 'runite_hammer' } },
+            ],
+        },
+    },
+    fungal_hollows: {
+        name: 'Fungal Hollows', difficulty: 2,
+        chain: 'verdant', chainOrder: 2,
+        duration: [280, 450], encounters: 4,
+        vis: { wall: 'wood_wall', floor: 'wood_floor' },
+        requiresRealm: 'verdant_depths',
+        loot: [
+            { resource: 'wood', weight: 35, amount: [10, 20] },
+            { resource: 'berries', weight: 25, amount: [6, 12] },
+            { resource: 'potatoes', weight: 20, amount: [5, 10] },
+            { artifact: 'cornucopia_charm', weight: 3 },
+        ],
+        enemies: { hp: [55, 85], damage: [6, 10], count: [2, 5] },
+        events: {
+            ambient: [
+                '{name} ducks under a canopy of phosphorescent mushroom caps.',
+                'Spore clouds drift lazily through the cavern.',
+                '{name} hears the squelch of something moving in the mycelium.',
+                'Bioluminescent tendrils pulse in waves along the walls.',
+                'The air is warm and humid, thick with the scent of decay and growth.',
+                '{name} notices mushrooms growing visibly before their eyes.',
+            ],
+            discoveries: [
+                '{name} finds a cluster of edible fungi — enormous and ripe.',
+                'A fallen log teems with harvestable growth.',
+                '{name} discovers a fungal garden tended by some long-gone cultivator.',
+            ],
+            traps: [
+                'A puffball mushroom explodes in {name}\'s face — choking spores!',
+                '{name} steps on a cap that snaps shut like a jaw!',
+                'Acidic sap drips from above onto {name}!',
+                'A vine whips out from the fungal mass, striking {name}!',
+            ],
+            rare: [
+                { chance: 0.05, text: '{name} discovers a grove of giant truffles — incredibly valuable!', loot: { resource: 'potatoes', amount: [8, 14] } },
+                { chance: 0.04, text: '{name} finds a cache of preserved seeds in a hollow tree!', loot: { resource: 'wheat', amount: [10, 16] } },
+                { chance: 0.02, text: '{name} finds a living staff of intertwined roots that still grows!', loot: { artifact: 'staff_of_regrowth' } },
+                { chance: 0.015, text: '{name} discovers a symbiotic fungal crown that enhances the mind!', loot: { artifact: 'mycelium_crown' } },
+            ],
+        },
+    },
+    primeval_canopy: {
+        name: 'Primeval Canopy', difficulty: 3,
+        chain: 'verdant', chainOrder: 3,
+        duration: [400, 600], encounters: 5,
+        vis: { wall: 'wood_wall', floor: 'wood_floor' },
+        requiresRealm: 'fungal_hollows',
+        loot: [
+            { resource: 'wood', weight: 30, amount: [12, 24] },
+            { resource: 'berries', weight: 20, amount: [8, 16] },
+            { resource: 'potatoes', weight: 15, amount: [6, 12] },
+            { resource: 'void_essence', weight: 10, amount: [2, 5] },
+            { artifact: 'staff_of_regrowth', weight: 3 },
+        ],
+        enemies: { hp: [80, 130], damage: [9, 14], count: [3, 6] },
+        events: {
+            ambient: [
+                '{name} climbs through roots thicker than castle walls.',
+                'The canopy above blocks all sky — only bioluminescence lights the way.',
+                '{name} hears the call of creatures that haven\'t existed for millennia.',
+                'Ancient bark carvings depict a civilization built among these branches.',
+                'A waterfall cascades from somewhere impossibly high above.',
+                '{name} feels the forest watching them with a patient intelligence.',
+            ],
+            discoveries: [
+                '{name} finds a treehouse larder still stocked with preserved fruit.',
+                'A massive seed pod cracks open, revealing usable materials.',
+                '{name} discovers a natural spring with restorative waters.',
+            ],
+            traps: [
+                'A carnivorous flower snaps its petals around {name}!',
+                '{name} disturbs a wasp nest the size of a cart!',
+                'The branch beneath {name} snaps — long fall!',
+                'Paralytic pollen fills the air around {name}!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} discovers the World-Root — a nexus of primal nature energy!', loot: { resource: 'void_essence', amount: [5, 9] } },
+                { chance: 0.03, text: '{name} harvests from the legendary Ever-Fruit tree!', loot: { resource: 'berries', amount: [12, 20] } },
+                { chance: 0.015, text: '{name} bonds with a seed of the World-Tree — it grows into living armor!', loot: { artifact: 'living_bark_armor' } },
+                { chance: 0.01, text: '{name} discovers an ancient druid\'s heartwood staff, still thrumming with life magic!', loot: { artifact: 'heartwood_staff' } },
+            ],
+        },
+    },
+    ancient_university: {
+        name: 'Ancient University', difficulty: 3,
+        chain: 'arcane', chainOrder: 2,
+        duration: [320, 500], encounters: 4,
+        vis: { wall: 'stone_wall', floor: 'wood_floor' },
+        requiresRealm: 'arcane_library',
+        research: 'arcane_studies',
+        loot: [
+            { resource: 'tome_magic_missile', weight: 15, amount: [1, 1] },
+            { resource: 'tome_heal', weight: 15, amount: [1, 1] },
+            { resource: 'tome_haste', weight: 12, amount: [1, 1] },
+            { resource: 'tome_warp', weight: 12, amount: [1, 1] },
+            { resource: 'tome_circle_of_growth', weight: 10, amount: [1, 1] },
+            { resource: 'runite', weight: 25, amount: [3, 7] },
+            { artifact: 'tome_of_shared_wisdom', weight: 3 },
+        ],
+        enemies: { hp: [60, 100], damage: [7, 12], count: [2, 5] },
+        events: {
+            ambient: [
+                '{name} passes through a grand lecture hall where spectral students still sit.',
+                'Enchanted chalk writes formulas endlessly across ancient blackboards.',
+                '{name} feels raw magical energy crackling along the corridors.',
+                'A golem proctor patrols the halls, still enforcing long-dead rules.',
+                'Alchemical apparatus bubbles and steams in an abandoned laboratory wing.',
+                '{name} hears a distant bell tolling class changes for no one.',
+            ],
+            discoveries: [
+                '{name} finds a professor\'s private collection hidden behind a false wall.',
+                'A sealed examination vault still contains graded manuscripts of power.',
+                '{name} deciphers a master thesis containing a spell formula.',
+            ],
+            traps: [
+                'A failed experiment reactivates as {name} passes — explosion!',
+                '{name} triggers a student\'s old ward — lightning arcs!',
+                'An animated suit of armor swings at {name}!',
+                'A containment circle breaks, releasing stored energy at {name}!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} discovers the Dean\'s private vault — advanced tome inside!', loot: { resource: 'tome_haste', amount: [1, 1] } },
+                { chance: 0.03, text: '{name} finds an enchanted runite cache in the alchemy wing!', loot: { resource: 'runite', amount: [5, 9] } },
+                { chance: 0.02, text: '{name} finds a set of spectacles that reveal hidden truths!', loot: { artifact: 'scholars_spectacles' } },
+                { chance: 0.015, text: '{name} discovers a thesis on mana crystallization with a working prototype!', loot: { item: 'crystal_capacitor' } },
+            ],
+        },
+    },
+    abandoned_laboratory: {
+        name: 'Abandoned Laboratory', difficulty: 4,
+        chain: 'arcane', chainOrder: 3,
+        duration: [450, 680], encounters: 6,
+        vis: { wall: 'stone_wall', floor: 'stone_floor' },
+        requiresRealm: 'ancient_university',
+        research: 'arcane_studies',
+        loot: [
+            { resource: 'tome_magic_missile', weight: 12, amount: [1, 1] },
+            { resource: 'tome_heal', weight: 12, amount: [1, 1] },
+            { resource: 'tome_haste', weight: 12, amount: [1, 1] },
+            { resource: 'tome_warp', weight: 12, amount: [1, 1] },
+            { resource: 'tome_circle_of_growth', weight: 12, amount: [1, 1] },
+            { resource: 'runite', weight: 20, amount: [4, 9] },
+            { resource: 'void_essence', weight: 15, amount: [2, 6] },
+            { artifact: 'scholars_spectacles', weight: 2 },
+        ],
+        enemies: { hp: [90, 150], damage: [10, 16], count: [3, 6] },
+        events: {
+            ambient: [
+                '{name} passes containment chambers — most are cracked and empty.',
+                'Unstable magical fields distort the air like heat shimmer.',
+                '{name} reads warning signs in a dozen languages on every door.',
+                'A half-finished construct twitches as the party passes.',
+                'Arcane waste pools glow an unsettling green in side chambers.',
+                '{name} hears the hum of a still-running experiment deep below.',
+            ],
+            discoveries: [
+                '{name} finds an intact experimental prototype in a sealed chamber.',
+                'A researcher\'s emergency stash — hidden for a quick escape that never came.',
+                '{name} recovers usable materials from a decommissioned experiment.',
+            ],
+            traps: [
+                'A containment breach floods the corridor with raw magic — {name} is hit!',
+                '{name} steps on a pressure plate — an experimental weapon fires!',
+                'A mutated specimen breaks free from stasis as {name} passes!',
+                'Unstable reagents combust near {name}!',
+                'A temporal anomaly snaps shut on {name} — disorienting!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} accesses the head researcher\'s personal vault — forbidden knowledge!', loot: { resource: 'tome_circle_of_growth', amount: [1, 1] } },
+                { chance: 0.03, text: '{name} finds concentrated void essence in a sealed containment jar!', loot: { resource: 'void_essence', amount: [6, 10] } },
+                { chance: 0.015, text: '{name} recovers an experimental amplification gauntlet — still functional!', loot: { artifact: 'arcane_amplifier' } },
+                { chance: 0.01, text: '{name} discovers the masterwork of a mad researcher — a staff that bends reality!', loot: { artifact: 'staff_of_distortion' } },
+            ],
+        },
+    },
+    void_abyss: {
+        name: 'Void Abyss', difficulty: 4,
+        chain: 'shadow', chainOrder: 2,
+        duration: [550, 800], encounters: 6,
+        vis: { wall: 'void_wall', floor: 'stone_floor' },
+        requiresRealm: 'shadow_realm',
+        research: 'deep_delving',
+        loot: [
+            { resource: 'void_essence', weight: 45, amount: [5, 10] },
+            { resource: 'runite', weight: 20, amount: [4, 8] },
+            { artifact: 'voidwalkers_lantern', weight: 3 },
+        ],
+        enemies: { hp: [120, 180], damage: [12, 18], count: [4, 7] },
+        events: {
+            ambient: [
+                '{name} cannot tell if they are walking on ground or floating.',
+                'The void here is so deep that sound ceases to propagate.',
+                '{name} sees echoes of themselves from other timelines.',
+                'Space folds back on itself — the party passes the same point twice.',
+                'A black sun burns overhead, radiating darkness instead of light.',
+                '{name} feels their thoughts being pulled apart by the emptiness.',
+            ],
+            discoveries: [
+                '{name} collects crystallized void from a collapsed pocket dimension.',
+                'The remains of another expedition float by — their supplies are intact.',
+                '{name} absorbs energy from a dying rift nexus.',
+            ],
+            traps: [
+                'A gravity well inverts — {name} slams into the ceiling then back down!',
+                '{name} is caught in a temporal loop — experiencing the same pain twice!',
+                'A void creature phases through {name}, draining their life force!',
+                'Reality tears open beneath {name} — they barely avoid falling into nothing!',
+                'An anti-magic pulse hits {name}, disrupting their defenses!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} finds a concentrated void crystal — pure primordial essence!', loot: { resource: 'void_essence', amount: [8, 14] } },
+                { chance: 0.03, text: '{name} collects runite that has been void-tempered for aeons!', loot: { resource: 'runite', amount: [6, 12] } },
+                { chance: 0.015, text: '{name} wrests a blade from the void itself — it cuts through reality!', loot: { artifact: 'void_blade' } },
+                { chance: 0.01, text: '{name} discovers an orb containing a trapped dimension — incredible power!', loot: { artifact: 'dimensional_orb' } },
+            ],
+        },
+    },
+    oblivion_rift: {
+        name: 'Oblivion Rift', difficulty: 5,
+        chain: 'shadow', chainOrder: 3,
+        duration: [700, 1000], encounters: 8,
+        vis: { wall: 'void_wall', floor: 'void_wall' },
+        requiresRealm: 'void_abyss',
+        research: 'deep_delving',
+        loot: [
+            { resource: 'void_essence', weight: 50, amount: [7, 14] },
+            { resource: 'runite', weight: 20, amount: [5, 10] },
+            { artifact: 'cloak_of_shadows', weight: 3 },
+        ],
+        enemies: { hp: [160, 240], damage: [15, 22], count: [4, 8] },
+        events: {
+            ambient: [
+                '{name} walks on platforms of solidified nothingness.',
+                'The concept of direction has no meaning here — only forward.',
+                '{name} sees the end of all things and looks away quickly.',
+                'Reality is a thin membrane here — the party can see through it.',
+                'Entities vast beyond comprehension move in the distance, unaware of the party.',
+                '{name} feels time flowing backwards, forwards, and sideways simultaneously.',
+            ],
+            discoveries: [
+                '{name} gathers void essence that has crystallized into impossible geometries.',
+                'A fragment of a destroyed world drifts by — {name} salvages from it.',
+                '{name} absorbs raw creation energy from the space between realities.',
+            ],
+            traps: [
+                'An oblivion wave washes over {name} — they briefly cease to exist!',
+                '{name} is caught between colliding reality fragments — crushed!',
+                'A void lord notices {name} — its gaze alone causes agony!',
+                'The ground unmakes itself beneath {name}!',
+                'A paradox storm engulfs {name} — existing and not existing hurts!',
+                '{name} is struck by a shard of broken time!',
+            ],
+            rare: [
+                { chance: 0.04, text: '{name} finds a tear in reality leading to a void essence wellspring!', loot: { resource: 'void_essence', amount: [10, 18] } },
+                { chance: 0.02, text: '{name} claims a fragment of pure oblivion — it annihilates anything it touches!', loot: { artifact: 'shard_of_oblivion' } },
+                { chance: 0.01, text: '{name} binds a fraction of the void\'s power into their very soul!', loot: { artifact: 'voidheart' } },
+                { chance: 0.01, text: '{name} finds armor forged from the boundary between existence and nothing!', loot: { artifact: 'armor_of_the_abyss' } },
             ],
         },
     },
@@ -1612,42 +1918,91 @@ export const STORY_MILESTONES = {
     },
 
     // -----------------------------------------------------------------------
-    // World tab — lore and worldbuilding (dimension exploration)
+    // World tab — lore and worldbuilding (realm exploration)
     // -----------------------------------------------------------------------
-    dim_crystal_caves: {
+    realm_crystal_caves: {
         tab: 'world',
         title: 'Crystal Caves',
-        trigger: 'dimension_crystal_caves',
+        trigger: 'realm_crystal_caves',
         text: 'TODO: Write lore text for exploring the Crystal Caves.',
         order: 20,
     },
-    dim_crystal_mines: {
+    realm_crystal_mines: {
         tab: 'world',
         title: 'Crystal Mines',
-        trigger: 'dimension_crystal_mines',
+        trigger: 'realm_crystal_mines',
         text: 'TODO: Write lore text for exploring the Crystal Mines.',
         order: 21,
     },
-    dim_verdant_depths: {
+    realm_crystal_depths: {
         tab: 'world',
-        title: 'Verdant Depths',
-        trigger: 'dimension_verdant_depths',
-        text: 'TODO: Write lore text for exploring the Verdant Depths.',
+        title: 'Crystal Depths',
+        trigger: 'realm_crystal_depths',
+        text: 'TODO: Write lore text for exploring the Crystal Depths.',
         order: 22,
     },
-    dim_shadow_realm: {
+    realm_verdant_depths: {
         tab: 'world',
-        title: 'Shadow Realm',
-        trigger: 'dimension_shadow_realm',
-        text: 'TODO: Write lore text for exploring the Shadow Realm.',
+        title: 'Verdant Depths',
+        trigger: 'realm_verdant_depths',
+        text: 'TODO: Write lore text for exploring the Verdant Depths.',
         order: 23,
     },
-    dim_arcane_library: {
+    realm_fungal_hollows: {
+        tab: 'world',
+        title: 'Fungal Hollows',
+        trigger: 'realm_fungal_hollows',
+        text: 'TODO: Write lore text for exploring the Fungal Hollows.',
+        order: 24,
+    },
+    realm_primeval_canopy: {
+        tab: 'world',
+        title: 'Primeval Canopy',
+        trigger: 'realm_primeval_canopy',
+        text: 'TODO: Write lore text for exploring the Primeval Canopy.',
+        order: 25,
+    },
+    realm_arcane_library: {
         tab: 'world',
         title: 'Arcane Library',
-        trigger: 'dimension_arcane_library',
+        trigger: 'realm_arcane_library',
         text: 'TODO: Write lore text for exploring the Arcane Library.',
-        order: 24,
+        order: 26,
+    },
+    realm_ancient_university: {
+        tab: 'world',
+        title: 'Ancient University',
+        trigger: 'realm_ancient_university',
+        text: 'TODO: Write lore text for exploring the Ancient University.',
+        order: 27,
+    },
+    realm_abandoned_laboratory: {
+        tab: 'world',
+        title: 'Abandoned Laboratory',
+        trigger: 'realm_abandoned_laboratory',
+        text: 'TODO: Write lore text for exploring the Abandoned Laboratory.',
+        order: 28,
+    },
+    realm_shadow_realm: {
+        tab: 'world',
+        title: 'Shadow Realm',
+        trigger: 'realm_shadow_realm',
+        text: 'TODO: Write lore text for exploring the Shadow Realm.',
+        order: 29,
+    },
+    realm_void_abyss: {
+        tab: 'world',
+        title: 'Void Abyss',
+        trigger: 'realm_void_abyss',
+        text: 'TODO: Write lore text for exploring the Void Abyss.',
+        order: 30,
+    },
+    realm_oblivion_rift: {
+        tab: 'world',
+        title: 'Oblivion Rift',
+        trigger: 'realm_oblivion_rift',
+        text: 'TODO: Write lore text for exploring the Oblivion Rift.',
+        order: 31,
     },
 };
 

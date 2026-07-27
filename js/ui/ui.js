@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, DIMENSIONS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, REALMS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -456,13 +456,13 @@ export class UI {
                         const c = this.game.getColonist(id);
                         return c ? c.name : '?';
                     }).join(', ');
-                    html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — assembling</div>`;
+                    html += `<div class="info-row" style="color:#aaddff;">${exp.realmName} — assembling</div>`;
                     html += `<div class="info-row" style="color:#888;">Party: ${names}</div>`;
                 } else {
                     const elapsed = this.game.tick - exp.startTick;
                     const totalDur = Math.floor(exp.duration * 1.2);
                     const pct = Math.min(100, Math.floor((elapsed / totalDur) * 100));
-                    html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status}${exp.combat ? ' [COMBAT]' : ''} (${pct}%)</div>`;
+                    html += `<div class="info-row" style="color:#aaddff;">${exp.realmName} — ${exp.status}${exp.combat ? ' [COMBAT]' : ''} (${pct}%)</div>`;
 
                     const aliveParty = exp.partySnapshot.filter(p => p.hp > 0);
                     html += `<div class="info-row" style="color:#888;">Party (${aliveParty.length}/${exp.partySnapshot.length} alive):</div>`;
@@ -493,7 +493,7 @@ export class UI {
             }
         }
 
-        const dims = expl.getAvailableDimensions(this.game);
+        const dims = expl.getAvailableRealms(this.game);
         if (dims.length > 0 && this.game.power.powered) {
             html += `<div class="info-row" style="margin-top:6px;"><b>Send Expedition:</b></div>`;
             for (const dim of dims) {
@@ -505,7 +505,7 @@ export class UI {
 
         if (expl.completedExpeditions.length > 0 && expl.expeditions.length === 0) {
             const last = expl.completedExpeditions[expl.completedExpeditions.length - 1];
-            html += `<div class="info-row" style="margin-top:6px;color:#88ccff;font-size:0.9em;">Last expedition: ${last.dimensionName}</div>`;
+            html += `<div class="info-row" style="margin-top:6px;color:#88ccff;font-size:0.9em;">Last expedition: ${last.realmName}</div>`;
             html += `<div class="exp-log-container">`;
             const logSlice = last.log.slice(-10);
             for (const entry of logSlice) {
@@ -937,7 +937,7 @@ export class UI {
             const elapsed = this.game.tick - (exp.startTick || this.game.tick);
             const totalDur = Math.floor((exp.duration || 1) * 1.2);
             const pct = exp.status === 'gathering' ? 0 : Math.min(100, Math.floor((elapsed / totalDur) * 100));
-            html += `<div class="info-row" style="color:#aaddff;">${exp.dimensionName} — ${exp.status} (${pct}%)</div>`;
+            html += `<div class="info-row" style="color:#aaddff;">${exp.realmName} — ${exp.status} (${pct}%)</div>`;
         }
         html += `<div class="info-actions"><button onclick="window.game.ui.toggleArcanePanel('expeditions')" style="background:#1a4466;color:#88ddff;">Open Portal Panel</button></div>`;
         return html;
@@ -2184,7 +2184,7 @@ export class UI {
         if (!hasGate) {
             html += `<div class="arcane-section" style="color:#888;padding:20px 0;text-align:center;">`;
             html += `<div style="font-size:1.2em;color:#33ccff;margin-bottom:8px;">Rift Gate Required</div>`;
-            html += `<div>Build a Rift Gate to send expeditions to other dimensions.</div>`;
+            html += `<div>Build a Rift Gate to send expeditions to other realms.</div>`;
             html += `<div style="margin-top:6px;color:#666;">Explore for treasure, artifacts, and rare materials. Requires mana to operate.</div>`;
             html += `</div>`;
             return html;
@@ -2204,13 +2204,13 @@ export class UI {
                         const c = this.game.getColonist(id);
                         return c ? c.name : '?';
                     }).join(', ');
-                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.dimensionName} — Assembling</div>`;
+                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.realmName} — Assembling</div>`;
                     html += `<div class="info-row" style="color:#888;">Party: ${names}</div>`;
                 } else {
                     const elapsed = this.game.tick - exp.startTick;
                     const totalDur = Math.floor(exp.duration * 1.2);
                     const pct = Math.min(100, Math.floor((elapsed / totalDur) * 100));
-                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.dimensionName} — ${exp.status}${exp.combat ? ' [COMBAT]' : ''}</div>`;
+                    html += `<div class="info-row" style="color:#aaddff;font-weight:bold;">${exp.realmName} — ${exp.status}${exp.combat ? ' [COMBAT]' : ''}</div>`;
                     html += `<div class="info-row">Progress: <span style="color:#88ddff">${pct}%</span></div>`;
 
                     html += `<canvas class="exp-vis-canvas" width="560" height="120"></canvas>`;
@@ -2243,33 +2243,41 @@ export class UI {
             }
         }
 
-        const dims = expl.getAvailableDimensions(this.game);
+        const dims = expl.getAvailableRealms(this.game);
         if (expl.expeditions.length === 0) {
             if (dims.length > 0 && this.game.power.powered) {
                 html += `<div class="info-row" style="margin-top:8px;font-weight:bold;color:#33ccff;">Send Expedition:</div>`;
-                for (const dim of dims) {
-                    const completed = expl.completedDimensions.has(dim.key);
-                    const hasSequel = Object.values(DIMENSIONS).some(d => d.requiresDimension === dim.key);
-                    const badge = completed ? `<span style="color:#44cc44;font-size:0.8em;"> ✓</span>` : '';
-                    const chain = hasSequel && completed ? ` <span style="color:#666;font-size:0.8em;">→</span>` : '';
-                    const reqBy = dim.requiresDimension ? DIMENSIONS[dim.requiresDimension]?.name : null;
-                    const indent = reqBy ? 'margin-left:16px;border-left:2px solid #446;padding-left:8px;' : '';
-                    html += `<div class="info-actions" style="${indent}"><button onclick="window.game.showExpeditionSetupInPanel('${dim.key}')" style="background:#1a4466;color:#88ddff;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;margin:2px 0;">${dim.name} (Difficulty ${dim.difficulty})${badge}${chain}</button></div>`;
-                }
-                const locked = Object.entries(DIMENSIONS).filter(([k, d]) => d.requiresDimension && !expl.completedDimensions.has(d.requiresDimension) && (!d.research || this.game.research.isResearched(d.research)));
-                for (const [key, dim] of locked) {
-                    const reqName = DIMENSIONS[dim.requiresDimension]?.name || dim.requiresDimension;
-                    html += `<div class="info-actions" style="margin-left:16px;border-left:2px solid #333;padding-left:8px;opacity:0.5;"><span style="color:#666;padding:6px 12px;display:inline-block;">${dim.name} — complete ${reqName} to unlock</span></div>`;
+                const allRealms = Object.entries(REALMS).map(([k, r]) => ({ key: k, ...r }));
+                const chains = [...new Set(allRealms.map(r => r.chain))];
+                for (const chain of chains) {
+                    const chainRealms = allRealms.filter(r => r.chain === chain).sort((a, b) => a.chainOrder - b.chainOrder);
+                    const completedCount = chainRealms.filter(r => expl.completedRealms.has(r.key)).length;
+                    const anyVisible = chainRealms.some(r => dims.find(d => d.key === r.key) || expl.completedRealms.has(r.key));
+                    if (!anyVisible && !chainRealms.some(r => !r.research || this.game.research.isResearched(r.research))) continue;
+                    html += `<div style="color:#888;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:6px;margin-bottom:2px;">${chain} <span style="color:#44cc44">${completedCount}/${chainRealms.length}</span></div>`;
+                    for (const realm of chainRealms) {
+                        const available = dims.find(d => d.key === realm.key);
+                        const completed = expl.completedRealms.has(realm.key);
+                        const badge = completed ? `<span style="color:#44cc44;font-size:0.8em;"> ✓</span>` : '';
+                        const indentPx = (realm.chainOrder - 1) * 16;
+                        const indent = indentPx > 0 ? `margin-left:${indentPx}px;border-left:2px solid #446;padding-left:8px;` : '';
+                        if (available) {
+                            html += `<div class="info-actions" style="${indent}"><button onclick="window.game.showExpeditionSetupInPanel('${realm.key}')" style="background:#1a4466;color:#88ddff;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;margin:2px 0;">${realm.name} (Difficulty ${realm.difficulty})${badge}</button></div>`;
+                        } else if (realm.requiresRealm && !expl.completedRealms.has(realm.requiresRealm) && (!realm.research || this.game.research.isResearched(realm.research))) {
+                            const reqName = REALMS[realm.requiresRealm]?.name || realm.requiresRealm;
+                            html += `<div class="info-actions" style="${indent}border-left-color:#333;opacity:0.5;"><span style="color:#666;padding:6px 12px;display:inline-block;">${realm.name} — complete ${reqName} to unlock</span></div>`;
+                        }
+                    }
                 }
             } else if (!this.game.power.powered) {
                 html += `<div class="info-row" style="color:#ff4444;margin-top:8px;">No mana — cannot send expeditions</div>`;
             } else {
-                html += `<div class="info-row" style="color:#888;margin-top:8px;">No dimensions available yet</div>`;
+                html += `<div class="info-row" style="color:#888;margin-top:8px;">No realms available yet</div>`;
             }
 
             if (expl.completedExpeditions.length > 0) {
                 const last = expl.completedExpeditions[expl.completedExpeditions.length - 1];
-                html += `<div class="info-row" style="margin-top:10px;color:#88ccff;font-weight:bold;">Last: ${last.dimensionName}</div>`;
+                html += `<div class="info-row" style="margin-top:10px;color:#88ccff;font-weight:bold;">Last: ${last.realmName}</div>`;
                 html += `<div class="exp-log-container">`;
                 const logSlice = last.log.slice(-10);
                 for (const entry of logSlice) {
@@ -2284,7 +2292,7 @@ export class UI {
         return html;
     }
 
-    _buildExpeditionSetupHtml(dimensionKey) {
+    _buildExpeditionSetupHtml(realmKey) {
         const available = this.game.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
         let html = `<div class="arcane-section">`;
         html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Select Party</div>`;
@@ -2314,16 +2322,16 @@ export class UI {
         html += `<span id="exp-diff-label" style="min-width:70px;color:#ffaa33;font-size:0.9em;"></span>`;
         html += `</div>`;
         html += `<div id="exp-diff-desc" style="color:#888;font-size:0.8em;padding:2px 4px;"></div>`;
-        html += this._buildDimensionDropsHtml(dimensionKey);
+        html += this._buildRealmDropsHtml(realmKey);
         html += `<div class="info-actions" style="margin-top:8px;">`;
-        html += `<button onclick="window.game.launchExpeditionFromPanel('${dimensionKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
+        html += `<button onclick="window.game.launchExpeditionFromPanel('${realmKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
         html += `<button onclick="window.game.ui._arcaneExpSetup=null;window.game.ui._lastArcaneHtml='';window.game.ui.updateArcanePanel();" style="background:#333;color:#aaa;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;margin-left:8px;">Cancel</button>`;
         html += `</div></div>`;
         return html;
     }
 
-    _buildDimensionDropsHtml(dimensionKey) {
-        const dim = DIMENSIONS[dimensionKey];
+    _buildRealmDropsHtml(realmKey) {
+        const dim = REALMS[realmKey];
         if (!dim) return '';
         const discovered = this.game.discoveredLoot || new Set();
         let html = `<div style="margin-top:10px;color:#ccaa44;font-weight:bold;font-size:0.9em;">Possible Drops</div>`;
@@ -2333,7 +2341,7 @@ export class UI {
         for (const entry of dim.loot) {
             const pct = Math.round(entry.weight / totalWeight * 100);
             const key = entry.artifact || entry.resource;
-            const isFound = discovered.has(`${dimensionKey}:${key}`);
+            const isFound = discovered.has(`${realmKey}:${key}`);
             const name = isFound ? (entry.artifact ? (ARTIFACTS[entry.artifact]?.name || entry.artifact) : entry.resource.replace(/_/g, ' ')) : '??????';
             const icon = isFound ? this._itemIcon(key, entry.artifact ? 'artifact' : null) : '';
             const nameColor = isFound ? '#ccc' : '#555';
@@ -2350,15 +2358,15 @@ export class UI {
                 let key, name, isFound;
                 if (rare.loot.artifact) {
                     key = rare.loot.artifact;
-                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    isFound = discovered.has(`${realmKey}:${key}`);
                     name = isFound ? (ARTIFACTS[key]?.name || key) : '??????';
                 } else if (rare.loot.item) {
                     key = rare.loot.item;
-                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    isFound = discovered.has(`${realmKey}:${key}`);
                     name = isFound ? (TRADER_EXCLUSIVE_ITEMS[key]?.name || key) : '??????';
                 } else {
                     key = rare.loot.resource;
-                    isFound = discovered.has(`${dimensionKey}:${key}`);
+                    isFound = discovered.has(`${realmKey}:${key}`);
                     name = isFound ? key.replace(/_/g, ' ') : '??????';
                 }
                 const icon = isFound ? this._itemIcon(key, rare.loot.artifact ? 'artifact' : null) : '';
@@ -2371,7 +2379,7 @@ export class UI {
         }
 
         const totalDrops = dim.loot.length + (dim.events?.rare?.length || 0);
-        const foundCount = [...dim.loot.map(e => e.artifact || e.resource), ...(dim.events?.rare || []).map(r => r.loot.artifact || r.loot.item || r.loot.resource)].filter(k => discovered.has(`${dimensionKey}:${k}`)).length;
+        const foundCount = [...dim.loot.map(e => e.artifact || e.resource), ...(dim.events?.rare || []).map(r => r.loot.artifact || r.loot.item || r.loot.resource)].filter(k => discovered.has(`${realmKey}:${k}`)).length;
         html += `<div style="color:#666;font-size:0.7em;text-align:right;margin-top:4px;">${foundCount}/${totalDrops} discovered</div>`;
         html += `</div>`;
         return html;
@@ -2460,15 +2468,23 @@ export class UI {
             retreatProgress = Math.min(1, Math.max(0, retreatElapsed / (retreatDur || 1)));
         }
 
-        const dimDef = DIMENSIONS[activeExp.dimension];
-        const vis = dimDef?.vis || { wall: 'stone_wall', floor: 'stone_floor' };
-        const dimColors = {
+        const realmDef = REALMS[activeExp.realm];
+        const vis = realmDef?.vis || { wall: 'stone_wall', floor: 'stone_floor' };
+        const realmColors = {
             crystal_caves: { accent: '#4488ff' },
+            crystal_mines: { accent: '#3366dd' },
+            crystal_depths: { accent: '#2244aa' },
             verdant_depths: { accent: '#44cc44' },
-            shadow_realm: { accent: '#aa44ff' },
+            fungal_hollows: { accent: '#88aa44' },
+            primeval_canopy: { accent: '#22aa66' },
             arcane_library: { accent: '#ffcc44' },
+            ancient_university: { accent: '#ddaa22' },
+            abandoned_laboratory: { accent: '#ff8844' },
+            shadow_realm: { accent: '#aa44ff' },
+            void_abyss: { accent: '#7722cc' },
+            oblivion_rift: { accent: '#440088' },
         };
-        const colors = dimColors[activeExp.dimension] || dimColors.crystal_caves;
+        const colors = realmColors[activeExp.realm] || realmColors.crystal_caves;
 
         const tileSize = 12;
         const wallRows = 2;
