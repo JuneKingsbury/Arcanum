@@ -24,6 +24,7 @@ export class UI {
         this.storyPanelVisible = false;
         this._storyTab = 'colony';
         this._lastStoryHtml = '';
+        this._lastStoryHasNew = false;
         this.elements = {};
         this.initElements();
     }
@@ -253,6 +254,11 @@ export class UI {
         if (this.storyPanelVisible) this.updateStoryPanel();
         if (this._viewingRiftGate) this._refreshRiftGateInfo();
         if (this._viewingColonistId != null) this._refreshColonistInfo();
+        const hasNew = this.game.story.hasUnviewed();
+        if (hasNew !== this._lastStoryHasNew) {
+            this._lastStoryHasNew = hasNew;
+            this.updateModeDisplay(this.game.input);
+        }
     }
 
     updateMinimapControls() {
@@ -381,7 +387,8 @@ export class UI {
             html += `<span class="mode-opt" data-mode-action="tame">[T]Tame</span>`;
             html += `<span class="mode-opt" data-mode-action="inventory">[I]Inventory</span>`;
             html += `<span class="mode-opt" data-mode-action="arcane">[V]Portal</span>`;
-            html += `<span class="mode-opt" data-mode-action="story">[J]Story</span>`;
+            const storyNew = this.game.story.hasUnviewed() ? ' style="color:#ffcc44"' : '';
+            html += `<span class="mode-opt" data-mode-action="story"${storyNew}>[J]Story${this.game.story.hasUnviewed() ? ' •' : ''}</span>`;
             html += '</span>';
         }
         this.elements.modeBar.innerHTML = html;
@@ -3015,6 +3022,7 @@ export class UI {
         this._panelPause(opening);
         this.elements.storyPanel.style.display = opening ? 'block' : 'none';
         if (opening) {
+            this.game.story.markAllViewed();
             this._lastStoryHtml = '';
             this.updateStoryPanel();
         }
@@ -3033,22 +3041,28 @@ export class UI {
         html += '</div>';
 
         const entries = Object.entries(STORY_MILESTONES)
-            .filter(([, m]) => m.tab === tab)
+            .filter(([, m]) => m.tab === tab);
+
+        const unlockedEntries = entries.filter(([k]) => unlocked.has(k))
+            .sort((a, b) => b[1].order - a[1].order);
+        const lockedEntries = entries.filter(([k]) => !unlocked.has(k))
             .sort((a, b) => a[1].order - b[1].order);
 
         html += '<div class="story-entries">';
-        for (const [key, milestone] of entries) {
-            if (unlocked.has(key)) {
-                html += `<div class="story-entry unlocked">`;
-                html += `<div class="story-entry-title">${milestone.title}</div>`;
-                html += `<div class="story-entry-text">${milestone.text}</div>`;
-                html += `</div>`;
-            } else {
-                html += `<div class="story-entry locked">`;
-                html += `<div class="story-entry-title">???</div>`;
-                html += `<div class="story-entry-text">This tale has yet to unfold...</div>`;
-                html += `</div>`;
-            }
+        for (const [key, milestone] of unlockedEntries) {
+            const info = unlocked.get(key);
+            const dateStr = info ? `Year ${info.year}, ${info.season.charAt(0).toUpperCase() + info.season.slice(1)}` : '';
+            html += `<div class="story-entry unlocked">`;
+            if (dateStr) html += `<div style="color:#888;font-size:10px;margin-bottom:2px;">${dateStr}</div>`;
+            html += `<div class="story-entry-title">${milestone.title}</div>`;
+            html += `<div class="story-entry-text">${milestone.text}</div>`;
+            html += `</div>`;
+        }
+        for (const [key, milestone] of lockedEntries) {
+            html += `<div class="story-entry locked">`;
+            html += `<div class="story-entry-title">???</div>`;
+            html += `<div class="story-entry-text">This tale has yet to unfold...</div>`;
+            html += `</div>`;
         }
         html += '</div>';
 

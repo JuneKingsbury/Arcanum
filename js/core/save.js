@@ -86,7 +86,10 @@ export function saveGame(game) {
         manaCrystalBonus: game.manaCrystalBonus || 0,
         discoveredLoot: [...(game.discoveredLoot || [])],
 
-        story: { unlocked: [...game.story.unlocked] },
+        story: {
+            unlocked: Object.fromEntries(game.story.unlocked),
+            viewed: [...game.story.viewed],
+        },
 
         tasks: game.taskQueue.getAll(),
         eventLog: game.eventLog.entries,
@@ -234,7 +237,12 @@ export function loadGame(game) {
     game.discoveredLoot = new Set(data.discoveredLoot || []);
 
     if (data.story) {
-        game.story.unlocked = new Set(data.story.unlocked || []);
+        if (Array.isArray(data.story.unlocked)) {
+            game.story.unlocked = new Map(data.story.unlocked.map(k => [k, { year: 1, season: 'spring' }]));
+        } else {
+            game.story.unlocked = new Map(Object.entries(data.story.unlocked || {}));
+        }
+        game.story.viewed = new Set(data.story.viewed || []);
     }
 
     game.taskQueue.tasks = data.tasks;
