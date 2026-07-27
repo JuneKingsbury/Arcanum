@@ -1567,6 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const glossaryPanel = document.getElementById('glossary-panel');
     const creditsPanel = document.getElementById('credits-panel');
     const changelogPanel = document.getElementById('changelog-panel');
+    const devtoolsPanel = document.getElementById('devtools-panel');
     const modalBackdrop = document.getElementById('modal-backdrop');
     const glossaryBody = document.getElementById('glossary-body');
     if (glossaryBody) {
@@ -1588,6 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         glossaryPanel.style.display = 'none';
         creditsPanel.style.display = 'none';
         changelogPanel.style.display = 'none';
+        devtoolsPanel.style.display = 'none';
         modalBackdrop.style.display = 'none';
     }
 
@@ -1623,6 +1625,15 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModals();
         if (opening) {
             changelogPanel.style.display = 'block';
+            modalBackdrop.style.display = 'block';
+        }
+    });
+
+    document.getElementById('start-devtools').addEventListener('click', () => {
+        const opening = devtoolsPanel.style.display === 'none';
+        closeModals();
+        if (opening) {
+            devtoolsPanel.style.display = 'block';
             modalBackdrop.style.display = 'block';
         }
     });
