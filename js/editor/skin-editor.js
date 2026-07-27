@@ -76,6 +76,58 @@ class SkinEditor {
         this._lastDragPos = null;
         this._animFrame = null;
 
+        // Selection state
+        this.selection = null; // { x, y, w, h }
+        this._selStart = null;
+        this._selPixels = null; // Uint8ClampedArray of selected region
+        this._selMoving = false;
+        this._selMoveStart = null;
+        this._selOrigPos = null;
+
+        // Shape tool preview state
+        this._shapeStart = null;
+        this._shapePreview = null; // array of {x, y} pixels to draw on release
+
+        // Region clipboard (for Ctrl+C/V on selections)
+        this._regionClipboard = null;
+
+        // Brush size
+        this.brushSize = 1;
+
+        // Mirror mode: null, 'h', 'v', 'both'
+        this.mirrorMode = null;
+
+        // Transparency lock
+        this.transparencyLock = false;
+
+        // Custom palette (6 saveable color slots)
+        this.customPalette = JSON.parse(localStorage.getItem('convocation_skin_custom_palette') || 'null') || [
+            { r: 0, g: 0, b: 0, a: 255 },
+            { r: 255, g: 255, b: 255, a: 255 },
+            { r: 200, g: 50, b: 50, a: 255 },
+            { r: 50, g: 200, b: 50, a: 255 },
+            { r: 50, g: 100, b: 200, a: 255 },
+            { r: 200, g: 180, b: 50, a: 255 },
+        ];
+
+        // Onion skin overlay
+        this._onionSkinKey = null; // spriteKey of overlay sprite
+        this._onionSkinData = null; // ImageData or pixel array
+        this._onionSkinOpacity = 0.3;
+
+        // Tile preview
+        this._showTilePreview = false;
+
+        // Reference image
+        this._refImage = null; // HTMLImageElement
+        this._showRefImage = false;
+
+        // Dither tool state
+        this._ditherColor2 = { r: 0, g: 0, b: 0, a: 255 };
+
+        // Gradient tool state
+        this._gradientColor2 = null;
+
         this._buildDOM();
         this._bindEvents();
         this._loadSkinData();
@@ -104,38 +156,73 @@ class SkinEditor {
         const toolbar = document.createElement('div');
         toolbar.id = 'se-toolbar';
         toolbar.innerHTML = `
-            <button id="se-back">← Back</button>
+            <button id="se-back" title="Return to start screen (Esc)">← Back</button>
             <span class="bp-sep"></span>
-            <label>Skin: <input type="text" id="se-skin-name" value="${this.skinName}" placeholder="my_skin" maxlength="30"></label>
+            <label title="Name of the skin pack">Skin: <input type="text" id="se-skin-name" value="${this.skinName}" placeholder="my_skin" maxlength="30"></label>
             <span class="bp-sep"></span>
-            <label>Size:
+            <label title="Canvas resolution for each sprite">Size:
                 <select id="se-canvas-size">
                     ${CANVAS_SIZES.map(s => `<option value="${s}" ${s === this.canvasSize ? 'selected' : ''}>${s}x${s}</option>`).join('')}
+                    <option value="custom">Custom...</option>
                 </select>
             </label>
+            <input type="number" id="se-custom-size" min="4" max="256" style="display:none;width:44px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;text-align:center;font-size:11px;padding:2px;" title="Enter custom canvas size (4-256)" placeholder="px">
             <span class="bp-sep"></span>
-            <button id="se-tool-draw" class="se-tool active" data-tool="draw" title="Draw (1)">Draw</button>
-            <button id="se-tool-erase" class="se-tool" data-tool="erase" title="Erase (2)">Erase</button>
-            <button id="se-tool-fill" class="se-tool" data-tool="fill" title="Fill (3)">Fill</button>
-            <button id="se-tool-pick" class="se-tool" data-tool="pick" title="Pick Color (4)">Pick</button>
+            <button id="se-tool-draw" class="se-tool active" data-tool="draw" title="Draw — paint pixels with current color&#10;Shortcut: 1">Draw</button>
+            <button id="se-tool-erase" class="se-tool" data-tool="erase" title="Erase — remove pixels (set transparent)&#10;Shortcut: 2">Erase</button>
+            <button id="se-tool-fill" class="se-tool" data-tool="fill" title="Fill — flood-fill contiguous area with current color&#10;Shortcut: 3">Fill</button>
+            <button id="se-tool-pick" class="se-tool" data-tool="pick" title="Pick Color — sample a pixel's color from the canvas&#10;Shortcut: 4">Pick</button>
+            <button id="se-tool-select" class="se-tool" data-tool="select" title="Select — drag to select a region, then move/copy/delete/fill it&#10;Shortcut: 5 | Del=delete | F=fill | Ctrl+C=copy | Ctrl+V=paste">Select</button>
+            <button id="se-tool-line" class="se-tool" data-tool="line" title="Line — click and drag to draw a straight line&#10;Shortcut: 6">Line</button>
+            <button id="se-tool-circle" class="se-tool" data-tool="circle" title="Circle — click center, drag to set radius&#10;Shortcut: 7">Circle</button>
+            <button id="se-tool-lighten" class="se-tool" data-tool="lighten" title="Lighten — brighten pixels without changing hue&#10;Shortcut: 8">Light</button>
+            <button id="se-tool-darken" class="se-tool" data-tool="darken" title="Darken — darken pixels without changing hue&#10;Shortcut: 9">Dark</button>
             <span class="bp-sep"></span>
-            <button id="se-toggle-grid" class="se-tool active" title="Toggle Grid (G)">Grid</button>
+            <label title="Brush size for draw/erase/lighten/darken tools&#10;Shortcut: [ smaller, ] larger" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#aaa;">
+                Size: <input type="number" id="se-brush-size" min="1" max="16" value="1" style="width:36px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;text-align:center;font-size:11px;padding:2px;">
+            </label>
+            <button id="se-brush-down" title="Decrease brush size&#10;Shortcut: [">-</button>
+            <button id="se-brush-up" title="Increase brush size&#10;Shortcut: ]">+</button>
             <span class="bp-sep"></span>
-            <button id="se-zoom-in" title="Zoom In (+)">+</button>
-            <button id="se-zoom-out" title="Zoom Out (-)">-</button>
-            <button id="se-zoom-reset" title="Reset Zoom (0)">Fit</button>
+            <button id="se-toggle-mirror" title="Mirror mode — auto-mirror strokes horizontally, vertically, or both&#10;Click to cycle: Off → H → V → Both&#10;Shortcut: M">Mirror</button>
+            <button id="se-toggle-tlock" title="Transparency Lock — only paint on non-transparent pixels (protects silhouette)&#10;Shortcut: T">T-Lock</button>
+            <button id="se-toggle-grid" class="se-tool active" title="Toggle pixel grid overlay&#10;Shortcut: G">Grid</button>
             <span class="bp-sep"></span>
-            <button id="se-undo" title="Undo (Ctrl+Z)">Undo</button>
-            <button id="se-redo" title="Redo (Ctrl+Y)">Redo</button>
-            <button id="se-copy" title="Copy sprite to clipboard (C)">Copy</button>
-            <button id="se-paste" title="Paste sprite from clipboard (V)">Paste</button>
+            <button id="se-flip-h" title="Flip Horizontal — mirror the entire sprite left-to-right">FlipH</button>
+            <button id="se-flip-v" title="Flip Vertical — mirror the entire sprite top-to-bottom">FlipV</button>
+            <button id="se-rotate-cw" title="Rotate 90° Clockwise — rotate the entire sprite">Rot</button>
+            <button id="se-replace-color" title="Replace Color — swap all pixels matching last-picked color with current color&#10;Workflow: Pick target color (4), set new color, click Replace">Replace</button>
+            <button id="se-outline" title="Outline — add a 1px outline around all non-transparent pixels using current color">Outline</button>
+            <button id="se-extract-palette" title="Extract Palette — pull all unique colors from sprite into the custom palette slots">Extract</button>
             <span class="bp-sep"></span>
-            <button id="se-clear">Clear</button>
-            <button id="se-save">Save PNG</button>
-            <button id="se-export-skin" title="Download skin as .zip file">Export .zip</button>
-            <button id="se-import-zip" title="Import a .skin.zip to edit">Import .zip</button>
+            <button id="se-tool-dither" class="se-tool" data-tool="dither" title="Dither Fill — fill area with checkerboard pattern using current color + secondary color&#10;Right-click the custom palette to set secondary">Dither</button>
+            <button id="se-tool-gradient" class="se-tool" data-tool="gradient" title="Gradient — drag to draw a linear gradient between current color and secondary color&#10;Uses last-picked color as secondary">Gradient</button>
             <span class="bp-sep"></span>
-            <select id="se-load-skin"><option value="">Load Skin...</option></select>
+            <button id="se-toggle-onion" title="Onion Skin — show a ghost overlay of another sprite for reference&#10;Select an object from the palette while this is on">Onion</button>
+            <button id="se-toggle-tile" title="Tile Preview — show sprite repeated in a 3x3 grid to check seamless tiling">Tile</button>
+            <button id="se-toggle-ref" title="Reference Image — load a PNG to overlay as a tracing guide&#10;Click to toggle on/off, loads file on first click">Ref</button>
+            <input type="file" id="se-ref-file" accept="image/*" style="display:none">
+            <span class="bp-sep"></span>
+            <button id="se-sel-delete" title="Delete Selection — erase all pixels in selection&#10;Shortcut: Delete/Backspace">SelDel</button>
+            <button id="se-sel-fill" title="Fill Selection — fill selection with current color&#10;Shortcut: F (while selection active)">SelFill</button>
+            <button id="se-sel-copy" title="Copy Selection — copy selected region to clipboard&#10;Shortcut: Ctrl+C">SelCopy</button>
+            <button id="se-sel-paste" title="Paste Selection — paste clipboard as floating selection&#10;Shortcut: Ctrl+V">SelPaste</button>
+            <span class="bp-sep"></span>
+            <button id="se-zoom-in" title="Zoom In&#10;Shortcut: + or =">+</button>
+            <button id="se-zoom-out" title="Zoom Out&#10;Shortcut: -">-</button>
+            <button id="se-zoom-reset" title="Reset Zoom to fit canvas&#10;Shortcut: 0">Fit</button>
+            <span class="bp-sep"></span>
+            <button id="se-undo" title="Undo last action&#10;Shortcut: Ctrl+Z">Undo</button>
+            <button id="se-redo" title="Redo last undone action&#10;Shortcut: Ctrl+Y">Redo</button>
+            <button id="se-copy" title="Copy entire sprite to clipboard (for pasting into another object)&#10;Shortcut: C">Copy</button>
+            <button id="se-paste" title="Paste entire sprite from clipboard&#10;Shortcut: V">Paste</button>
+            <span class="bp-sep"></span>
+            <button id="se-clear" title="Clear the entire canvas (confirmation required)">Clear</button>
+            <button id="se-save" title="Save sprite to skin data and download as PNG file">Save PNG</button>
+            <button id="se-export-skin" title="Export all sprites as a .skin.zip file for sharing">Export .zip</button>
+            <button id="se-import-zip" title="Import a .skin.zip file to load sprites">Import .zip</button>
+            <span class="bp-sep"></span>
+            <select id="se-load-skin" title="Load a previously saved skin by name"><option value="">Load Skin...</option></select>
             <input type="file" id="se-import-file" accept=".zip" style="display:none">
         `;
         this.container.appendChild(toolbar);
@@ -166,6 +253,13 @@ class SkinEditor {
         statusBar.id = 'se-status';
         statusBar.textContent = 'x: 0, y: 0';
         canvasArea.appendChild(statusBar);
+
+        const paletteBar = document.createElement('div');
+        paletteBar.id = 'se-custom-palette';
+        paletteBar.title = 'Custom palette — Left-click to pick, Right-click to set slot to current color';
+        paletteBar.innerHTML = this._buildCustomPaletteHTML();
+        canvasArea.appendChild(paletteBar);
+
         workspace.appendChild(canvasArea);
 
         const sidebar = document.createElement('div');
@@ -181,6 +275,22 @@ class SkinEditor {
                     <div class="se-color-row">
                         <label>Opacity: <span id="se-alpha-val">255</span></label>
                         <input type="range" id="se-alpha-slider" min="0" max="255" value="255" style="width:100%">
+                    </div>
+                    <div class="se-color-row">
+                        <label style="font-size:10px;color:#888;">H: <span id="se-hsl-h-val">0</span>°</label>
+                        <input type="range" id="se-hsl-h" min="0" max="360" value="0" style="width:100%">
+                    </div>
+                    <div class="se-color-row">
+                        <label style="font-size:10px;color:#888;">S: <span id="se-hsl-s-val">0</span>%</label>
+                        <input type="range" id="se-hsl-s" min="0" max="100" value="0" style="width:100%">
+                    </div>
+                    <div class="se-color-row">
+                        <label style="font-size:10px;color:#888;">L: <span id="se-hsl-l-val">100</span>%</label>
+                        <input type="range" id="se-hsl-l" min="0" max="100" value="100" style="width:100%">
+                    </div>
+                    <div class="se-color-row" style="gap:3px;">
+                        <button id="se-color-darker" style="flex:1;font-size:10px;padding:2px 4px;" title="Darken current color 10%">Darker</button>
+                        <button id="se-color-lighter" style="flex:1;font-size:10px;padding:2px 4px;" title="Lighten current color 10%">Lighter</button>
                     </div>
                     <div id="se-current-color" title="Current color"></div>
                     <div id="se-recent-colors"></div>
@@ -310,10 +420,14 @@ class SkinEditor {
                 continue;
             }
             const active = this.activeObject && this.activeObject.key === item.key && this.activeObject.category === item.category ? ' active' : '';
-            const hasSaved = this.savedSprites[`${item.category}:${item.key}`] ? ' <span class="se-saved-badge">✓</span>' : '';
+            const spriteKey = `${item.category}:${item.key}`;
+            const saved = this.savedSprites[spriteKey];
             const removeBtn = item.isVariant ? ` <span class="se-remove-variant" data-variant-key="${item.key}" title="Remove variant">✕</span>` : '';
+            const icon = saved
+                ? `<img src="${saved.data}" style="width:16px;height:16px;image-rendering:pixelated;vertical-align:middle;">`
+                : `<span style="color:${item.color}">${item.char}</span>`;
             html += `<div class="bp-palette-item${active}" data-key="${item.key}" data-category="${item.category}" title="${item.desc}">
-                <span style="color:${item.color}">${item.char}</span> ${item.key.replace(/_/g, ' ')}${hasSaved}${removeBtn}
+                ${icon} ${item.key.replace(/_/g, ' ')}${removeBtn}
             </div>`;
         }
         palette.innerHTML = html;
@@ -345,7 +459,21 @@ class SkinEditor {
         });
 
         document.getElementById('se-canvas-size').addEventListener('change', (e) => {
-            this._setCanvasSize(parseInt(e.target.value));
+            if (e.target.value === 'custom') {
+                const input = document.getElementById('se-custom-size');
+                input.style.display = 'inline-block';
+                input.value = this.canvasSize;
+                input.focus();
+                input.select();
+            } else {
+                document.getElementById('se-custom-size').style.display = 'none';
+                this._setCanvasSize(parseInt(e.target.value));
+            }
+        });
+        document.getElementById('se-custom-size').addEventListener('change', (e) => {
+            const val = Math.max(4, Math.min(256, parseInt(e.target.value) || 16));
+            e.target.value = val;
+            this._setCanvasSize(val);
         });
 
         document.getElementById('se-load-skin').addEventListener('change', (e) => {
@@ -357,6 +485,67 @@ class SkinEditor {
         this.container.querySelectorAll('.se-tool[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => this._setTool(btn.dataset.tool));
         });
+
+        // Brush size
+        document.getElementById('se-brush-size').addEventListener('input', (e) => {
+            this.brushSize = Math.max(1, Math.min(16, parseInt(e.target.value) || 1));
+        });
+        document.getElementById('se-brush-down').addEventListener('click', () => this._adjustBrushSize(-1));
+        document.getElementById('se-brush-up').addEventListener('click', () => this._adjustBrushSize(1));
+
+        // Selection action buttons
+        document.getElementById('se-sel-delete').addEventListener('click', () => this._deleteSelection());
+        document.getElementById('se-sel-fill').addEventListener('click', () => this._fillSelection());
+        document.getElementById('se-sel-copy').addEventListener('click', () => this._copySelection());
+        document.getElementById('se-sel-paste').addEventListener('click', () => this._pasteSelection());
+
+        // Mirror mode
+        document.getElementById('se-toggle-mirror').addEventListener('click', () => this._cycleMirror());
+
+        // Transparency lock
+        document.getElementById('se-toggle-tlock').addEventListener('click', () => this._toggleTransparencyLock());
+
+        // Flip & rotate
+        document.getElementById('se-flip-h').addEventListener('click', () => this._flipHorizontal());
+        document.getElementById('se-flip-v').addEventListener('click', () => this._flipVertical());
+        document.getElementById('se-rotate-cw').addEventListener('click', () => this._rotateCW());
+
+        // Replace color
+        document.getElementById('se-replace-color').addEventListener('click', () => this._replaceColor());
+
+        // Outline
+        document.getElementById('se-outline').addEventListener('click', () => this._generateOutline());
+
+        // Extract palette
+        document.getElementById('se-extract-palette').addEventListener('click', () => this._extractPalette());
+
+        // Onion skin
+        document.getElementById('se-toggle-onion').addEventListener('click', () => this._toggleOnionSkin());
+
+        // Tile preview
+        document.getElementById('se-toggle-tile').addEventListener('click', () => this._toggleTilePreview());
+
+        // Reference image
+        document.getElementById('se-toggle-ref').addEventListener('click', () => this._toggleRefImage());
+        document.getElementById('se-ref-file').addEventListener('change', (e) => this._loadRefImage(e));
+
+        // Custom palette
+        document.getElementById('se-custom-palette').addEventListener('mousedown', (e) => {
+            const slot = e.target.closest('.se-palette-slot');
+            if (!slot) return;
+            e.preventDefault();
+            const idx = parseInt(slot.dataset.idx);
+            if (e.button === 2) {
+                this.customPalette[idx] = { ...this.color };
+                this._saveCustomPalette();
+                this._refreshCustomPalette();
+            } else {
+                const c = this.customPalette[idx];
+                this.color = { ...c };
+                this._syncColorUI();
+            }
+        });
+        document.getElementById('se-custom-palette').addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Category filter
         document.getElementById('se-category-filter').addEventListener('click', (e) => {
@@ -402,6 +591,39 @@ class SkinEditor {
             this._updateCurrentColor();
         });
 
+        // HSL sliders
+        document.getElementById('se-hsl-h').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('se-hsl-h-val').textContent = val;
+            const hsl = this._rgbToHsl(this.color.r, this.color.g, this.color.b);
+            hsl.h = val;
+            const rgb = this._hslToRgb(hsl.h, hsl.s, hsl.l);
+            this.color.r = rgb.r; this.color.g = rgb.g; this.color.b = rgb.b;
+            this._syncColorUI(true);
+        });
+        document.getElementById('se-hsl-s').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('se-hsl-s-val').textContent = val;
+            const hsl = this._rgbToHsl(this.color.r, this.color.g, this.color.b);
+            hsl.s = val;
+            const rgb = this._hslToRgb(hsl.h, hsl.s, hsl.l);
+            this.color.r = rgb.r; this.color.g = rgb.g; this.color.b = rgb.b;
+            this._syncColorUI(true);
+        });
+        document.getElementById('se-hsl-l').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('se-hsl-l-val').textContent = val;
+            const hsl = this._rgbToHsl(this.color.r, this.color.g, this.color.b);
+            hsl.l = val;
+            const rgb = this._hslToRgb(hsl.h, hsl.s, hsl.l);
+            this.color.r = rgb.r; this.color.g = rgb.g; this.color.b = rgb.b;
+            this._syncColorUI(true);
+        });
+
+        // Darker/Lighter buttons
+        document.getElementById('se-color-darker').addEventListener('click', () => this._shiftColorLightness(-10));
+        document.getElementById('se-color-lighter').addEventListener('click', () => this._shiftColorLightness(10));
+
         // Recent colors
         document.getElementById('se-recent-colors').addEventListener('click', (e) => {
             const swatch = e.target.closest('.se-swatch');
@@ -437,6 +659,27 @@ class SkinEditor {
         const pos = this._eventToPixel(e);
         if (!pos) return;
 
+        if (this.tool === 'select') {
+            if (this.selection && this._posInSelection(pos) && e.button === 0) {
+                this._selMoving = true;
+                this._selMoveStart = { x: pos.x, y: pos.y };
+                this._selOrigPos = { x: this.selection.x, y: this.selection.y };
+                if (!this._selPixels) this._liftSelection();
+            } else {
+                this._commitSelection();
+                this._selStart = { x: pos.x, y: pos.y };
+                this.selection = null;
+            }
+            return;
+        }
+
+        if (this.tool === 'line' || this.tool === 'circle' || this.tool === 'gradient') {
+            this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+            this._shapeStart = { x: pos.x, y: pos.y };
+            this._shapePreview = [];
+            return;
+        }
+
         this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
         if (e.button === 2) {
             this._erasePixel(pos.x, pos.y);
@@ -460,6 +703,33 @@ class SkinEditor {
         this._updateStatus(pos);
 
         if (this._mouseDown && pos) {
+            if (this.tool === 'select') {
+                if (this._selMoving) {
+                    const dx = pos.x - this._selMoveStart.x;
+                    const dy = pos.y - this._selMoveStart.y;
+                    this.selection.x = this._selOrigPos.x + dx;
+                    this.selection.y = this._selOrigPos.y + dy;
+                } else if (this._selStart) {
+                    const x = Math.min(this._selStart.x, pos.x);
+                    const y = Math.min(this._selStart.y, pos.y);
+                    const w = Math.abs(pos.x - this._selStart.x) + 1;
+                    const h = Math.abs(pos.y - this._selStart.y) + 1;
+                    this.selection = { x, y, w, h };
+                }
+                return;
+            }
+
+            if ((this.tool === 'line' || this.tool === 'circle' || this.tool === 'gradient') && this._shapeStart) {
+                if (this.tool === 'gradient') {
+                    this._shapePreview = this._computeGradientPixels(this._shapeStart.x, this._shapeStart.y, pos.x, pos.y);
+                } else {
+                    this._shapePreview = this.tool === 'line'
+                        ? this._computeLinePixels(this._shapeStart.x, this._shapeStart.y, pos.x, pos.y)
+                        : this._computeCirclePixels(this._shapeStart.x, this._shapeStart.y, pos.x, pos.y);
+                }
+                return;
+            }
+
             if (e.buttons === 2) {
                 this._erasePixel(pos.x, pos.y);
             } else {
@@ -476,6 +746,31 @@ class SkinEditor {
         }
         if (this._mouseDown) {
             this._mouseDown = false;
+
+            if (this.tool === 'select') {
+                this._selMoving = false;
+                this._selStart = null;
+                return;
+            }
+
+            if ((this.tool === 'line' || this.tool === 'circle' || this.tool === 'gradient') && this._shapeStart && this._shapePreview) {
+                for (const p of this._shapePreview) {
+                    if (p.x >= 0 && p.x < this.canvasSize && p.y >= 0 && p.y < this.canvasSize) {
+                        if (p.r !== undefined) {
+                            this._setPixel(p.x, p.y, p.r, p.g, p.b, p.a);
+                        } else {
+                            this._setPixel(p.x, p.y, this.color.r, this.color.g, this.color.b, this.color.a);
+                        }
+                    }
+                }
+                this._shapeStart = null;
+                this._shapePreview = null;
+                this._addRecentColor();
+                this._pushUndo();
+                this._autoSave();
+                return;
+            }
+
             this._pushUndo();
             this._autoSave();
         }
@@ -523,18 +818,47 @@ class SkinEditor {
             return;
         }
 
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+            e.preventDefault();
+            this._copySelection();
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+            e.preventDefault();
+            this._pasteSelection();
+            return;
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (this.selection) { this._deleteSelection(); return; }
+        }
+
         switch (e.key) {
             case '1': this._setTool('draw'); break;
             case '2': this._setTool('erase'); break;
             case '3': this._setTool('fill'); break;
             case '4': this._setTool('pick'); break;
+            case '5': this._setTool('select'); break;
+            case '6': this._setTool('line'); break;
+            case '7': this._setTool('circle'); break;
+            case '8': this._setTool('lighten'); break;
+            case '9': this._setTool('darken'); break;
+            case 'f': case 'F':
+                if (this.selection) this._fillSelection();
+                break;
+            case 'm': case 'M': this._cycleMirror(); break;
+            case 't': case 'T': this._toggleTransparencyLock(); break;
             case 'g': case 'G': this._toggleGrid(); break;
-            case 'c': case 'C': if (!e.ctrlKey && !e.metaKey) this._copySprite(); break;
-            case 'v': case 'V': if (!e.ctrlKey && !e.metaKey) this._pasteSprite(); break;
+            case 'c': case 'C': this._copySprite(); break;
+            case 'v': case 'V': this._pasteSprite(); break;
             case '=': case '+': this._zoomIn(); break;
             case '-': case '_': this._zoomOut(); break;
             case '0': this._resetZoom(); break;
-            case 'Escape': this._goBack(); break;
+            case '[': this._adjustBrushSize(-1); break;
+            case ']': this._adjustBrushSize(1); break;
+            case 'Escape':
+                if (this.selection) { this._commitSelection(); this.selection = null; }
+                else this._goBack();
+                break;
         }
     }
 
@@ -585,11 +909,11 @@ class SkinEditor {
     _applyTool(x, y) {
         switch (this.tool) {
             case 'draw':
-                this._setPixel(x, y, this.color.r, this.color.g, this.color.b, this.color.a);
+                this._drawBrush(x, y);
                 this._addRecentColor();
                 break;
             case 'erase':
-                this._erasePixel(x, y);
+                this._eraseBrush(x, y);
                 break;
             case 'fill':
                 this._floodFill(x, y);
@@ -598,19 +922,116 @@ class SkinEditor {
             case 'pick':
                 this._pickColor(x, y);
                 break;
+            case 'lighten':
+                this._lightenBrush(x, y);
+                break;
+            case 'darken':
+                this._darkenBrush(x, y);
+                break;
+            case 'dither':
+                this._ditherFill(x, y);
+                break;
         }
     }
 
     _applyToolContinuous(x, y) {
         if (this.tool === 'draw') {
-            this._setPixel(x, y, this.color.r, this.color.g, this.color.b, this.color.a);
+            this._drawBrush(x, y);
         } else if (this.tool === 'erase') {
-            this._erasePixel(x, y);
+            this._eraseBrush(x, y);
+        } else if (this.tool === 'lighten') {
+            this._lightenBrush(x, y);
+        } else if (this.tool === 'darken') {
+            this._darkenBrush(x, y);
         }
+    }
+
+    _getMirrorPoints(cx, cy) {
+        const points = [[cx, cy]];
+        const s = this.canvasSize;
+        if (this.mirrorMode === 'h' || this.mirrorMode === 'both') {
+            points.push([s - 1 - cx, cy]);
+        }
+        if (this.mirrorMode === 'v' || this.mirrorMode === 'both') {
+            points.push([cx, s - 1 - cy]);
+        }
+        if (this.mirrorMode === 'both') {
+            points.push([s - 1 - cx, s - 1 - cy]);
+        }
+        return points;
+    }
+
+    _drawBrush(cx, cy) {
+        const bs = this.brushSize || 1;
+        const r = Math.floor(bs / 2);
+        for (const [mx, my] of this._getMirrorPoints(cx, cy)) {
+            for (let dy = -r; dy < bs - r; dy++) {
+                for (let dx = -r; dx < bs - r; dx++) {
+                    const px = mx + dx, py = my + dy;
+                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                        this._setPixel(px, py, this.color.r, this.color.g, this.color.b, this.color.a);
+                    }
+                }
+            }
+        }
+    }
+
+    _eraseBrush(cx, cy) {
+        const bs = this.brushSize || 1;
+        const r = Math.floor(bs / 2);
+        for (const [mx, my] of this._getMirrorPoints(cx, cy)) {
+            for (let dy = -r; dy < bs - r; dy++) {
+                for (let dx = -r; dx < bs - r; dx++) {
+                    const px = mx + dx, py = my + dy;
+                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                        this._erasePixel(px, py);
+                    }
+                }
+            }
+        }
+    }
+
+    _lightenBrush(cx, cy) {
+        const bs = this.brushSize || 1;
+        const r = Math.floor(bs / 2);
+        for (const [mx, my] of this._getMirrorPoints(cx, cy)) {
+            for (let dy = -r; dy < bs - r; dy++) {
+                for (let dx = -r; dx < bs - r; dx++) {
+                    const px = mx + dx, py = my + dy;
+                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                        this._shiftBrightness(px, py, 20);
+                    }
+                }
+            }
+        }
+    }
+
+    _darkenBrush(cx, cy) {
+        const bs = this.brushSize || 1;
+        const r = Math.floor(bs / 2);
+        for (const [mx, my] of this._getMirrorPoints(cx, cy)) {
+            for (let dy = -r; dy < bs - r; dy++) {
+                for (let dx = -r; dx < bs - r; dx++) {
+                    const px = mx + dx, py = my + dy;
+                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                        this._shiftBrightness(px, py, -20);
+                    }
+                }
+            }
+        }
+    }
+
+    _shiftBrightness(x, y, amount) {
+        const i = (y * this.canvasSize + x) * 4;
+        if (this.pixels[i + 3] === 0) return;
+        this.pixels[i] = Math.max(0, Math.min(255, this.pixels[i] + amount));
+        this.pixels[i + 1] = Math.max(0, Math.min(255, this.pixels[i + 1] + amount));
+        this.pixels[i + 2] = Math.max(0, Math.min(255, this.pixels[i + 2] + amount));
     }
 
     _setPixel(x, y, r, g, b, a) {
         const i = (y * this.canvasSize + x) * 4;
+        if (this.transparencyLock && this.pixels[i + 3] === 0) return;
         this.pixels[i] = r;
         this.pixels[i + 1] = g;
         this.pixels[i + 2] = b;
@@ -628,6 +1049,7 @@ class SkinEditor {
 
     _pickColor(x, y) {
         const { r, g, b, a } = this._getPixel(x, y);
+        this._lastPickedColor = { r, g, b, a };
         this.color = { r, g, b, a };
         this._syncColorUI();
         this._setTool('draw');
@@ -658,6 +1080,10 @@ class SkinEditor {
     }
 
     _setTool(tool) {
+        if (this.tool === 'select' && tool !== 'select') {
+            this._commitSelection();
+            this.selection = null;
+        }
         this.tool = tool;
         this.container.querySelectorAll('.se-tool[data-tool]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tool === tool);
@@ -706,6 +1132,8 @@ class SkinEditor {
     }
 
     _selectObject(key, category) {
+        const prevSpriteKey = this.activeObject ? `${this.activeObject.category}:${this.activeObject.key}` : null;
+
         this._autoSave();
         this._clearUndoHistory();
         this.activeObject = { key, category };
@@ -716,6 +1144,11 @@ class SkinEditor {
         } else {
             this.pixels = new Uint8ClampedArray(this.canvasSize * this.canvasSize * 4);
         }
+
+        if (this._onionSkinKey === '__pending__' && prevSpriteKey && prevSpriteKey !== spriteKey) {
+            this._setOnionSkinFromSprite(prevSpriteKey);
+        }
+
         this._buildPalette();
         this._refreshSavedList();
         this._updateActiveObjectDisplay();
@@ -757,12 +1190,21 @@ class SkinEditor {
         this._syncColorUI();
     }
 
-    _syncColorUI() {
+    _syncColorUI(skipHSL) {
         const hex = '#' + [this.color.r, this.color.g, this.color.b].map(c => c.toString(16).padStart(2, '0')).join('');
         document.getElementById('se-color-picker').value = hex;
         document.getElementById('se-color-hex').value = hex;
         document.getElementById('se-alpha-slider').value = this.color.a;
         document.getElementById('se-alpha-val').textContent = this.color.a;
+        if (!skipHSL) {
+            const hsl = this._rgbToHsl(this.color.r, this.color.g, this.color.b);
+            document.getElementById('se-hsl-h').value = hsl.h;
+            document.getElementById('se-hsl-s').value = hsl.s;
+            document.getElementById('se-hsl-l').value = hsl.l;
+            document.getElementById('se-hsl-h-val').textContent = hsl.h;
+            document.getElementById('se-hsl-s-val').textContent = hsl.s;
+            document.getElementById('se-hsl-l-val').textContent = hsl.l;
+        }
         this._updateCurrentColor();
     }
 
@@ -771,6 +1213,55 @@ class SkinEditor {
         if (!el) return;
         const { r, g, b, a } = this.color;
         el.style.background = `rgba(${r},${g},${b},${a / 255})`;
+    }
+
+    _rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    _hslToRgb(h, s, l) {
+        h /= 360; s /= 100; l /= 100;
+        let r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+    }
+
+    _shiftColorLightness(amount) {
+        const hsl = this._rgbToHsl(this.color.r, this.color.g, this.color.b);
+        hsl.l = Math.max(0, Math.min(100, hsl.l + amount));
+        const rgb = this._hslToRgb(hsl.h, hsl.s, hsl.l);
+        this.color.r = rgb.r; this.color.g = rgb.g; this.color.b = rgb.b;
+        this._syncColorUI();
     }
 
     _addRecentColor() {
@@ -831,6 +1322,22 @@ class SkinEditor {
         }
         ctx.restore();
 
+        // Reference image overlay (behind pixels)
+        if (this._showRefImage && this._refImage) {
+            ctx.globalAlpha = 0.3;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(this._refImage, ox, oy, gridW, gridH);
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Onion skin overlay (behind pixels)
+        if (this._onionSkinKey && this._onionSkinData) {
+            ctx.globalAlpha = this._onionSkinOpacity;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(this._onionSkinData, ox, oy, gridW, gridH);
+            ctx.globalAlpha = 1.0;
+        }
+
         // Draw pixels
         for (let py = 0; py < size; py++) {
             for (let px = 0; px < size; px++) {
@@ -864,21 +1371,89 @@ class SkinEditor {
         ctx.lineWidth = 1;
         ctx.strokeRect(ox - 0.5, oy - 0.5, gridW + 1, gridH + 1);
 
-        // Cursor highlight
+        // Draw lifted selection pixels (floating above canvas)
+        if (this._selPixels && this.selection) {
+            const s = this.selection;
+            for (let dy = 0; dy < s.h; dy++) {
+                for (let dx = 0; dx < s.w; dx++) {
+                    const i = (dy * s.w + dx) * 4;
+                    const a = this._selPixels[i + 3];
+                    if (a === 0) continue;
+                    const px = s.x + dx, py = s.y + dy;
+                    ctx.fillStyle = `rgba(${this._selPixels[i]},${this._selPixels[i + 1]},${this._selPixels[i + 2]},${a / 255})`;
+                    ctx.fillRect(ox + px * z, oy + py * z, z, z);
+                }
+            }
+        }
+
+        // Shape preview (line/circle/gradient)
+        if (this._shapePreview && this._shapePreview.length > 0) {
+            for (const p of this._shapePreview) {
+                if (p.x >= 0 && p.x < size && p.y >= 0 && p.y < size) {
+                    if (p.r !== undefined) {
+                        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.a / 255})`;
+                    } else {
+                        ctx.fillStyle = `rgba(${this.color.r},${this.color.g},${this.color.b},${this.color.a / 255})`;
+                    }
+                    ctx.fillRect(ox + p.x * z, oy + p.y * z, z, z);
+                }
+            }
+        }
+
+        // Selection rectangle
+        if (this.selection) {
+            const s = this.selection;
+            ctx.strokeStyle = 'rgba(0,200,255,0.8)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(ox + s.x * z, oy + s.y * z, s.w * z, s.h * z);
+            ctx.setLineDash([]);
+        }
+
+        // Cursor highlight (respects brush size)
         if (this.hoveredPixel) {
             const { x, y } = this.hoveredPixel;
+            const bs = this.brushSize || 1;
+            const r = Math.floor(bs / 2);
             ctx.strokeStyle = 'rgba(255,255,255,0.6)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(ox + x * z + 1, oy + y * z + 1, z - 2, z - 2);
+            if (bs === 1) {
+                ctx.strokeRect(ox + x * z + 1, oy + y * z + 1, z - 2, z - 2);
+            } else {
+                ctx.strokeRect(ox + (x - r) * z + 1, oy + (y - r) * z + 1, bs * z - 2, bs * z - 2);
+            }
         }
     }
 
     _renderPreview() {
         const ctx = this.previewCtx;
         const size = this.canvasSize;
-        ctx.clearRect(0, 0, size, size);
-        const imageData = new ImageData(this.pixels.slice(), size, size);
-        ctx.putImageData(imageData, 0, 0);
+        const pw = this.previewCanvas.width;
+        const ph = this.previewCanvas.height;
+
+        if (this._showTilePreview) {
+            this.previewCanvas.width = size * 3;
+            this.previewCanvas.height = size * 3;
+            ctx.clearRect(0, 0, size * 3, size * 3);
+            const imageData = new ImageData(this.pixels.slice(), size, size);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+            for (let ty = 0; ty < 3; ty++) {
+                for (let tx = 0; tx < 3; tx++) {
+                    ctx.drawImage(tempCanvas, tx * size, ty * size);
+                }
+            }
+        } else {
+            if (this.previewCanvas.width !== size || this.previewCanvas.height !== size) {
+                this.previewCanvas.width = size;
+                this.previewCanvas.height = size;
+            }
+            ctx.clearRect(0, 0, size, size);
+            const imageData = new ImageData(this.pixels.slice(), size, size);
+            ctx.putImageData(imageData, 0, 0);
+        }
     }
 
     _updateStatus(pos) {
@@ -969,6 +1544,498 @@ class SkinEditor {
         this._autoSave();
         const el = document.getElementById('se-status');
         el.textContent = 'Sprite pasted from clipboard';
+    }
+
+    // --- Selection Tools ---
+    _posInSelection(pos) {
+        if (!this.selection) return false;
+        const s = this.selection;
+        return pos.x >= s.x && pos.x < s.x + s.w && pos.y >= s.y && pos.y < s.y + s.h;
+    }
+
+    _liftSelection() {
+        const s = this.selection;
+        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this._selPixels = new Uint8ClampedArray(s.w * s.h * 4);
+        for (let dy = 0; dy < s.h; dy++) {
+            for (let dx = 0; dx < s.w; dx++) {
+                const sx = s.x + dx, sy = s.y + dy;
+                if (sx < 0 || sx >= this.canvasSize || sy < 0 || sy >= this.canvasSize) continue;
+                const srcI = (sy * this.canvasSize + sx) * 4;
+                const dstI = (dy * s.w + dx) * 4;
+                this._selPixels[dstI] = this.pixels[srcI];
+                this._selPixels[dstI + 1] = this.pixels[srcI + 1];
+                this._selPixels[dstI + 2] = this.pixels[srcI + 2];
+                this._selPixels[dstI + 3] = this.pixels[srcI + 3];
+                this.pixels[srcI] = 0;
+                this.pixels[srcI + 1] = 0;
+                this.pixels[srcI + 2] = 0;
+                this.pixels[srcI + 3] = 0;
+            }
+        }
+    }
+
+    _commitSelection() {
+        if (!this._selPixels || !this.selection) return;
+        const s = this.selection;
+        for (let dy = 0; dy < s.h; dy++) {
+            for (let dx = 0; dx < s.w; dx++) {
+                const tx = s.x + dx, ty = s.y + dy;
+                if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                const srcI = (dy * s.w + dx) * 4;
+                if (this._selPixels[srcI + 3] === 0) continue;
+                const dstI = (ty * this.canvasSize + tx) * 4;
+                this.pixels[dstI] = this._selPixels[srcI];
+                this.pixels[dstI + 1] = this._selPixels[srcI + 1];
+                this.pixels[dstI + 2] = this._selPixels[srcI + 2];
+                this.pixels[dstI + 3] = this._selPixels[srcI + 3];
+            }
+        }
+        this._selPixels = null;
+        this._pushUndo();
+        this._autoSave();
+    }
+
+    _copySelection() {
+        if (!this.selection) return;
+        const s = this.selection;
+        const data = new Uint8ClampedArray(s.w * s.h * 4);
+        const src = this._selPixels || this.pixels;
+        for (let dy = 0; dy < s.h; dy++) {
+            for (let dx = 0; dx < s.w; dx++) {
+                let srcI;
+                if (this._selPixels) {
+                    srcI = (dy * s.w + dx) * 4;
+                } else {
+                    const sx = s.x + dx, sy = s.y + dy;
+                    if (sx < 0 || sx >= this.canvasSize || sy < 0 || sy >= this.canvasSize) continue;
+                    srcI = (sy * this.canvasSize + sx) * 4;
+                }
+                const dstI = (dy * s.w + dx) * 4;
+                data[dstI] = src[srcI];
+                data[dstI + 1] = src[srcI + 1];
+                data[dstI + 2] = src[srcI + 2];
+                data[dstI + 3] = src[srcI + 3];
+            }
+        }
+        this._regionClipboard = { w: s.w, h: s.h, pixels: data };
+        document.getElementById('se-status').textContent = `Copied ${s.w}x${s.h} region`;
+    }
+
+    _pasteSelection() {
+        if (!this._regionClipboard) {
+            document.getElementById('se-status').textContent = 'Nothing to paste — select and Ctrl+C first';
+            return;
+        }
+        this._commitSelection();
+        const clip = this._regionClipboard;
+        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this.selection = { x: 0, y: 0, w: clip.w, h: clip.h };
+        this._selPixels = new Uint8ClampedArray(clip.pixels);
+        this._setTool('select');
+        document.getElementById('se-status').textContent = `Pasted ${clip.w}x${clip.h} region — drag to position, Esc to commit`;
+    }
+
+    _deleteSelection() {
+        if (!this.selection) return;
+        if (this._selPixels) {
+            this._selPixels = null;
+            this._pushUndo();
+            this._autoSave();
+            this.selection = null;
+            return;
+        }
+        const s = this.selection;
+        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        for (let dy = 0; dy < s.h; dy++) {
+            for (let dx = 0; dx < s.w; dx++) {
+                const tx = s.x + dx, ty = s.y + dy;
+                if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                this._erasePixel(tx, ty);
+            }
+        }
+        this.selection = null;
+        this._pushUndo();
+        this._autoSave();
+    }
+
+    _fillSelection() {
+        if (!this.selection) return;
+        const s = this.selection;
+        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        if (this._selPixels) {
+            for (let dy = 0; dy < s.h; dy++) {
+                for (let dx = 0; dx < s.w; dx++) {
+                    const i = (dy * s.w + dx) * 4;
+                    this._selPixels[i] = this.color.r;
+                    this._selPixels[i + 1] = this.color.g;
+                    this._selPixels[i + 2] = this.color.b;
+                    this._selPixels[i + 3] = this.color.a;
+                }
+            }
+        } else {
+            for (let dy = 0; dy < s.h; dy++) {
+                for (let dx = 0; dx < s.w; dx++) {
+                    const tx = s.x + dx, ty = s.y + dy;
+                    if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                    this._setPixel(tx, ty, this.color.r, this.color.g, this.color.b, this.color.a);
+                }
+            }
+        }
+        this._pushUndo();
+        this._autoSave();
+    }
+
+    // --- Shape Tools ---
+    _computeLinePixels(x0, y0, x1, y1) {
+        const points = [];
+        const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        let cx = x0, cy = y0;
+        while (true) {
+            points.push({ x: cx, y: cy });
+            if (cx === x1 && cy === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; cx += sx; }
+            if (e2 < dx) { err += dx; cy += sy; }
+        }
+        return points;
+    }
+
+    _computeCirclePixels(cx, cy, ex, ey) {
+        const points = [];
+        const r = Math.round(Math.sqrt((ex - cx) ** 2 + (ey - cy) ** 2));
+        if (r === 0) return [{ x: cx, y: cy }];
+        let x = r, y = 0, d = 1 - r;
+        const addSymmetric = (px, py) => {
+            points.push({ x: cx + px, y: cy + py });
+            points.push({ x: cx - px, y: cy + py });
+            points.push({ x: cx + px, y: cy - py });
+            points.push({ x: cx - px, y: cy - py });
+            points.push({ x: cx + py, y: cy + px });
+            points.push({ x: cx - py, y: cy + px });
+            points.push({ x: cx + py, y: cy - px });
+            points.push({ x: cx - py, y: cy - px });
+        };
+        while (x >= y) {
+            addSymmetric(x, y);
+            y++;
+            if (d <= 0) {
+                d += 2 * y + 1;
+            } else {
+                x--;
+                d += 2 * (y - x) + 1;
+            }
+        }
+        return points;
+    }
+
+    // --- Brush Size ---
+    _adjustBrushSize(delta) {
+        this.brushSize = Math.max(1, Math.min(16, (this.brushSize || 1) + delta));
+        const input = document.getElementById('se-brush-size');
+        if (input) input.value = this.brushSize;
+        document.getElementById('se-status').textContent = `Brush size: ${this.brushSize}`;
+    }
+
+    // --- Mirror Mode ---
+    _cycleMirror() {
+        const modes = [null, 'h', 'v', 'both'];
+        const idx = modes.indexOf(this.mirrorMode);
+        this.mirrorMode = modes[(idx + 1) % modes.length];
+        const btn = document.getElementById('se-toggle-mirror');
+        const labels = { null: 'Mirror', h: 'Mirror-H', v: 'Mirror-V', both: 'Mirror-HV' };
+        btn.textContent = labels[this.mirrorMode] || 'Mirror';
+        btn.classList.toggle('active', this.mirrorMode !== null);
+        document.getElementById('se-status').textContent = this.mirrorMode
+            ? `Mirror: ${this.mirrorMode === 'h' ? 'Horizontal' : this.mirrorMode === 'v' ? 'Vertical' : 'Both'}`
+            : 'Mirror off';
+    }
+
+    // --- Transparency Lock ---
+    _toggleTransparencyLock() {
+        this.transparencyLock = !this.transparencyLock;
+        const btn = document.getElementById('se-toggle-tlock');
+        btn.classList.toggle('active', this.transparencyLock);
+        document.getElementById('se-status').textContent = this.transparencyLock
+            ? 'Transparency lock ON — only draws on non-transparent pixels'
+            : 'Transparency lock OFF';
+    }
+
+    // --- Flip & Rotate ---
+    _flipHorizontal() {
+        this._pushUndoSnapshot();
+        const s = this.canvasSize;
+        const flipped = new Uint8ClampedArray(this.pixels.length);
+        for (let y = 0; y < s; y++) {
+            for (let x = 0; x < s; x++) {
+                const srcI = (y * s + x) * 4;
+                const dstI = (y * s + (s - 1 - x)) * 4;
+                flipped[dstI] = this.pixels[srcI];
+                flipped[dstI + 1] = this.pixels[srcI + 1];
+                flipped[dstI + 2] = this.pixels[srcI + 2];
+                flipped[dstI + 3] = this.pixels[srcI + 3];
+            }
+        }
+        this.pixels = flipped;
+        this._autoSave();
+    }
+
+    _flipVertical() {
+        this._pushUndoSnapshot();
+        const s = this.canvasSize;
+        const flipped = new Uint8ClampedArray(this.pixels.length);
+        for (let y = 0; y < s; y++) {
+            for (let x = 0; x < s; x++) {
+                const srcI = (y * s + x) * 4;
+                const dstI = ((s - 1 - y) * s + x) * 4;
+                flipped[dstI] = this.pixels[srcI];
+                flipped[dstI + 1] = this.pixels[srcI + 1];
+                flipped[dstI + 2] = this.pixels[srcI + 2];
+                flipped[dstI + 3] = this.pixels[srcI + 3];
+            }
+        }
+        this.pixels = flipped;
+        this._autoSave();
+    }
+
+    _rotateCW() {
+        this._pushUndoSnapshot();
+        const s = this.canvasSize;
+        const rotated = new Uint8ClampedArray(this.pixels.length);
+        for (let y = 0; y < s; y++) {
+            for (let x = 0; x < s; x++) {
+                const srcI = (y * s + x) * 4;
+                const dstI = (x * s + (s - 1 - y)) * 4;
+                rotated[dstI] = this.pixels[srcI];
+                rotated[dstI + 1] = this.pixels[srcI + 1];
+                rotated[dstI + 2] = this.pixels[srcI + 2];
+                rotated[dstI + 3] = this.pixels[srcI + 3];
+            }
+        }
+        this.pixels = rotated;
+        this._autoSave();
+    }
+
+    // --- Replace Color ---
+    _replaceColor() {
+        if (!this._lastPickedColor) {
+            document.getElementById('se-status').textContent = 'Pick a color first (tool 4), then set your desired color and click Replace';
+            return;
+        }
+        const target = this._lastPickedColor;
+        const fill = this.color;
+        if (target.r === fill.r && target.g === fill.g && target.b === fill.b && target.a === fill.a) {
+            document.getElementById('se-status').textContent = 'Source and target colors are the same';
+            return;
+        }
+        this._pushUndoSnapshot();
+        const s = this.canvasSize;
+        let count = 0;
+        for (let i = 0; i < s * s * 4; i += 4) {
+            if (this.pixels[i] === target.r && this.pixels[i + 1] === target.g &&
+                this.pixels[i + 2] === target.b && this.pixels[i + 3] === target.a) {
+                this.pixels[i] = fill.r;
+                this.pixels[i + 1] = fill.g;
+                this.pixels[i + 2] = fill.b;
+                this.pixels[i + 3] = fill.a;
+                count++;
+            }
+        }
+        this._autoSave();
+        document.getElementById('se-status').textContent = `Replaced ${count} pixel(s)`;
+    }
+
+    // --- Custom Palette ---
+    _buildCustomPaletteHTML() {
+        return `<div style="display:flex;gap:4px;align-items:center;padding:4px 8px;">
+            <span style="font-size:10px;color:#888;margin-right:4px;">Palette:</span>
+            ${this.customPalette.map((c, i) =>
+                `<div class="se-palette-slot" data-idx="${i}" style="width:24px;height:24px;border-radius:3px;border:2px solid #555;cursor:pointer;background:rgba(${c.r},${c.g},${c.b},${c.a / 255})" title="Left-click: pick | Right-click: set to current color"></div>`
+            ).join('')}
+        </div>`;
+    }
+
+    _refreshCustomPalette() {
+        const el = document.getElementById('se-custom-palette');
+        if (el) el.innerHTML = this._buildCustomPaletteHTML();
+    }
+
+    _saveCustomPalette() {
+        localStorage.setItem('convocation_skin_custom_palette', JSON.stringify(this.customPalette));
+    }
+
+    // --- Dither Fill ---
+    _ditherFill(x, y) {
+        const target = this._getPixel(x, y);
+        const c1 = this.color;
+        const c2 = this._lastPickedColor || this._ditherColor2;
+        if (target.r === c1.r && target.g === c1.g && target.b === c1.b && target.a === c1.a) return;
+
+        const size = this.canvasSize;
+        const stack = [[x, y]];
+        const visited = new Set();
+
+        while (stack.length > 0) {
+            const [fx, fy] = stack.pop();
+            if (fx < 0 || fx >= size || fy < 0 || fy >= size) continue;
+            const key = fy * size + fx;
+            if (visited.has(key)) continue;
+            visited.add(key);
+
+            const px = this._getPixel(fx, fy);
+            if (px.r !== target.r || px.g !== target.g || px.b !== target.b || px.a !== target.a) continue;
+
+            const useC1 = (fx + fy) % 2 === 0;
+            const c = useC1 ? c1 : c2;
+            this._setPixel(fx, fy, c.r, c.g, c.b, c.a);
+            stack.push([fx + 1, fy], [fx - 1, fy], [fx, fy + 1], [fx, fy - 1]);
+        }
+    }
+
+    // --- Gradient Tool ---
+    _computeGradientPixels(x0, y0, x1, y1) {
+        const c1 = this.color;
+        const c2 = this._lastPickedColor || this._ditherColor2;
+        const pixels = [];
+        const dx = x1 - x0, dy = y1 - y0;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len === 0) return [{ x: x0, y: y0, r: c1.r, g: c1.g, b: c1.b, a: c1.a }];
+
+        const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+        const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+
+        for (let py = minY; py <= maxY; py++) {
+            for (let px = minX; px <= maxX; px++) {
+                const proj = ((px - x0) * dx + (py - y0) * dy) / (len * len);
+                const t = Math.max(0, Math.min(1, proj));
+                pixels.push({
+                    x: px, y: py,
+                    r: Math.round(c1.r + (c2.r - c1.r) * t),
+                    g: Math.round(c1.g + (c2.g - c1.g) * t),
+                    b: Math.round(c1.b + (c2.b - c1.b) * t),
+                    a: Math.round(c1.a + (c2.a - c1.a) * t),
+                });
+            }
+        }
+        return pixels;
+    }
+
+    // --- Outline Generator ---
+    _generateOutline() {
+        const size = this.canvasSize;
+        const hasPixel = (x, y) => {
+            if (x < 0 || x >= size || y < 0 || y >= size) return false;
+            return this.pixels[(y * size + x) * 4 + 3] > 0;
+        };
+
+        this._pushUndoSnapshot();
+        const outlinePixels = [];
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                if (hasPixel(x, y)) continue;
+                if (hasPixel(x - 1, y) || hasPixel(x + 1, y) || hasPixel(x, y - 1) || hasPixel(x, y + 1)) {
+                    outlinePixels.push([x, y]);
+                }
+            }
+        }
+        for (const [x, y] of outlinePixels) {
+            this._setPixel(x, y, this.color.r, this.color.g, this.color.b, this.color.a);
+        }
+        this._autoSave();
+        document.getElementById('se-status').textContent = `Added outline: ${outlinePixels.length} pixel(s)`;
+    }
+
+    // --- Extract Palette ---
+    _extractPalette() {
+        const size = this.canvasSize;
+        const colorSet = new Map();
+        for (let i = 0; i < size * size * 4; i += 4) {
+            if (this.pixels[i + 3] === 0) continue;
+            const key = `${this.pixels[i]},${this.pixels[i + 1]},${this.pixels[i + 2]},${this.pixels[i + 3]}`;
+            if (!colorSet.has(key)) {
+                colorSet.set(key, { r: this.pixels[i], g: this.pixels[i + 1], b: this.pixels[i + 2], a: this.pixels[i + 3] });
+            }
+        }
+        const colors = [...colorSet.values()];
+        if (colors.length === 0) {
+            document.getElementById('se-status').textContent = 'No colors to extract (canvas is empty)';
+            return;
+        }
+        for (let i = 0; i < 6 && i < colors.length; i++) {
+            this.customPalette[i] = colors[i];
+        }
+        this._saveCustomPalette();
+        this._refreshCustomPalette();
+        document.getElementById('se-status').textContent = `Extracted ${Math.min(6, colors.length)} color(s) to palette${colors.length > 6 ? ` (${colors.length} total, showing first 6)` : ''}`;
+    }
+
+    // --- Onion Skin ---
+    _toggleOnionSkin() {
+        if (this._onionSkinKey) {
+            this._onionSkinKey = null;
+            this._onionSkinData = null;
+            document.getElementById('se-toggle-onion').classList.remove('active');
+            document.getElementById('se-status').textContent = 'Onion skin OFF';
+        } else {
+            document.getElementById('se-toggle-onion').classList.add('active');
+            document.getElementById('se-status').textContent = 'Onion skin ON — select an object from palette to use as overlay';
+            this._onionSkinKey = '__pending__';
+        }
+    }
+
+    _setOnionSkinFromSprite(spriteKey) {
+        const saved = this.savedSprites[spriteKey];
+        if (!saved) {
+            this._onionSkinKey = null;
+            this._onionSkinData = null;
+            return;
+        }
+        this._onionSkinKey = spriteKey;
+        const img = new Image();
+        img.onload = () => { this._onionSkinData = img; };
+        img.src = saved.data;
+    }
+
+    // --- Tile Preview ---
+    _toggleTilePreview() {
+        this._showTilePreview = !this._showTilePreview;
+        document.getElementById('se-toggle-tile').classList.toggle('active', this._showTilePreview);
+        document.getElementById('se-status').textContent = this._showTilePreview
+            ? 'Tile preview ON — preview shows 3x3 tiled grid'
+            : 'Tile preview OFF';
+    }
+
+    // --- Reference Image ---
+    _toggleRefImage() {
+        if (!this._refImage) {
+            document.getElementById('se-ref-file').click();
+            return;
+        }
+        this._showRefImage = !this._showRefImage;
+        document.getElementById('se-toggle-ref').classList.toggle('active', this._showRefImage);
+        document.getElementById('se-status').textContent = this._showRefImage
+            ? 'Reference image ON — shown behind canvas at 30% opacity'
+            : 'Reference image OFF';
+    }
+
+    _loadRefImage(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                this._refImage = img;
+                this._showRefImage = true;
+                document.getElementById('se-toggle-ref').classList.add('active');
+                document.getElementById('se-status').textContent = `Reference image loaded (${img.width}x${img.height})`;
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
     }
 
     // --- Colonist Variants ---
@@ -1255,6 +2322,10 @@ class SkinEditor {
     }
 
     _goBack() {
+        this._commitSelection();
+        this.selection = null;
+        this._shapePreview = null;
+        this._shapeStart = null;
         this.hide();
         document.getElementById('start-screen').style.display = '';
     }
