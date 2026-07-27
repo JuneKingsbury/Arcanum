@@ -335,7 +335,7 @@ function getWorkSpeed(colonist, game) {
     return speed;
 }
 
-function getEquippedItems(colonist) {
+export function getEquippedItems(colonist) {
     const items = [];
     if (colonist.weapon) items.push(colonist.weapon);
     if (colonist.armor) items.push(colonist.armor);
@@ -386,7 +386,7 @@ function getEquipmentSpellBonus(colonist) {
     return bonus;
 }
 
-function getEquipmentStat(colonist, stat) {
+export function getEquipmentStat(colonist, stat) {
     let total = 0;
     for (const item of getEquippedItems(colonist)) {
         if (item[stat]) total += item[stat];

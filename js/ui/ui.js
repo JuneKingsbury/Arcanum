@@ -4,6 +4,7 @@ import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
+import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
 
 export class UI {
     constructor(game) {
@@ -598,6 +599,51 @@ export class UI {
         return `<div class="info-row" style="color:#aaffaa;font-size:11px;">${effects.join(' | ')}</div>`;
     }
 
+    _buildEquipmentEffectsHtml(colonist) {
+        const STAT_LABELS = {
+            damage: { label: 'Damage', fmt: v => `${v}` },
+            damageReduction: { label: 'Damage Reduction', fmt: v => `${Math.round(v * 100)}%` },
+            critChance: { label: 'Crit Chance', fmt: v => `${Math.round(v * 100)}%` },
+            dodgeChance: { label: 'Dodge', fmt: v => `${Math.round(v * 100)}%` },
+            hpOnKill: { label: 'HP on Kill', fmt: v => `+${v}` },
+            thornsDamage: { label: 'Thorns', fmt: v => `${v}` },
+            spellDamageBonus: { label: 'Spell Dmg', fmt: v => `+${Math.round(v * 100)}%` },
+            manaRegen: { label: 'Mana Regen', fmt: v => `+${v}/tick` },
+            spellCostReduction: { label: 'Spell Cost', fmt: v => `-${Math.round(v * 100)}%` },
+            tomeStudySpeed: { label: 'Tome Speed', fmt: v => `${v}x` },
+            researchSpeed: { label: 'Research', fmt: v => `${v}x` },
+            maxHpBonus: { label: 'Max HP', fmt: v => `+${v}` },
+            moodBonus: { label: 'Mood', fmt: v => `+${v}` },
+            hungerReduction: { label: 'Hunger', fmt: v => `-${Math.round(v * 100)}%` },
+            coldResistance: { label: 'Cold Res', fmt: v => `${Math.round(v * 100)}%` },
+            moveSpeedBonus: { label: 'Move Speed', fmt: v => `+${Math.round(v * 100)}%` },
+            workSpeedBonus: { label: 'Work Speed', fmt: v => `+${Math.round(v * 100)}%` },
+            miningSpeed: { label: 'Mining', fmt: v => `${v}x` },
+            choppingSpeed: { label: 'Chopping', fmt: v => `${v}x` },
+            farmingSpeed: { label: 'Farming', fmt: v => `${v}x` },
+            craftingSpeed: { label: 'Crafting', fmt: v => `${v}x` },
+            cookingSpeed: { label: 'Cooking', fmt: v => `${v}x` },
+            buildSpeed: { label: 'Building', fmt: v => `${v}x` },
+        };
+        const items = getEquippedItems(colonist);
+        if (items.length === 0) return '';
+        const totals = {};
+        let drMult = 1;
+        for (const item of items) {
+            for (const [stat, def] of Object.entries(STAT_LABELS)) {
+                if (!item[stat]) continue;
+                if (stat === 'damageReduction') { drMult *= (1 - item[stat]); }
+                else { totals[stat] = (totals[stat] || 0) + item[stat]; }
+            }
+        }
+        if (drMult < 1) totals.damageReduction = 1 - drMult;
+        const parts = [];
+        for (const [stat, def] of Object.entries(STAT_LABELS)) {
+            if (totals[stat]) parts.push(`<span style="color:#ccc">${def.label}:</span> ${def.fmt(totals[stat])}`);
+        }
+        return parts.length ? parts.join(' <span style="color:#333">|</span> ') : '';
+    }
+
     _getArtifactTooltip(art) {
         const lines = [];
         if (art.moveSpeedBonus) lines.push(`Equipped: +${Math.round(art.moveSpeedBonus * 100)}% move speed`);
@@ -741,6 +787,12 @@ export class UI {
         html += this._buildSlotSelect(colonist, 'tool');
         html += `</div>`;
         html += `</div>`;
+
+        // --- Equipment Effects Summary ---
+        const eqEffects = this._buildEquipmentEffectsHtml(colonist);
+        if (eqEffects) {
+            html += `<div style="margin:2px 0;padding:3px 6px;background:#111;border-radius:3px;font-size:11px;color:#aaa;line-height:1.5">${eqEffects}</div>`;
+        }
 
         // --- Spells ---
         const hasSpells = (colonist.knownSpells && colonist.knownSpells.length > 0) || colonist.equippedTome;
@@ -2087,6 +2139,14 @@ export class UI {
         }
         html += `</select>`;
         html += `<button onclick="window.game.cheatSpawnItem('tool',document.getElementById('debug-tool-select').value)" class="settings-btn settings-btn-danger" style="white-space:nowrap;">Grant Tool</button>`;
+        html += `</div>`;
+        html += `<div class="settings-row" style="margin-top:4px;gap:4px;flex-wrap:wrap;">`;
+        html += `<select id="debug-helmet-select" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;flex:1;min-width:120px;">`;
+        for (const [key, def] of Object.entries(HELMETS)) {
+            html += `<option value="${key}">${def.name}</option>`;
+        }
+        html += `</select>`;
+        html += `<button onclick="window.game.cheatSpawnItem('helmet',document.getElementById('debug-helmet-select').value)" class="settings-btn settings-btn-danger" style="white-space:nowrap;">Grant Helmet</button>`;
         html += `</div>`;
         html += `<div class="settings-row" style="margin-top:8px;gap:4px;flex-wrap:wrap;">`;
         html += `<select id="debug-resource-select" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;flex:1;min-width:80px;">`;
