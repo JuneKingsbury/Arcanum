@@ -104,13 +104,13 @@ export function initChangelogInteraction() {
 export function renderCreditsHTML() {
     return `
 <div style="text-align:center; padding:20px 0;">
-    <div style="color:#ffcc00; font-size:16px; font-weight:bold; margin-bottom:16px;">~= CONVOCATION =~</div>
-    <div style="color:#aaa; margin-bottom:20px;">A browser-based ASCII colony sim</div>
+    <div style="color:#ffcc00; font-size:16px; font-weight:bold; margin-bottom:16px;">Arcanum</div>
+    <div style="color:#aaa; margin-bottom:20px;">A browser-based magical colony sim</div>
     <div style="color:#ccc; margin-bottom:8px;"><b>Design & Development</b></div>
-    <div style="color:#aaa; margin-bottom:20px;">jurbani</div>
+    <div style="color:#aaa; margin-bottom:20px;">June Kingsbury</div>
     <div style="color:#ccc; margin-bottom:8px;"><b>Built With</b></div>
     <div style="color:#aaa; margin-bottom:4px;">Vanilla JavaScript, HTML5 Canvas</div>
-    <div style="color:#aaa; margin-bottom:20px;">No frameworks, no dependencies</div>
+    <div style="color:#aaa; margin-bottom:20px;">jszip for skin ZIP file handling</div>
     <div style="color:#666; font-size:10px; margin-top:20px;">Version 0.1 — July 2026</div>
 </div>`;
 }
