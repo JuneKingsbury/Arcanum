@@ -669,113 +669,134 @@ export class UI {
         const artifactTip = colonist.artifact ? this._getArtifactTooltip(colonist.artifact) : 'No artifact equipped';
 
         const nc = colonist.nameColor || '#ffff00';
+        const sectionHdr = 'color:#888;font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #333;margin-top:8px;padding-bottom:2px;margin-bottom:3px';
         let html = `<div class="info-header" style="cursor:pointer;color:${nc}" onclick="window.game.selectColonistById(${colonist.id})">${colonist.name} ${colonist.drafted ? '[DRAFTED]' : ''}${colonist.guardMode ? '[GUARDING]' : ''}</div>`;
-        html += `<div class="info-row">HP: ${Math.round(colonist.hp)}/${colonist.maxHp}</div>`;
-        html += `<div class="info-row">Mood: <span class="mood-${moodLevel}">${colonist.mood.toFixed(0)} (${moodLevel})</span></div>`;
-        html += `<div class="info-row">State: ${colonist.state}</div>`;
-        html += `<div class="info-row">Task: ${this.getColonistTaskDescription(colonist)}</div>`;
-        html += `<div class="info-row">Traits: ${traitSpans}</div>`;
+
+        // --- Status ---
+        html += `<div style="${sectionHdr}">Status</div>`;
+        html += `<div class="info-row">HP: ${Math.round(colonist.hp)}/${colonist.maxHp} | Mood: <span class="mood-${moodLevel}">${colonist.mood.toFixed(0)} (${moodLevel})</span></div>`;
         html += `<div class="info-row">Hunger: ${bar(colonist.needs.hunger)} Rest: ${bar(colonist.needs.rest)}</div>`;
-        html += `<div class="info-row">Skills: ${Object.entries(SKILLS).map(([k, def]) => `<span class="skill-tip" data-tip="${def.description}">${def.name}:${colonist.skills[k] || 1}</span>`).join(' ')}</div>`;
+        html += `<div class="info-row">State: ${colonist.state} | Task: ${this.getColonistTaskDescription(colonist)}</div>`;
+        if (traitSpans) html += `<div class="info-row">Traits: ${traitSpans}</div>`;
+        html += `<div class="info-row">Bed: ${colonist.assignedBed ? `(${colonist.assignedBed.x},${colonist.assignedBed.y})` : 'None'}</div>`;
+
+        // --- Skills ---
+        html += `<div style="${sectionHdr}">Skills</div>`;
+        html += `<div class="info-row">${Object.entries(SKILLS).map(([k, def]) => `<span class="skill-tip" data-tip="${def.description}">${def.name}:${colonist.skills[k] || 1}</span>`).join(' ')}</div>`;
         const hasMagic = colonist.magicSkills && Object.values(colonist.magicSkills).some(v => v > 0);
         if (hasMagic) {
             html += `<div class="info-row"><span style="color:#aa88ff">Mana: ${bar(colonist.mana / colonist.maxMana * 100)} ${Math.floor(colonist.mana)}/${colonist.maxMana}</span></div>`;
             html += `<div class="info-row">Magic: ${Object.entries(MAGIC_SKILLS).filter(([k]) => colonist.magicSkills[k] > 0).map(([k, def]) => `<span class="skill-tip" data-tip="${def.description}" style="color:#bb88ff">${def.name}:${colonist.magicSkills[k]}</span>`).join(' ')}</div>`;
         }
+
+        // --- Equipment ---
+        html += `<div style="${sectionHdr}">Equipment</div>`;
         const id = colonist.id;
         const tomeName = colonist.equippedTome ? SPELL_TOMES[colonist.equippedTome]?.name : null;
         const tomeTip = tomeName ? (() => { const p = (colonist.tomeProgress?.[colonist.equippedTome] || 0); return `${tomeName} (${Math.floor(p / SPELL_TOMES[colonist.equippedTome].learningWork * 100)}%)`; })() : 'No tome equipped';
-        const slotStyle = 'border:1px solid #444;border-radius:4px;padding:4px 2px;background:#1a1a2e;cursor:pointer;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-        html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:8px 0;text-align:center;">`;
+        const slotStyle = 'position:relative;border:1px solid #444;border-radius:4px;padding:4px 2px;background:#1a1a2e;cursor:pointer;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+        html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:4px 0;text-align:center;">`;
         // Row 1: Tome | Helmet | Artifact
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-tome-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Tome</div>`;
         html += colonist.equippedTome ? `<span class="skill-tip" data-tip="${tomeTip}">${this._itemIcon(colonist.equippedTome, 'tome')}</span>` : `<span style="color:#333;font-size:14px">~</span>`;
+        html += this._buildSlotSelect(colonist, 'tome');
         html += `</div>`;
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-helmet-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Helmet</div>`;
         html += colonist.helmet ? `<span class="skill-tip" data-tip="${helmetTip}">${this._itemIcon(colonist.helmet.key, 'helmet')}</span>` : `<span style="color:#333;font-size:14px">^</span>`;
+        html += this._buildSlotSelect(colonist, 'helmet');
         html += `</div>`;
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-artifact-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Artifact</div>`;
         html += colonist.artifact ? `<span class="skill-tip" data-tip="${artifactTip}">${this._itemIcon(colonist.artifact.key, 'artifact')}</span>` : `<span style="color:#333;font-size:14px">*</span>`;
+        html += this._buildSlotSelect(colonist, 'artifact');
         html += `</div>`;
         // Row 2: Weapon | Armor | Tool
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-weapon-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Weapon</div>`;
         html += colonist.weapon ? `<span class="skill-tip" data-tip="${weaponTip}">${this._itemIcon(colonist.weapon.key, 'weapon')}</span>` : `<span style="color:#333;font-size:14px">/</span>`;
+        html += this._buildSlotSelect(colonist, 'weapon');
         html += `</div>`;
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-armor-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Armor</div>`;
         html += colonist.armor ? `<span class="skill-tip" data-tip="${armorTip}">${this._itemIcon(colonist.armor.key, 'armor')}</span>` : `<span style="color:#333;font-size:14px">[]</span>`;
+        html += this._buildSlotSelect(colonist, 'armor');
         html += `</div>`;
-        html += `<div style="${slotStyle}" onclick="document.getElementById('eq-tool-${id}')?.click()">`;
+        html += `<div style="${slotStyle}">`;
         html += `<div style="color:#666;font-size:10px">Tool</div>`;
         html += colonist.tool ? `<span class="skill-tip" data-tip="${toolTip}">${this._itemIcon(colonist.tool.key, 'tool')}</span>` : `<span style="color:#333;font-size:14px">\\</span>`;
+        html += this._buildSlotSelect(colonist, 'tool');
         html += `</div>`;
         html += `</div>`;
-        if (colonist.equippedTome) {
-            const tomeDef = SPELL_TOMES[colonist.equippedTome];
-            const currentProgress = (colonist.tomeProgress && colonist.tomeProgress[colonist.equippedTome]) || 0;
-            const progress = Math.floor((currentProgress / tomeDef.learningWork) * 100);
-            html += `<div class="info-row"><span style="color:#bb88ff">Studying: ${tomeDef.name} (${progress}%)</span></div>`;
-        }
-        if (colonist.knownSpells && colonist.knownSpells.length > 0) {
-            html += `<div class="info-row" style="color:#aa88ff"><b>Known Spells:</b></div>`;
-            for (const spellKey of colonist.knownSpells) {
-                const spell = SPELLS[spellKey];
-                if (!spell) continue;
-                const onCooldown = colonist._spellCooldowns?.[spellKey] && this.game.tick - colonist._spellCooldowns[spellKey] < spell.cooldown;
-                const cdRemaining = onCooldown ? spell.cooldown - (this.game.tick - colonist._spellCooldowns[spellKey]) : 0;
-                const hasMana = colonist.mana >= spell.manaCost;
-                const isDisabled = colonist.disabledSpells && colonist.disabledSpells.includes(spellKey);
-                let spellHtml = '';
-                if (spell.castType === 'auto') {
-                    const checked = !isDisabled ? 'checked' : '';
-                    spellHtml += `<input type="checkbox" ${checked} onchange="window.game.toggleSpell(${colonist.id},'${spellKey}')" style="margin-right:4px;vertical-align:middle">`;
+
+        // --- Spells ---
+        const hasSpells = (colonist.knownSpells && colonist.knownSpells.length > 0) || colonist.equippedTome;
+        if (hasSpells || hasMagic) {
+            html += `<div style="${sectionHdr}">Spells</div>`;
+            if (colonist.equippedTome) {
+                const tomeDef = SPELL_TOMES[colonist.equippedTome];
+                const currentProgress = (colonist.tomeProgress && colonist.tomeProgress[colonist.equippedTome]) || 0;
+                const progress = Math.floor((currentProgress / tomeDef.learningWork) * 100);
+                html += `<div class="info-row"><span style="color:#bb88ff">Studying: ${tomeDef.name} (${progress}%)</span></div>`;
+            }
+            if (colonist.knownSpells && colonist.knownSpells.length > 0) {
+                for (const spellKey of colonist.knownSpells) {
+                    const spell = SPELLS[spellKey];
+                    if (!spell) continue;
+                    const onCooldown = colonist._spellCooldowns?.[spellKey] && this.game.tick - colonist._spellCooldowns[spellKey] < spell.cooldown;
+                    const cdRemaining = onCooldown ? spell.cooldown - (this.game.tick - colonist._spellCooldowns[spellKey]) : 0;
+                    const hasManaForSpell = colonist.mana >= spell.manaCost;
+                    const isDisabled = colonist.disabledSpells && colonist.disabledSpells.includes(spellKey);
+                    let spellHtml = '';
+                    if (spell.castType === 'auto') {
+                        const checked = !isDisabled ? 'checked' : '';
+                        spellHtml += `<input type="checkbox" ${checked} onchange="window.game.toggleSpell(${colonist.id},'${spellKey}')" style="margin-right:4px;vertical-align:middle">`;
+                    }
+                    const tipDesc = this._spellTooltip(spell);
+                    spellHtml += `<span class="skill-tip" data-tip="${tipDesc}" style="color:${isDisabled ? '#666' : '#bb88ff'}">${spell.name}</span> <span style="color:#666;font-size:0.85em">(${spell.manaCost} mana, ${spell.cooldown}t cd)</span>`;
+                    if (spell.castType === 'targeted') {
+                        const disabled = onCooldown || !hasManaForSpell;
+                        const reason = onCooldown ? `${cdRemaining}t` : !hasManaForSpell ? 'low mana' : '';
+                        spellHtml += disabled
+                            ? ` <span style="color:#666">[${reason}]</span>`
+                            : ` <button onclick="window.game.startSpellTargeting(${colonist.id},'${spellKey}')" style="font-size:0.8em">Cast</button>`;
+                    } else {
+                        spellHtml += ` <span style="color:#555;font-size:0.8em">[auto${onCooldown ? `, ${cdRemaining}t` : ''}]</span>`;
+                    }
+                    html += `<div class="info-row" style="padding-left:8px">${spellHtml}</div>`;
                 }
-                const tipDesc = this._spellTooltip(spell);
-                spellHtml += `<span class="skill-tip" data-tip="${tipDesc}" style="color:${isDisabled ? '#666' : '#bb88ff'}">${spell.name}</span> <span style="color:#666;font-size:0.85em">(${spell.manaCost} mana, ${spell.cooldown}t cd)</span>`;
-                if (spell.castType === 'targeted') {
-                    const disabled = onCooldown || !hasMana;
-                    const reason = onCooldown ? `${cdRemaining}t` : !hasMana ? 'low mana' : '';
-                    spellHtml += disabled
-                        ? ` <span style="color:#666">[${reason}]</span>`
-                        : ` <button onclick="window.game.startSpellTargeting(${colonist.id},'${spellKey}')" style="font-size:0.8em">Cast</button>`;
-                } else {
-                    spellHtml += ` <span style="color:#555;font-size:0.8em">[auto${onCooldown ? `, ${cdRemaining}t` : ''}]</span>`;
-                }
-                html += `<div class="info-row" style="padding-left:8px">${spellHtml}</div>`;
+            }
+            if (colonist.activeEffects && colonist.activeEffects.length > 0) {
+                const effects = colonist.activeEffects.map(e => `<span style="color:#88ffaa">${e.type} (${e.expiresAt - this.game.tick}t)</span>`).join(', ');
+                html += `<div class="info-row">Effects: ${effects}</div>`;
+            }
+            if (colonist.activeAuras && colonist.activeAuras.length > 0) {
+                const auraSpans = colonist.activeAuras.map(a => {
+                    const def = ARTIFACTS[a.key];
+                    const tip = def ? this._getArtifactTooltip(def) : a.name;
+                    const clickAction = a.sourceType === 'pedestal'
+                        ? `window.game.camera.centerOn(${a.x},${a.y})`
+                        : `window.game.selectColonistById(${a.colonistId})`;
+                    return `<span class="skill-tip" data-tip="${tip}" style="color:#ccaa44;cursor:pointer;text-decoration:underline" onclick="${clickAction}">${a.name}</span>`;
+                }).join(', ');
+                html += `<div class="info-row">Auras: ${auraSpans}</div>`;
             }
         }
-        if (colonist.activeEffects && colonist.activeEffects.length > 0) {
-            const effects = colonist.activeEffects.map(e => `<span style="color:#88ffaa">${e.type} (${e.expiresAt - this.game.tick}t)</span>`).join(', ');
-            html += `<div class="info-row">Effects: ${effects}</div>`;
+
+        // --- Thoughts ---
+        if (thoughts) {
+            html += `<div style="${sectionHdr}">Thoughts</div>`;
+            html += `<div class="info-thoughts">${thoughts}</div>`;
         }
-        if (colonist.activeAuras && colonist.activeAuras.length > 0) {
-            const auraSpans = colonist.activeAuras.map(a => {
-                const def = ARTIFACTS[a.key];
-                const tip = def ? this._getArtifactTooltip(def) : a.name;
-                const clickAction = a.sourceType === 'pedestal'
-                    ? `window.game.camera.centerOn(${a.x},${a.y})`
-                    : `window.game.selectColonistById(${a.colonistId})`;
-                return `<span class="skill-tip" data-tip="${tip}" style="color:#ccaa44;cursor:pointer;text-decoration:underline" onclick="${clickAction}">${a.name}</span>`;
-            }).join(', ');
-            html += `<div class="info-row">Auras: ${auraSpans}</div>`;
-        }
-        html += `<div class="info-row">Bed: ${colonist.assignedBed ? `(${colonist.assignedBed.x},${colonist.assignedBed.y})` : 'None'}</div>`;
-        if (thoughts) html += `<div class="info-thoughts"><b>Thoughts:</b><br>${thoughts}</div>`;
+
+        // --- Actions ---
+        html += `<div style="${sectionHdr}">Actions</div>`;
         html += `<div class="info-actions">`;
         html += `<button onclick="window.game.toggleDraft(${colonist.id})">${colonist.drafted ? 'Undraft' : 'Draft'}</button>`;
         html += `<button onclick="window.game.toggleGuard(${colonist.id})">${colonist.guardMode ? 'Unguard' : 'Guard'}</button>`;
         html += `<button onclick="window.game.draftAll()">Draft All</button>`;
         html += `<button onclick="window.game.undraftAll()">Undraft All</button>`;
-        html += this.buildWeaponDropdown(colonist);
-        html += this.buildArmorDropdown(colonist);
-        html += this.buildHelmetDropdown(colonist);
-        html += this.buildToolDropdown(colonist);
-        html += this.buildArtifactDropdown(colonist);
-        html += this.buildTomeDropdown(colonist);
         html += `<button onclick="window.game.autoEquipBest(${colonist.id})">Auto-equip Best</button>`;
         const others = this.game.colonists.filter(c => c.hp > 0 && c.id !== colonist.id);
         if (others.length > 0) {
@@ -798,63 +819,47 @@ export class UI {
         this.elements.infoPanel.innerHTML = this.buildColonistInfoHtml(colonist);
     }
 
-    _buildEquipDropdown(colonist, { slot, listName, label, fallback, equipFn, unequipFn, statRenderer }) {
-        const items = this.game.resources[listName];
-        const current = colonist[slot];
-        let html = `<select id="eq-${slot}-${colonist.id}" onchange="if(this.value==='unequip'){window.game.${unequipFn}(${colonist.id})}else if(this.value!==''){window.game.${equipFn}(${colonist.id},parseInt(this.value))}">`;
-        html += `<option value="">${label}: ${current?.name || fallback}</option>`;
-        if (current) {
-            html += `<option value="unequip">Unequip ${current.name}</option>`;
+    _buildSlotSelect(colonist, slot) {
+        const overlayStyle = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
+        const SLOT_CONFIG = {
+            weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => `${w.damage} dmg` },
+            armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => `${Math.round(a.damageReduction * 100)}% DR` },
+            helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => `${Math.round(h.damageReduction * 100)}% DR` },
+            tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/') },
+            artifact: { listName: 'artifacts', label: 'Artifact', fallback: 'None', equipFn: 'equipArtifact', unequipFn: 'unequipArtifact', statRenderer: a => Object.entries(a).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? (v < 1 ? `${Math.round(v*100)}%` : `+${Math.round((v-1)*100)}%`) : '').filter(Boolean).join('/') },
+        };
+        if (slot === 'tome') {
+            const tomes = this.game.resources.tomes || [];
+            let html = `<select style="${overlayStyle}" id="eq-tome-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipTome(${colonist.id})}else if(this.value!==''){window.game.equipTome(${colonist.id},parseInt(this.value))}">`;
+            const currentTome = colonist.equippedTome ? SPELL_TOMES[colonist.equippedTome]?.name : 'None';
+            html += `<option value="">Tome: ${currentTome}</option>`;
+            if (colonist.equippedTome) html += `<option value="unequip">Unequip</option>`;
+            tomes.forEach((t, i) => {
+                const def = SPELL_TOMES[t.key];
+                if (!def) return;
+                const spell = SPELLS[def.spell];
+                const canStudy = (colonist.magicSkills[spell?.school] || 0) >= def.minSchoolLevel;
+                const alreadyKnown = colonist.knownSpells.includes(def.spell);
+                if (alreadyKnown) return;
+                html += `<option value="${i}" ${canStudy ? '' : 'disabled'}>${def.name}${canStudy ? '' : ` (need ${MAGIC_SKILLS[spell.school].name} ${def.minSchoolLevel})`}</option>`;
+            });
+            if (tomes.length === 0 && !colonist.equippedTome) html += `<option disabled>No tomes available</option>`;
+            html += `</select>`;
+            return html;
         }
+        const cfg = SLOT_CONFIG[slot];
+        const items = this.game.resources[cfg.listName];
+        const current = colonist[slot];
+        let html = `<select style="${overlayStyle}" id="eq-${slot}-${colonist.id}" onchange="if(this.value==='unequip'){window.game.${cfg.unequipFn}(${colonist.id})}else if(this.value!==''){window.game.${cfg.equipFn}(${colonist.id},parseInt(this.value))}">`;
+        html += `<option value="">${cfg.label}: ${current?.name || cfg.fallback}</option>`;
+        if (current) html += `<option value="unequip">Unequip ${current.name}</option>`;
         items.forEach((item, i) => {
-            const stats = statRenderer(item);
+            const stats = cfg.statRenderer(item);
             html += `<option value="${i}">${item.name}${stats ? ` (${stats})` : ''}</option>`;
         });
-        if (items.length === 0 && !current) {
-            html += `<option disabled>No ${label.toLowerCase()}s available</option>`;
-        }
+        if (items.length === 0 && !current) html += `<option disabled>No ${cfg.label.toLowerCase()}s available</option>`;
         html += `</select>`;
         return html;
-    }
-
-    buildWeaponDropdown(colonist) {
-        return this._buildEquipDropdown(colonist, {
-            slot: 'weapon', listName: 'weapons', label: 'Weapon', fallback: 'Fists',
-            equipFn: 'equipWeapon', unequipFn: 'unequipWeapon',
-            statRenderer: w => `${w.damage} dmg`,
-        });
-    }
-
-    buildArmorDropdown(colonist) {
-        return this._buildEquipDropdown(colonist, {
-            slot: 'armor', listName: 'armors', label: 'Armor', fallback: 'None',
-            equipFn: 'equipArmor', unequipFn: 'unequipArmor',
-            statRenderer: a => `${Math.round(a.damageReduction * 100)}% DR`,
-        });
-    }
-
-    buildHelmetDropdown(colonist) {
-        return this._buildEquipDropdown(colonist, {
-            slot: 'helmet', listName: 'helmets', label: 'Helmet', fallback: 'None',
-            equipFn: 'equipHelmet', unequipFn: 'unequipHelmet',
-            statRenderer: h => `${Math.round(h.damageReduction * 100)}% DR`,
-        });
-    }
-
-    buildToolDropdown(colonist) {
-        return this._buildEquipDropdown(colonist, {
-            slot: 'tool', listName: 'tools', label: 'Tool', fallback: 'None',
-            equipFn: 'equipTool', unequipFn: 'unequipTool',
-            statRenderer: t => Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/'),
-        });
-    }
-
-    buildArtifactDropdown(colonist) {
-        return this._buildEquipDropdown(colonist, {
-            slot: 'artifact', listName: 'artifacts', label: 'Artifact', fallback: 'None',
-            equipFn: 'equipArtifact', unequipFn: 'unequipArtifact',
-            statRenderer: a => Object.entries(a).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? (v < 1 ? `${Math.round(v*100)}%` : `+${Math.round((v-1)*100)}%`) : '').filter(Boolean).join('/'),
-        });
     }
 
     _buildBedInfoHtml(tile, x, y) {
@@ -938,29 +943,6 @@ export class UI {
         return html;
     }
 
-    buildTomeDropdown(colonist) {
-        const tomes = this.game.resources.tomes || [];
-        let html = `<select id="eq-tome-${colonist.id}" onchange="if(this.value==='unequip'){window.game.unequipTome(${colonist.id})}else if(this.value!==''){window.game.equipTome(${colonist.id},parseInt(this.value))}">`;
-        const currentTome = colonist.equippedTome ? SPELL_TOMES[colonist.equippedTome]?.name : 'None';
-        html += `<option value="">Tome: ${currentTome}</option>`;
-        if (colonist.equippedTome) {
-            html += `<option value="unequip">Unequip</option>`;
-        }
-        tomes.forEach((t, i) => {
-            const def = SPELL_TOMES[t.key];
-            if (!def) return;
-            const spell = SPELLS[def.spell];
-            const canStudy = (colonist.magicSkills[spell?.school] || 0) >= def.minSchoolLevel;
-            const alreadyKnown = colonist.knownSpells.includes(def.spell);
-            if (alreadyKnown) return;
-            html += `<option value="${i}" ${canStudy ? '' : 'disabled'}>${def.name}${canStudy ? '' : ` (need ${MAGIC_SKILLS[spell.school].name} ${def.minSchoolLevel})`}</option>`;
-        });
-        if (tomes.length === 0 && !colonist.equippedTome) {
-            html += `<option disabled>No tomes available</option>`;
-        }
-        html += `</select>`;
-        return html;
-    }
 
     getCraftOutputTip(outputKey) {
         if (WEAPONS[outputKey]) {
