@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -519,12 +519,25 @@ class Game {
         }
     }
 
-    // Generic discard: removes item from inventory
     _discardItem(index, listName) {
         const list = this.resources[listName];
         if (index < 0 || index >= list.length) return;
         const item = list.splice(index, 1)[0];
-        this.notifications.push({ text: `Discarded ${item.name}`, tick: this.tick, type: 'event' });
+        const recovered = {};
+        const recipe = Object.values(RECIPES).find(r => {
+            const outputKey = Object.keys(r.output)[0];
+            return outputKey === item.key;
+        });
+        if (recipe) {
+            for (const [res, amt] of Object.entries(recipe.input)) {
+                recovered[res] = Math.max(1, Math.floor(amt * SALVAGE_RATE));
+            }
+        } else {
+            recovered.planks = 1;
+        }
+        this.resources.add(recovered);
+        const recoveredStr = Object.entries(recovered).map(([k, v]) => `${v} ${k}`).join(', ');
+        this.notifications.push({ text: `Salvaged ${item.name} (${recoveredStr})`, tick: this.tick, type: 'event' });
         this.ui.updateInventoryPanel();
     }
 

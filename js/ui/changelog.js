@@ -1,4 +1,11 @@
 export const CHANGELOG = [
+    { date: '2026-07-27', message: 'Equipment expansion: 7 new weapons, 5 new armors across all progression tiers' },
+    { date: '2026-07-27', message: 'New materials: iron ore (mining) and hides/leather (hunting) for mid-tier equipment' },
+    { date: '2026-07-27', message: 'Tool system overhaul: 15 tools across 5 categories (Pickaxe, Axe, Sickle, Hammer, Mattock) × 3 material tiers (Stone → Iron → Runic)' },
+    { date: '2026-07-27', message: 'Mattock tools: multi-purpose mining + chopping at slightly lower efficiency than specialists' },
+    { date: '2026-07-27', message: 'Hammer tools: new crafting speed bonus for faster crafting and cooking tasks' },
+    { date: '2026-07-27', message: 'Crafting quality system: skill-based rolls produce Crude/Fine/Superior items with stat modifiers' },
+    { date: '2026-07-27', message: 'Salvage system: recycle unwanted equipment for partial resource recovery' },
     { date: '2026-07-27', message: 'Fixed unreachableFailers crash on game load — uses plain object instead of Set for JSON compatibility' },
     { date: '2026-07-27', message: 'Deconstruct toggle button in build mode — works on mobile and for users without right-click (press X or click button)' },
     { date: '2026-07-27', message: 'Mobile crafting tabs now scrollable horizontally' },

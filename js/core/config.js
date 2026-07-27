@@ -19,7 +19,7 @@ export const CONFIG = {
     TICK_RATE: 200,             // ms between game ticks (lower = faster simulation)
     TICKS_PER_SEASON: 1500,     // ticks per season (5 days at 300 ticks/day)
     TICKS_PER_DAY: 300,         // ticks per in-game day (60 seconds real-time at 1x)
-    START_RESOURCES: { wood: 25, stone: 15, planks: 5, food: 20, meat: 0, wheat: 0, berries: 0, corn: 0, potatoes: 0, bricks: 0, runite: 0, eggs: 0, milk: 0, wool: 0, void_essence: 0 },
+    START_RESOURCES: { wood: 25, stone: 15, planks: 5, food: 20, meat: 0, wheat: 0, berries: 0, corn: 0, potatoes: 0, bricks: 0, hides: 0, leather: 0, iron_ore: 0, iron: 0, runite: 0, eggs: 0, milk: 0, wool: 0, void_essence: 0 },
     PEACEFUL_MODE: false,       // disables raids and hostile animals
     GAME_SPEED: 1,              // default simulation speed multiplier
     STOCKPILE_ALERTS: { wood: 5, stone: 5, food: 5 },
@@ -322,6 +322,15 @@ export const TASK_CONFIG = {
     unreachableCheckInterval: 60, // ticks between reachability re-checks (avoids spam)
 };
 
+export const QUALITY_TIERS = [
+    { key: 'poor', prefix: 'Crude', multiplier: 0.85, color: '#888888', baseChance: 0.20, perSkill: -0.03 },
+    { key: 'normal', prefix: '', multiplier: 1.00, color: '#cccccc', baseChance: 0.60, perSkill: 0 },
+    { key: 'fine', prefix: 'Fine', multiplier: 1.10, color: '#44cc44', baseChance: 0.15, perSkill: 0.02 },
+    { key: 'superior', prefix: 'Superior', multiplier: 1.20, color: '#4488ff', baseChance: 0.05, perSkill: 0.01 },
+];
+
+export const SALVAGE_RATE = 0.5;
+
 // ----------------------------------------------------------------------------
 // Building & Crafting config
 // ----------------------------------------------------------------------------
@@ -438,15 +447,45 @@ export const RECIPE_CATEGORIES = ['Materials', 'Equipment', 'Tools', 'Artifacts'
 export const RECIPES = {
     craft_planks: { input: { wood: 2 }, output: { planks: 3 }, skill: 'crafting', ticks: 10, station: 'workbench', category: 'Materials' },
     craft_bricks: { input: { stone: 2 }, output: { bricks: 3 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Materials' },
+    tan_leather: { input: { hides: 2 }, output: { leather: 2 }, skill: 'crafting', ticks: 10, station: 'workbench', category: 'Materials' },
+    smelt_iron: { input: { iron_ore: 2 }, output: { iron: 2 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Materials' },
+    craft_stone_spear: { input: { stone: 2, wood: 1 }, output: { stone_spear: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Equipment' },
     craft_wooden_club: { input: { wood: 2, planks: 1 }, output: { wooden_club: 1 }, skill: 'crafting', ticks: 15, station: 'workbench', category: 'Equipment' },
+    craft_hatchet: { input: { planks: 2, stone: 1 }, output: { hatchet: 1 }, skill: 'crafting', ticks: 16, station: 'workbench', category: 'Equipment' },
+    craft_iron_sword: { input: { iron: 2, planks: 1 }, output: { iron_sword: 1 }, skill: 'crafting', ticks: 20, station: 'workbench', category: 'Equipment' },
+    craft_iron_mace: { input: { iron: 3, planks: 1 }, output: { iron_mace: 1 }, skill: 'crafting', ticks: 24, station: 'workbench', research: 'runecraft', category: 'Equipment' },
     craft_etched_axe: { input: { stone: 2, planks: 1 }, output: { etched_axe: 1 }, skill: 'crafting', ticks: 22, station: 'workbench', research: 'runecraft', category: 'Equipment' },
+    craft_enchanted_glaive: { input: { iron: 2, runite: 1, planks: 2 }, output: { enchanted_glaive: 1 }, skill: 'crafting', ticks: 38, station: 'workbench', research: 'mana_weaving', category: 'Equipment' },
     craft_runic_blade: { input: { runite: 2, planks: 1 }, output: { runic_blade: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'runeforging', category: 'Equipment' },
+    craft_runic_greatsword: { input: { runite: 4, iron: 2, planks: 2 }, output: { runic_greatsword: 1 }, skill: 'crafting', ticks: 50, station: 'workbench', research: 'masterwork', category: 'Equipment' },
+    craft_void_dagger: { input: { void_essence: 3, runite: 1 }, output: { void_dagger: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
     craft_void_blade: { input: { void_essence: 6, runite: 2, planks: 1 }, output: { void_blade: 1 }, skill: 'crafting', ticks: 60, station: 'workbench', research: 'void_forging', category: 'Equipment' },
+    craft_iron_helm: { input: { iron: 2 }, output: { iron_helm: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
+    craft_leather_vest: { input: { leather: 3 }, output: { leather_vest: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Equipment' },
+    craft_iron_chainmail: { input: { iron: 4, leather: 2 }, output: { iron_chainmail: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', category: 'Equipment' },
+    craft_mana_weave_robe: { input: { runite: 2, leather: 2, iron: 1 }, output: { mana_weave_robe: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'mana_weaving', category: 'Equipment' },
+    craft_runic_plate: { input: { runite: 3, iron: 2, leather: 1 }, output: { runic_plate: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'runeforging', category: 'Equipment' },
     craft_void_armor: { input: { void_essence: 5, bricks: 2, planks: 1 }, output: { void_armor: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Equipment' },
+    // Pickaxes
     craft_stone_pickaxe: { input: { stone: 2, planks: 1 }, output: { stone_pickaxe: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Tools' },
+    craft_iron_pickaxe: { input: { iron: 2, planks: 1 }, output: { iron_pickaxe: 1 }, skill: 'crafting', ticks: 20, station: 'workbench', category: 'Tools' },
     craft_runic_pickaxe: { input: { runite: 2, planks: 1 }, output: { runic_pickaxe: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'runeforging', category: 'Tools' },
-    craft_woodcutter_axe: { input: { planks: 2, stone: 1 }, output: { woodcutter_axe: 1 }, skill: 'crafting', ticks: 16, station: 'workbench', category: 'Tools' },
-    craft_harvesting_sickle: { input: { stone: 1, planks: 1, wood: 1 }, output: { harvesting_sickle: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', research: 'druidcraft', category: 'Tools' },
+    // Axes
+    craft_stone_axe: { input: { stone: 2, planks: 1 }, output: { stone_axe: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Tools' },
+    craft_iron_axe: { input: { iron: 2, planks: 1 }, output: { iron_axe: 1 }, skill: 'crafting', ticks: 20, station: 'workbench', category: 'Tools' },
+    craft_runic_axe: { input: { runite: 2, planks: 1 }, output: { runic_axe: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'runeforging', category: 'Tools' },
+    // Sickles
+    craft_stone_sickle: { input: { stone: 1, planks: 1 }, output: { stone_sickle: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', category: 'Tools' },
+    craft_iron_sickle: { input: { iron: 1, planks: 1 }, output: { iron_sickle: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Tools' },
+    craft_runic_sickle: { input: { runite: 1, planks: 1 }, output: { runic_sickle: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', research: 'runeforging', category: 'Tools' },
+    // Hammers (crafting speed)
+    craft_stone_hammer: { input: { stone: 2, planks: 1 }, output: { stone_hammer: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Tools' },
+    craft_iron_hammer: { input: { iron: 2, planks: 1 }, output: { iron_hammer: 1 }, skill: 'crafting', ticks: 20, station: 'workbench', category: 'Tools' },
+    craft_runic_hammer: { input: { runite: 2, planks: 1 }, output: { runic_hammer: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'runeforging', category: 'Tools' },
+    // Mattocks (multi-purpose)
+    craft_stone_mattock: { input: { stone: 3, planks: 2 }, output: { stone_mattock: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Tools' },
+    craft_iron_mattock: { input: { iron: 3, planks: 2 }, output: { iron_mattock: 1 }, skill: 'crafting', ticks: 26, station: 'workbench', category: 'Tools' },
+    craft_runic_mattock: { input: { runite: 3, planks: 2 }, output: { runic_mattock: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'runeforging', category: 'Tools' },
     craft_wooden_wand: { input: { wood: 3, planks: 1 }, output: { wooden_wand: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', research: 'arcane_studies', category: 'Equipment' },
     craft_crystal_staff: { input: { stone: 3, planks: 2, runite: 1 }, output: { crystal_staff: 1 }, skill: 'crafting', ticks: 28, station: 'workbench', research: 'arcane_studies', category: 'Equipment' },
     craft_runic_wand: { input: { runite: 2, planks: 2 }, output: { runic_wand: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
@@ -483,9 +522,16 @@ export const RECIPES = {
 // Optional stat bonuses: miningSpeed, choppingSpeed, farmingSpeed (multipliers applied during those tasks).
 export const WEAPONS = {
     fists: { name: 'Fists', damage: 5 },
+    stone_spear: { name: 'Stone Spear', damage: 8 },
     wooden_club: { name: 'Wooden Club', damage: 10 },
+    hatchet: { name: 'Hatchet', damage: 12, choppingSpeed: 1.2 },
+    iron_sword: { name: 'Iron Sword', damage: 14 },
     etched_axe: { name: 'Etched Axe', damage: 15 },
+    iron_mace: { name: 'Iron Mace', damage: 16, miningSpeed: 1.2 },
+    enchanted_glaive: { name: 'Enchanted Glaive', damage: 18, spellDamageBonus: 0.25 },
+    void_dagger: { name: 'Void Dagger', damage: 20, spellDamageBonus: 0.35 },
     runic_blade: { name: 'Runic Blade', damage: 22 },
+    runic_greatsword: { name: 'Runic Greatsword', damage: 26 },
     wooden_wand: { name: 'Wooden Wand', damage: 3, spellDamageBonus: 0.3 },
     crystal_staff: { name: 'Crystal Staff', damage: 8, spellDamageBonus: 0.2 },
     runic_wand: { name: 'Runic Wand', damage: 5, spellDamageBonus: 0.5 },
@@ -495,16 +541,37 @@ export const WEAPONS = {
 
 // To add armor: add entry here + a recipe with output: { <key>: 1 }. Auto-detected on craft.
 export const ARMORS = {
+    iron_helm: { name: 'Iron Helm', damageReduction: 0.08 },
+    leather_vest: { name: 'Leather Vest', damageReduction: 0.10 },
+    mana_weave_robe: { name: 'Mana-Weave Robe', damageReduction: 0.15, spellDamageBonus: 0.15 },
+    iron_chainmail: { name: 'Iron Chainmail', damageReduction: 0.18 },
+    runic_plate: { name: 'Runic Plate', damageReduction: 0.24 },
     void_armor: { name: 'Void Armor', damageReduction: 0.3 },
 };
 
 // To add a tool: add entry here + a recipe with output: { <key>: 1 }. Equipped in a separate slot from weapons.
 // Stat bonuses stack with weapon bonuses. moveSpeedBonus: reduces move cooldown (fraction, e.g. 0.3 = 30% faster).
 export const TOOLS = {
-    stone_pickaxe: { name: 'Stone Pickaxe', miningSpeed: 1.3 },
-    runic_pickaxe: { name: 'Runic Pickaxe', miningSpeed: 1.6 },
-    woodcutter_axe: { name: "Woodcutter's Axe", choppingSpeed: 1.4 },
-    harvesting_sickle: { name: 'Harvesting Sickle', farmingSpeed: 1.3 },
+    // Pickaxes — mining specialist
+    stone_pickaxe: { name: 'Stone Pickaxe', miningSpeed: 1.25 },
+    iron_pickaxe: { name: 'Iron Pickaxe', miningSpeed: 1.45 },
+    runic_pickaxe: { name: 'Runic Pickaxe', miningSpeed: 1.7 },
+    // Axes — chopping specialist
+    stone_axe: { name: 'Stone Axe', choppingSpeed: 1.25 },
+    iron_axe: { name: 'Iron Axe', choppingSpeed: 1.45 },
+    runic_axe: { name: 'Runic Axe', choppingSpeed: 1.7 },
+    // Sickles — farming specialist
+    stone_sickle: { name: 'Stone Sickle', farmingSpeed: 1.25 },
+    iron_sickle: { name: 'Iron Sickle', farmingSpeed: 1.45 },
+    runic_sickle: { name: 'Runic Sickle', farmingSpeed: 1.7 },
+    // Hammers — crafting speed specialist
+    stone_hammer: { name: 'Stone Hammer', craftingSpeed: 1.25 },
+    iron_hammer: { name: 'Iron Hammer', craftingSpeed: 1.45 },
+    runic_hammer: { name: 'Runic Hammer', craftingSpeed: 1.7 },
+    // Mattocks — multi-purpose (mining + chopping, weaker than specialists)
+    stone_mattock: { name: 'Stone Mattock', miningSpeed: 1.15, choppingSpeed: 1.15 },
+    iron_mattock: { name: 'Iron Mattock', miningSpeed: 1.3, choppingSpeed: 1.3 },
+    runic_mattock: { name: 'Runic Mattock', miningSpeed: 1.5, choppingSpeed: 1.5 },
 };
 
 // To add an artifact: add entry here + a recipe with output: { <key>: 1 }. Equipped in a dedicated artifact slot.
@@ -991,14 +1058,14 @@ for (const [name, c] of Object.entries(CROPS)) {
 // tameable: true enables taming. tamed sub-object: what the animal produces once tamed.
 // speed: movement rate (lower = slower). fleeRange/aggroRange: detection distance for behavior.
 export const ANIMALS = {
-    deer:    { char: 'd', color: '#bb8855', hp: 40, speed: 0.5, hostile: false, meatYield: 3, fleeRange: 5, spawnWeight: 20 },
+    deer:    { char: 'd', color: '#bb8855', hp: 40, speed: 0.5, hostile: false, meatYield: 3, hideYield: 2, fleeRange: 5, spawnWeight: 20 },
     rabbit:  { char: 'r', color: '#ccaa88', hp: 10, speed: 0.7, hostile: false, meatYield: 1, fleeRange: 4, spawnWeight: 20 },
-    wolf:    { char: 'w', color: '#555555', hp: 60, speed: 0.6, hostile: true, meatYield: 2, damage: 8, aggroRange: 6, spawnWeight: 0, spawnCondition: 'hostileNight', tameable: true, tamed: { guardAnimal: true, guardRadius: 8, guardDamage: 8, foodToTame: 6, dangerousTame: true, baseTameChance: 0.40, retaliationDamage: 12 } },
+    wolf:    { char: 'w', color: '#555555', hp: 60, speed: 0.6, hostile: true, meatYield: 2, hideYield: 1, damage: 8, aggroRange: 6, spawnWeight: 0, spawnCondition: 'hostileNight', tameable: true, tamed: { guardAnimal: true, guardRadius: 8, guardDamage: 8, foodToTame: 6, dangerousTame: true, baseTameChance: 0.40, retaliationDamage: 12 } },
     chicken: { char: 'c', color: '#ddaa44', hp: 15, speed: 0.4, hostile: false, meatYield: 1, fleeRange: 3, spawnWeight: 10, tameable: true, tamed: { produces: 'eggs', produceRate: 80, produceAmount: 1, foodToTame: 2 } },
-    cow:     { char: 'C', color: '#aa7744', hp: 80, speed: 0.3, hostile: false, meatYield: 4, fleeRange: 4, spawnWeight: 15, tameable: true, tamed: { produces: 'milk', produceRate: 100, produceAmount: 2, foodToTame: 4 } },
+    cow:     { char: 'C', color: '#aa7744', hp: 80, speed: 0.3, hostile: false, meatYield: 4, hideYield: 3, fleeRange: 4, spawnWeight: 15, tameable: true, tamed: { produces: 'milk', produceRate: 100, produceAmount: 2, foodToTame: 4 } },
     sheep:   { char: 's', color: '#cccccc', hp: 40, speed: 0.35, hostile: false, meatYield: 2, fleeRange: 4, spawnWeight: 15, tameable: true, tamed: { produces: 'wool', produceRate: 120, produceAmount: 1, foodToTame: 3 } },
-    okapi:   { char: 'O', color: '#b3562e', hp: 100, speed: 0.8, hostile: false, meatYield: 5, fleeRange: 4, spawnWeight: 5, tameable: true, tamed: { packAnimal: true, expeditionSpeedBonus: 0.25, foodToTame: 5 } },
-    tapir:   { char: 't', color: '#f2e6e6', hp: 60, speed: 0.25, hostile: false, meatYield: 4, fleeRange: 4, spawnWeight: 5, tameable: true, tamed: { happinessAura: true, auraRadius: 4, auraMoodBonus: 5, foodToTame: 3 } },
+    okapi:   { char: 'O', color: '#b3562e', hp: 100, speed: 0.8, hostile: false, meatYield: 5, hideYield: 3, fleeRange: 4, spawnWeight: 5, tameable: true, tamed: { packAnimal: true, expeditionSpeedBonus: 0.25, foodToTame: 5 } },
+    tapir:   { char: 't', color: '#f2e6e6', hp: 60, speed: 0.25, hostile: false, meatYield: 4, hideYield: 2, fleeRange: 4, spawnWeight: 5, tameable: true, tamed: { happinessAura: true, auraRadius: 4, auraMoodBonus: 5, foodToTame: 3 } },
 };
 
 // Wildlife spawning and behavior. Used by wildlife.js.
@@ -1041,6 +1108,7 @@ export const RAID_CONFIG = {
 // Trade values for bartering system. Used by events.js caravan trades.
 export const TRADE_VALUES = {
     wood: 1, stone: 1.5, planks: 2.5, food: 1.2, bricks: 3,
+    hides: 1.5, leather: 3, iron_ore: 2, iron: 4,
     runite: 6, void_essence: 10, meat: 0.8, wheat: 0.6, berries: 0.5,
     corn: 0.7, potatoes: 0.6, eggs: 1.5, milk: 2, wool: 2.5,
 };
@@ -1578,6 +1646,7 @@ export const TERRAIN = {
 export const RESOURCES = {
     tree:       { char: 'T', color: '#8B6B3A', springColor: '#55cc44', summerColor: '#338822', autumnColor: '#cc8822', winterColor: '#667788', designation: 'chop', work: 12, yield: { wood: 1 }, perAmount: true },
     stone:      { char: 'o', color: '#999', designation: 'mine', work: 18, yield: { stone: 1 }, perAmount: true },
+    iron_ore:   { char: 'o', color: '#cc8844', designation: 'mine', work: 20, yield: { iron_ore: 1 }, perAmount: true },
     runite_ore: { char: 'o', color: '#44cccc', designation: 'mine', work: 22, yield: { runite: 1 }, perAmount: true },
 };
 
@@ -1634,9 +1703,11 @@ export const MAP_GENERATORS = [
             count: 6,           // formations per 100x80 area (scales with map size)
             sizeRange: [2, 4],  // min/max formation radius
             fillChance: 0.7,    // chance per tile in radius to place rock
-            resourceChance: 0.5, // chance a rock tile gets a stone/runite deposit
-            runiteChance: 0.2,  // fraction of resource tiles that are runite vs stone
+            resourceChance: 0.5, // chance a rock tile gets a stone/iron/runite deposit
+            runiteChance: 0.15, // fraction of resource tiles that are runite
+            ironChance: 0.30,   // fraction of resource tiles that are iron
             stoneAmount: [3, 5], // stone deposit amount range
+            ironAmount: [2, 4],  // iron deposit amount range
             runiteAmount: [2, 3], // runite deposit amount range
         },
     },
@@ -1649,8 +1720,10 @@ export const MAP_GENERATORS = [
             widthRange: [3, 6],  // half-width of the range
             tallRockChance: 0.4, // chance of tall_rock (impassable) vs regular rock
             resourceChance: 0.3, // chance a rock tile gets deposits
-            runiteChance: 0.3,   // fraction of resource tiles that are runite
+            runiteChance: 0.25,  // fraction of resource tiles that are runite
+            ironChance: 0.30,    // fraction of resource tiles that are iron
             stoneAmount: [3, 5],
+            ironAmount: [2, 4],
             runiteAmount: [2, 4],
         },
     },

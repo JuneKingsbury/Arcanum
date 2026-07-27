@@ -52,11 +52,29 @@ Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early 
 ### Equipment
 Colonists have 4 gear slots:
 
-- **Weapon** — Determines melee damage. Fists (5), Wooden Club (10), Etched Axe (15), Runic Blade (22), Runic Pick (12, +40% mine speed), Void Blade (30).
+- **Weapon** — Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
 - **Magic Weapon** — Wands and staves trade melee power for spell amplification. Wooden Wand (+30% spell dmg), Runic Wand (+50%), Crystal Staff (+20%), Void Staff (+40%). Best for dedicated spellcasters.
-- **Armor** — Void Armor reduces all incoming damage by 30%.
-- **Tool** — Boosts work speed. Stone Pickaxe (+20% mining), Runic Pickaxe (+50%), Woodcutter's Axe (+30% chopping), Harvesting Sickle (+25% farming).
+- **Armor** — Reduces incoming damage. Progression: Iron Helm (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
+- **Tool** — Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
+  - **Pickaxe** — Mining speed (1.25x / 1.45x / 1.7x)
+  - **Axe** — Chopping speed (1.25x / 1.45x / 1.7x)
+  - **Sickle** — Farming speed (1.25x / 1.45x / 1.7x)
+  - **Hammer** — Crafting speed (1.25x / 1.45x / 1.7x)
+  - **Mattock** — Mining + Chopping (1.15x / 1.3x / 1.5x) — multi-purpose but weaker than specialists
 - **Artifact** — Special items with unique effects. Can be equipped for personal bonuses or placed on Artifact Pedestals for area-of-effect colony buffs. See the Artifacts section below.
+
+### Crafting Quality
+When equipment is crafted, a quality roll occurs based on the crafter's skill level:
+
+| Quality | Stat Multiplier | Name Prefix | Notes |
+|---|---|---|---|
+| Crude | 0.85x | "Crude" | More common at low skill |
+| Normal | 1.00x | (none) | Default result |
+| Fine | 1.10x | "Fine" | More common at high skill |
+| Superior | 1.20x | "Superior" | Rare, requires high skill |
+
+### Salvage
+Click the ♻ icon on equipment in inventory to salvage it, recovering 50% of the recipe's crafting materials (rounded down, minimum 1 per resource type). Better than discarding — you always get something back.
 
 Use "Auto-equip Best" to quickly gear up a colonist with the best available items from storage.
 
@@ -224,14 +242,14 @@ Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a
 ## Wildlife & Taming
 
 ### Wild Animals
-- **Deer** (d) — Passive, flees. 3 meat when hunted.
+- **Deer** (d) — Passive, flees. 3 meat + 2 hides when hunted.
 - **Rabbit** (r) — Passive, fast. 1 meat.
-- **Wolf** (w) — Hostile at night/winter. 2 meat. Tameable (dangerous).
-- **Okapi** (k) — Passive. Pack animal when tamed.
-- **Tapir** (t) — Passive. Happiness aura when tamed.
+- **Wolf** (w) — Hostile at night/winter. 2 meat + 1 hide. Tameable (dangerous).
+- **Okapi** (k) — Passive. 3 meat + 3 hides when hunted. Pack animal when tamed.
+- **Tapir** (t) — Passive. 2 meat + 2 hides when hunted. Happiness aura when tamed.
 - **Chicken** (c) — Passive. Produces eggs when tamed.
 
-Click an animal and press Hunt to create a hunting task.
+Click an animal and press Hunt to create a hunting task. Medium and large animals drop hides, which can be tanned into leather for armor crafting.
 
 ### Beast Binding
 Requires Beast Binding research + Beast Circle. Tamed animals fill different roles:
@@ -376,7 +394,9 @@ Build an Arcanum and assign colonists to study. They generate study points over 
 | Druidcraft | — | Corn, Potatoes. Unlocks Beast Binding |
 | Ley Channeling | — | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
 | Alchemy | — | +2 bonus food per cooked meal |
-| Runeforging | Runecraft | Runic Blade, Runic Pick, Runic Pickaxe, Boots of Haste |
+| Mana Weaving | Ley Channeling | Mana-Weave Robe, Enchanted Glaive |
+| Masterwork | Runeforging | Runic Greatsword, Great Forge |
+| Runeforging | Runecraft | Runic Blade, Runic Pick, Runic Pickaxe, Runic Plate, Boots of Haste |
 | Warding | Runecraft | Arcane Sentinel |
 | Ember Magic | Ley Channeling | Ember Ward |
 | Luminance | Ley Channeling | Glowstone |
@@ -449,13 +469,13 @@ Random events keep things interesting:
 - **~** Water — Slow (3x move cost). Can't build on it.
 
 ### Map Generation
-Each map is procedurally generated with: dirt patches, rock formations (with stone/runite deposits), mountain ranges (impassable spines), forests, a winding river, and ancient ruins (pre-built structures you can repair).
+Each map is procedurally generated with: dirt patches, rock formations (with stone/iron ore/runite deposits), mountain ranges (impassable spines), forests, a winding river, and ancient ruins (pre-built structures you can repair). Resource deposits spawn tiered: ~50% stone, ~30% iron ore, ~20% runite.
 
 ### Map Symbols Reference
 ```
 .  Grass           ,  Dirt            #  Rock (slow)
 ▲  Tall Rock       ~  Water (slow)    T  Tree
-o  Deposit         @  Colonist        G  Golem
+o  Deposit (stone/iron/runite)  @  Colonist  G  Golem
 R  Raider          E  Void Enemy      V  Void Nexus
 ▓  Void Wall       ▒  Void Door       Y  Void Turret
 Ω  Rift Gate       S  Food Chest      I  Ice Box
@@ -498,7 +518,7 @@ R  Raider          E  Void Enemy      V  Void Nexus
 | [ / ] | Cycle colonist selection |
 
 ### Mode-Specific
-- **Build mode**: Tab/Shift+Tab to cycle categories, 1-9/0 to select items.
+- **Build mode**: Tab/Shift+Tab to cycle categories, 1-9/0 to select items. X to toggle deconstruct mode.
 - **Designate mode**: Tab to switch between Chop and Mine.
 - **Zone mode**: 1-9 to select crop type.
 

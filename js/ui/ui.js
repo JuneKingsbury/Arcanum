@@ -884,6 +884,7 @@ export class UI {
             if (t.miningSpeed) stats.push(`+${Math.round((t.miningSpeed-1)*100)}% mining`);
             if (t.choppingSpeed) stats.push(`+${Math.round((t.choppingSpeed-1)*100)}% chopping`);
             if (t.farmingSpeed) stats.push(`+${Math.round((t.farmingSpeed-1)*100)}% farming`);
+            if (t.craftingSpeed) stats.push(`+${Math.round((t.craftingSpeed-1)*100)}% crafting`);
             if (t.moveSpeedBonus) stats.push(`+${Math.round(t.moveSpeedBonus*100)}% move speed`);
             return stats.join(', ');
         }
@@ -1787,6 +1788,12 @@ export class UI {
         return html;
     }
 
+    _qualityColor(item) {
+        if (!item.quality) return '#cccccc';
+        const colors = { poor: '#888888', fine: '#44cc44', superior: '#4488ff' };
+        return colors[item.quality] || '#cccccc';
+    }
+
     _buildInvEquipment(weapons, armors, tools, artifacts) {
         let html = '';
         if (weapons.length > 0) {
@@ -1794,13 +1801,17 @@ export class UI {
             weapons.forEach((w, i) => {
                 let stats = `Dmg: ${w.damage}`;
                 if (w.spellDamageBonus) stats += `, +${Math.round(w.spellDamageBonus * 100)}% spell`;
-                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(w.key, 'weapon')}${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Discard ${w.name}?')){window.game.discardWeapon(${i})}">x</button></div>`;
+                if (w.miningSpeed) stats += `, +${Math.round((w.miningSpeed-1)*100)}% mine`;
+                if (w.choppingSpeed) stats += `, +${Math.round((w.choppingSpeed-1)*100)}% chop`;
+                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(w)}">${this._itemIcon(w.key, 'weapon')}${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${w.name.replace(/'/g, "\\\\'")}?')){window.game.discardWeapon(${i})}">♻</button></div>`;
             });
         }
         if (armors.length > 0) {
             html += '<div class="info-row" style="color:#9966cc;margin-top:8px;margin-bottom:4px;"><b>Armor:</b></div>';
             armors.forEach((a, i) => {
-                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(a.key, 'armor')}${a.name}</span><span class="inv-amount">-${Math.round(a.damageReduction * 100)}% dmg</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArmor(${i})}">x</button></div>`;
+                let stats = `-${Math.round(a.damageReduction * 100)}% dmg`;
+                if (a.spellDamageBonus) stats += `, +${Math.round(a.spellDamageBonus * 100)}% spell`;
+                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(a)}">${this._itemIcon(a.key, 'armor')}${a.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${a.name.replace(/'/g, "\\\\'")}?')){window.game.discardArmor(${i})}">♻</button></div>`;
             });
         }
         if (tools.length > 0) {
@@ -1810,15 +1821,16 @@ export class UI {
                 if (t.miningSpeed) stats.push(`+${Math.round((t.miningSpeed-1)*100)}% mine`);
                 if (t.choppingSpeed) stats.push(`+${Math.round((t.choppingSpeed-1)*100)}% chop`);
                 if (t.farmingSpeed) stats.push(`+${Math.round((t.farmingSpeed-1)*100)}% farm`);
+                if (t.craftingSpeed) stats.push(`+${Math.round((t.craftingSpeed-1)*100)}% craft`);
                 if (t.moveSpeedBonus) stats.push(`+${Math.round(t.moveSpeedBonus*100)}% move`);
-                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(t.key, 'tool')}${t.name}</span><span class="inv-amount">${stats.join(', ')}</span><button class="inv-delete" onclick="if(confirm('Discard ${t.name}?')){window.game.discardTool(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(t)}">${this._itemIcon(t.key, 'tool')}${t.name}</span><span class="inv-amount">${stats.join(', ')}</span><button class="inv-delete" onclick="if(confirm('Salvage ${t.name.replace(/'/g, "\\\\'")}?')){window.game.discardTool(${i})}">♻</button></div>`;
             });
         }
         if (artifacts.length > 0) {
             html += '<div class="info-row" style="color:#ccaa44;margin-top:8px;margin-bottom:4px;"><b>Artifacts:</b></div>';
             artifacts.forEach((a, i) => {
                 const tip = this._getArtifactTooltip(a);
-                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${tip}">${this._itemIcon(a.key, 'artifact')}${a.name}</span><button class="inv-delete" onclick="if(confirm('Discard ${a.name}?')){window.game.discardArtifact(${i})}">x</button></div>`;
+                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${tip}">${this._itemIcon(a.key, 'artifact')}${a.name}</span><button class="inv-delete" onclick="if(confirm('Salvage ${a.name.replace(/'/g, "\\\\'")}?')){window.game.discardArtifact(${i})}">♻</button></div>`;
             });
         }
         if (!html) html = '<div class="info-row" style="color:#666;">No equipment in storage.</div>';

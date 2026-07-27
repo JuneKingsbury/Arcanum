@@ -35,7 +35,10 @@ export function updateWildlife(game) {
     for (let i = game.wildlife.length - 1; i >= 0; i--) {
         const animal = game.wildlife[i];
         if (animal.hp <= 0) {
-            game.resources.add({ meat: ANIMALS[animal.type].meatYield });
+            const def = ANIMALS[animal.type];
+            const yield_ = { meat: def.meatYield };
+            if (def.hideYield) yield_.hides = def.hideYield;
+            game.resources.add(yield_);
             game.wildlife.splice(i, 1);
             continue;
         }

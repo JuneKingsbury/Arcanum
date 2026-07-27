@@ -83,13 +83,21 @@ function generateRockFormations(map, params) {
                         map[ny][nx].terrain = 'rock';
                         map[ny][nx].passable = TERRAIN.rock.passable.colonist;
                         if (Math.random() < params.resourceChance) {
-                            const isRunite = Math.random() < params.runiteChance;
-                            map[ny][nx].resource = {
-                                type: isRunite ? 'runite_ore' : 'stone',
-                                amount: isRunite
-                                    ? params.runiteAmount[0] + Math.floor(Math.random() * (params.runiteAmount[1] - params.runiteAmount[0] + 1))
-                                    : params.stoneAmount[0] + Math.floor(Math.random() * (params.stoneAmount[1] - params.stoneAmount[0] + 1))
-                            };
+                            const roll = Math.random();
+                            const ironChance = params.ironChance || 0.3;
+                            const runiteChance = params.runiteChance;
+                            let type, amount;
+                            if (roll < runiteChance) {
+                                type = 'runite_ore';
+                                amount = params.runiteAmount[0] + Math.floor(Math.random() * (params.runiteAmount[1] - params.runiteAmount[0] + 1));
+                            } else if (roll < runiteChance + ironChance) {
+                                type = 'iron_ore';
+                                amount = (params.ironAmount || params.stoneAmount)[0] + Math.floor(Math.random() * ((params.ironAmount || params.stoneAmount)[1] - (params.ironAmount || params.stoneAmount)[0] + 1));
+                            } else {
+                                type = 'stone';
+                                amount = params.stoneAmount[0] + Math.floor(Math.random() * (params.stoneAmount[1] - params.stoneAmount[0] + 1));
+                            }
+                            map[ny][nx].resource = { type, amount };
                         }
                     }
                 }
@@ -135,13 +143,21 @@ function generateMountainRanges(map, params) {
                 map[ny][nx].resource = null;
 
                 if (!isTallRock && Math.random() < params.resourceChance) {
-                    const isRunite = Math.random() < params.runiteChance;
-                    map[ny][nx].resource = {
-                        type: isRunite ? 'runite_ore' : 'stone',
-                        amount: isRunite
-                            ? params.runiteAmount[0] + Math.floor(Math.random() * (params.runiteAmount[1] - params.runiteAmount[0] + 1))
-                            : params.stoneAmount[0] + Math.floor(Math.random() * (params.stoneAmount[1] - params.stoneAmount[0] + 1))
-                    };
+                    const roll = Math.random();
+                    const ironChance = params.ironChance || 0.3;
+                    const runiteChance = params.runiteChance;
+                    let type, amount;
+                    if (roll < runiteChance) {
+                        type = 'runite_ore';
+                        amount = params.runiteAmount[0] + Math.floor(Math.random() * (params.runiteAmount[1] - params.runiteAmount[0] + 1));
+                    } else if (roll < runiteChance + ironChance) {
+                        type = 'iron_ore';
+                        amount = (params.ironAmount || params.stoneAmount)[0] + Math.floor(Math.random() * ((params.ironAmount || params.stoneAmount)[1] - (params.ironAmount || params.stoneAmount)[0] + 1));
+                    } else {
+                        type = 'stone';
+                        amount = params.stoneAmount[0] + Math.floor(Math.random() * (params.stoneAmount[1] - params.stoneAmount[0] + 1));
+                    }
+                    map[ny][nx].resource = { type, amount };
                 }
             }
         }

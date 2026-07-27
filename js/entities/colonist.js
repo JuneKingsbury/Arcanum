@@ -1,9 +1,27 @@
-import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES } from '../core/config.js';
+import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
+
+function applyQuality(item, colonist, ...statKeys) {
+    const skill = colonist.skills.crafting || 1;
+    const chances = QUALITY_TIERS.map(t => Math.max(0, t.baseChance + t.perSkill * skill));
+    const total = chances.reduce((s, c) => s + c, 0);
+    let roll = Math.random() * total;
+    let tier = QUALITY_TIERS[1];
+    for (let i = 0; i < QUALITY_TIERS.length; i++) {
+        roll -= chances[i];
+        if (roll <= 0) { tier = QUALITY_TIERS[i]; break; }
+    }
+    if (tier.key === 'normal') return;
+    item.quality = tier.key;
+    item.name = `${tier.prefix} ${item.name}`;
+    for (const stat of statKeys) {
+        if (item[stat]) item[stat] = Math.round(item[stat] * tier.multiplier * 100) / 100;
+    }
+}
 
 let nextColonistId = 1;
 
@@ -328,6 +346,7 @@ function getEquipmentWorkBonus(colonist, task) {
         if (task.type === 'mine' && item.miningSpeed) mult *= item.miningSpeed;
         if (task.type === 'chop' && item.choppingSpeed) mult *= item.choppingSpeed;
         if ((task.type === 'plant' || task.type === 'harvest') && item.farmingSpeed) mult *= item.farmingSpeed;
+        if ((task.type === 'craft' || task.type === 'cook') && item.craftingSpeed) mult *= item.craftingSpeed;
     }
     if (colonist.artifact && !colonist.artifactBroken) {
         if (colonist.artifact.workSpeedBonus) mult *= (1 + colonist.artifact.workSpeedBonus);
@@ -447,7 +466,8 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let dmg = spell.damage;
-            if (colonist.weapon?.spellDamageBonus) dmg = Math.floor(dmg * (1 + colonist.weapon.spellDamageBonus));
+            const spellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0);
+            if (spellBonus) dmg = Math.floor(dmg * (1 + spellBonus));
             target.hp -= dmg;
             game.combatEffects.push({ x: target.x, y: target.y, char: spell.projectileChar || '*', color: spell.projectileColor || '#ff44ff', ttl: 3 });
             break;
@@ -458,7 +478,8 @@ function applySpellEffect(colonist, spell, game) {
             const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
             if (dist > spell.range) return;
             let aoeDmg = spell.damage;
-            if (colonist.weapon?.spellDamageBonus) aoeDmg = Math.floor(aoeDmg * (1 + colonist.weapon.spellDamageBonus));
+            const aoeSpellBonus = (colonist.weapon?.spellDamageBonus || 0) + (colonist.armor?.spellDamageBonus || 0);
+            if (aoeSpellBonus) aoeDmg = Math.floor(aoeDmg * (1 + aoeSpellBonus));
             const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.wildlife.filter(w => w.hostile)];
             for (const h of allHostiles) {
                 if (h.hp <= 0) continue;
@@ -851,13 +872,19 @@ function completeTask(colonist, task, game) {
                 let handled = false;
                 for (const key of Object.keys(output)) {
                     if (WEAPONS[key]) {
-                        game.resources.addWeapon({ ...WEAPONS[key] });
+                        const item = { ...WEAPONS[key], key };
+                        applyQuality(item, colonist, 'damage');
+                        game.resources.addWeapon(item);
                         handled = true;
                     } else if (ARMORS[key]) {
-                        game.resources.addArmor({ ...ARMORS[key] });
+                        const item = { ...ARMORS[key], key };
+                        applyQuality(item, colonist, 'damageReduction');
+                        game.resources.addArmor(item);
                         handled = true;
                     } else if (TOOLS[key]) {
-                        game.resources.addTool({ ...TOOLS[key], key });
+                        const item = { ...TOOLS[key], key };
+                        applyQuality(item, colonist, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
+                        game.resources.addTool(item);
                         handled = true;
                     } else if (ARTIFACTS[key]) {
                         game.resources.addArtifact({ ...ARTIFACTS[key], key });
