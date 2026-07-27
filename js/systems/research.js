@@ -3,7 +3,8 @@ import { RESEARCH, WORK_CONFIG } from '../core/config.js';
 export class ResearchSystem {
     constructor() {
         this.completed = new Set();
-        this.studyPoints = 0;
+        this.activeResearch = null;
+        this.progress = {};
     }
 
     getAvailable() {
@@ -16,19 +17,43 @@ export class ResearchSystem {
         return available;
     }
 
-    purchase(key) {
-        if (this.completed.has(key)) return false;
+    hasAvailableResearch() {
+        for (const [key, tech] of Object.entries(RESEARCH)) {
+            if (this.completed.has(key)) continue;
+            if (tech.requires.every(r => this.completed.has(r))) return true;
+        }
+        return false;
+    }
+
+    selectResearch(key) {
         const tech = RESEARCH[key];
-        if (!tech) return false;
+        if (!tech || this.completed.has(key)) return false;
         if (!tech.requires.every(r => this.completed.has(r))) return false;
-        if (this.studyPoints < tech.cost) return false;
-        this.studyPoints -= tech.cost;
-        this.completed.add(key);
+        this.activeResearch = key;
         return true;
     }
 
+    deselectResearch() {
+        this.activeResearch = null;
+    }
+
     addProgress(amount) {
-        this.studyPoints += amount;
+        if (!this.activeResearch) return null;
+        if (!this.progress[this.activeResearch]) this.progress[this.activeResearch] = 0;
+        this.progress[this.activeResearch] += amount;
+        const tech = RESEARCH[this.activeResearch];
+        if (this.progress[this.activeResearch] >= tech.cost) {
+            this.completed.add(this.activeResearch);
+            delete this.progress[this.activeResearch];
+            const completedKey = this.activeResearch;
+            this.activeResearch = null;
+            return completedKey;
+        }
+        return null;
+    }
+
+    getProgress(key) {
+        return this.progress[key] || 0;
     }
 
     isResearched(key) {

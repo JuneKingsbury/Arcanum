@@ -322,9 +322,9 @@ export const WORK_CONFIG = {
 // Spell tome study tuning. Used by colonist.js when studying at a research desk with a tome equipped.
 export const MAGIC_STUDY_CONFIG = {
     studyTicksPerProgress: 1,       // tome learning progress gained per study tick
+    tomeStudyBonus: 2,              // tome progress multiplier when no research is active (focused study)
     xpPerStudyTick: 0.05,           // magic school XP gained per study tick (level-up at 1.0 per level)
     xpPerCast: 0.02,                // magic school XP gained per successful spell cast
-    researchPointsWhileStudying: 1, // research points still generated per study cycle while learning a tome
 };
 
 // Task reachability. When all colonists fail to path to a task this many times, auto-cancel it.

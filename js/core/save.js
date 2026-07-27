@@ -80,7 +80,8 @@ export function saveGame(game) {
 
         research: {
             completed: [...game.research.completed],
-            studyPoints: game.research.studyPoints,
+            activeResearch: game.research.activeResearch,
+            progress: game.research.progress,
         },
 
         manaCrystalBonus: game.manaCrystalBonus || 0,
@@ -205,7 +206,8 @@ export function loadGame(game) {
     }
 
     game.research.completed = new Set(data.research.completed);
-    game.research.studyPoints = data.research.studyPoints || 0;
+    game.research.activeResearch = data.research.activeResearch || null;
+    game.research.progress = data.research.progress || {};
 
     if (data.exploration) {
         game.exploration.expeditions = data.exploration.expeditions || [];

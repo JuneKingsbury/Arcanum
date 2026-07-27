@@ -182,7 +182,7 @@ export const GLOSSARY = [
     {
         title: 'Research (Arcanum required)',
         entries: [
-            ['How Research Works', 'Colonists study at the Arcanum to generate study points. Spend points to unlock research.'],
+            ['How Research Works', 'Select a research topic, then colonists study at the Arcanum to progress it. Only one research can be active at a time. If no research is selected, tome study speed is doubled.'],
             ['Research Tree', 'Research is organized into 4 tabs. Cross-tab prerequisites show as clickable badges.\n\n  Foundations & Nature    Arcane & Mana        Crafting & Lore      Void & Exploration\n  ──────────────────────  ───────────────────  ───────────────────  ──────────────────\n  Runecraft              Ley Channeling       Arcane Studies       Warding\n  Druidcraft             Luminance            Advanced Arcana      Void Summoning\n  Alchemy                Brilliance           Runeforging          Void Forging\n  Beast Binding          Ember Magic          Masterwork           Planar Rift\n  Verdant Growth         Arcane Infusion      Golem Craft          Deep Delving\n                         Mana Weaving\n                         Pyroclasm'],
         ]
     },

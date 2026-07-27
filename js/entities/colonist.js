@@ -205,7 +205,7 @@ export function recalcMaxMana(colonist) {
     colonist.maxMana = MANA_CONFIG.baseMana + combinedLevel * MANA_CONFIG.manaPerMagicLevel;
 }
 
-function advanceTomeStudy(colonist, game) {
+function advanceTomeStudy(colonist, game, rate) {
     if (!colonist.equippedTome) return;
     const tomeKey = colonist.equippedTome;
     const tomeDef = SPELL_TOMES[tomeKey];
@@ -220,7 +220,8 @@ function advanceTomeStudy(colonist, game) {
 
     if (!colonist.tomeProgress) colonist.tomeProgress = {};
     if (!colonist.tomeProgress[tomeKey]) colonist.tomeProgress[tomeKey] = 0;
-    colonist.tomeProgress[tomeKey] += MAGIC_STUDY_CONFIG.studyTicksPerProgress;
+    const progressAmount = rate !== undefined ? rate : MAGIC_STUDY_CONFIG.studyTicksPerProgress;
+    colonist.tomeProgress[tomeKey] += progressAmount;
 
     if (!colonist._magicXpAccumulator) colonist._magicXpAccumulator = {};
     if (!colonist._magicXpAccumulator[school]) colonist._magicXpAccumulator[school] = 0;
@@ -949,8 +950,17 @@ function completeTask(colonist, task, game) {
             break;
         }
         case 'research': {
-            game.research.addProgress(colonist.skills.research + 2);
-            advanceTomeStudy(colonist, game);
+            const completedKey = game.research.addProgress(colonist.skills.research + 2);
+            if (completedKey) {
+                const name = completedKey.replace(/_/g, ' ');
+                game.notifications.push({ text: `Research complete: ${name}!`, tick: game.tick, type: 'success' });
+                game.eventLog.add(game, `Research unlocked: ${name}`, 'success', null);
+                game.story.checkMilestone(`research_${completedKey}`, game);
+            }
+            const tomeRate = game.research.activeResearch
+                ? MAGIC_STUDY_CONFIG.studyTicksPerProgress
+                : MAGIC_STUDY_CONFIG.tomeStudyBonus;
+            advanceTomeStudy(colonist, game, tomeRate);
             break;
         }
         case 'tame': {

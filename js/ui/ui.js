@@ -25,6 +25,7 @@ export class UI {
         this._storyTab = 'colony';
         this._lastStoryHtml = '';
         this._lastStoryHasNew = false;
+        this._lastResearchNeedsAttention = false;
         this.elements = {};
         this.initElements();
     }
@@ -255,8 +256,10 @@ export class UI {
         if (this._viewingRiftGate) this._refreshRiftGateInfo();
         if (this._viewingColonistId != null) this._refreshColonistInfo();
         const hasNew = this.game.story.hasUnviewed();
-        if (hasNew !== this._lastStoryHasNew) {
+        const researchNeedsAtt = !this.game.research.activeResearch && this.game.research.hasAvailableResearch();
+        if (hasNew !== this._lastStoryHasNew || researchNeedsAtt !== this._lastResearchNeedsAttention) {
             this._lastStoryHasNew = hasNew;
+            this._lastResearchNeedsAttention = researchNeedsAtt;
             this.updateModeDisplay(this.game.input);
         }
     }
@@ -383,7 +386,9 @@ export class UI {
             html += `<span class="mode-opt" data-mode-action="gather">[G]Gather</span>`;
             html += `<span class="mode-opt" data-mode-action="priority">[P]Priority</span>`;
             html += `<span class="mode-opt" data-mode-action="craft">[C]Craft</span>`;
-            html += `<span class="mode-opt" data-mode-action="research">[R]Research</span>`;
+            const researchNeedsAttention = !this.game.research.activeResearch && this.game.research.hasAvailableResearch();
+            const researchStyle = researchNeedsAttention ? ' style="color:#ffcc44"' : '';
+            html += `<span class="mode-opt" data-mode-action="research"${researchStyle}>[R]Research${researchNeedsAttention ? ' •' : ''}</span>`;
             html += `<span class="mode-opt" data-mode-action="tame">[T]Tame</span>`;
             html += `<span class="mode-opt" data-mode-action="inventory">[I]Inventory</span>`;
             html += `<span class="mode-opt" data-mode-action="arcane">[V]Portal</span>`;
@@ -1406,7 +1411,22 @@ export class UI {
         const research = this.game.research;
         const activeTab = this._researchTab || 'foundations';
         let html = '<div class="panel-close" data-panel-close="research">&times;</div><h3>Research</h3>';
-        html += `<div class="info-row" style="color:#aa88ff; font-weight:bold; margin-bottom:6px;">Study Points: ${Math.floor(research.studyPoints)}</div>`;
+
+        if (research.activeResearch) {
+            const activeTech = RESEARCH[research.activeResearch];
+            const prog = research.getProgress(research.activeResearch);
+            const pct = Math.min(100, Math.floor((prog / activeTech.cost) * 100));
+            html += `<div class="info-row" style="color:#aa88ff; font-weight:bold; margin-bottom:6px;">`;
+            html += `Researching: ${activeTech.name} (${Math.floor(prog)}/${activeTech.cost})`;
+            html += `<button style="margin-left:8px;font-size:10px;padding:1px 6px;cursor:pointer;" onclick="window.game.cancelResearch()">Cancel</button>`;
+            html += `</div>`;
+            html += `<div style="background:#333;border-radius:3px;height:6px;margin-bottom:8px;"><div style="background:#aa88ff;height:100%;border-radius:3px;width:${pct}%;"></div></div>`;
+        } else {
+            const hasAvail = research.hasAvailableResearch();
+            html += `<div class="info-row" style="color:${hasAvail ? '#ffcc44' : '#888'}; font-weight:bold; margin-bottom:6px;">`;
+            html += hasAvail ? 'No research selected — tome study speed doubled' : 'All available research complete';
+            html += `</div>`;
+        }
 
         html += '<div class="research-tabs">';
         for (const tab of RESEARCH_TABS) {
@@ -1427,17 +1447,28 @@ export class UI {
                 const tech = RESEARCH[key];
                 const completed = research.completed.has(key);
                 const available = !completed && tech.requires.every(r => research.completed.has(r));
-                const canAfford = available && research.studyPoints >= tech.cost;
+                const isActive = research.activeResearch === key;
+                const prog = research.getProgress(key);
                 let cls = 'research-node';
                 if (completed) cls += ' completed';
-                else if (canAfford) cls += ' affordable';
+                else if (isActive) cls += ' affordable';
                 else if (available) cls += ' available';
                 else cls += ' locked';
                 const sameTabReqs = tech.requires.filter(r => RESEARCH[r]?.tab === activeTab);
                 html += `<div class="${cls}" data-key="${key}" data-requires="${sameTabReqs.join(',')}">`;
                 html += `<div class="research-node-name">${tech.name}</div>`;
                 html += `<div class="research-node-desc">${tech.description}</div>`;
-                html += `<div class="research-node-cost">${completed ? 'Researched' : `${tech.cost} pts`}</div>`;
+                if (completed) {
+                    html += `<div class="research-node-cost">Researched</div>`;
+                } else if (isActive) {
+                    const pct = Math.min(100, Math.floor((prog / tech.cost) * 100));
+                    html += `<div class="research-node-cost">${Math.floor(prog)}/${tech.cost} pts (${pct}%)</div>`;
+                    html += `<div style="background:#333;border-radius:3px;height:4px;margin:4px 0;"><div style="background:#aa88ff;height:100%;border-radius:3px;width:${pct}%;"></div></div>`;
+                } else if (prog > 0) {
+                    html += `<div class="research-node-cost">${Math.floor(prog)}/${tech.cost} pts (paused)</div>`;
+                } else {
+                    html += `<div class="research-node-cost">${tech.cost} pts</div>`;
+                }
                 const crossTabReqs = tech.requires.filter(r => RESEARCH[r]?.tab !== activeTab);
                 if (crossTabReqs.length > 0) {
                     html += '<div class="research-cross-tab-row">';
@@ -1451,8 +1482,10 @@ export class UI {
                     }
                     html += '</div>';
                 }
-                if (canAfford) {
-                    html += `<button class="research-node-btn" onclick="window.game.startResearch('${key}')">Research</button>`;
+                if (available && !isActive) {
+                    html += `<button class="research-node-btn" onclick="window.game.selectResearch('${key}')">Select</button>`;
+                } else if (isActive) {
+                    html += `<button class="research-node-btn" onclick="window.game.cancelResearch()" style="background:#663333;">Cancel</button>`;
                 }
                 html += `</div>`;
             }

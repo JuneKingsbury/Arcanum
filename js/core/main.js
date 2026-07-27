@@ -686,12 +686,17 @@ class Game {
         }
     }
 
-    startResearch(techKey) {
-        if (this.research.purchase(techKey)) {
+    selectResearch(techKey) {
+        if (this.research.selectResearch(techKey)) {
             const name = techKey.replace(/_/g, ' ');
-            this.notifications.push({ text: `Unlocked: ${name}!`, tick: this.tick, type: 'success' });
-            this.eventLog.add(this, `Research unlocked: ${name}`, 'success', null);
-            this.story.checkMilestone(`research_${techKey}`, this);
+            this.notifications.push({ text: `Now researching: ${name}`, tick: this.tick, type: 'info' });
+        }
+    }
+
+    cancelResearch() {
+        if (this.research.activeResearch) {
+            this.research.deselectResearch();
+            this.notifications.push({ text: 'Research paused', tick: this.tick, type: 'info' });
         }
     }
 
@@ -1052,10 +1057,11 @@ class Game {
     }
 
     cheatGrantResearch() {
-        this.research.studyPoints = 999;
         for (const key of Object.keys(RESEARCH)) {
             this.research.completed.add(key);
         }
+        this.research.activeResearch = null;
+        this.research.progress = {};
         this.notifications.push({ text: '[DEBUG] All research completed', tick: this.tick, type: 'success' });
     }
 
