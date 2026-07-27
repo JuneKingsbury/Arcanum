@@ -9,7 +9,7 @@ import { TaskQueue } from './tasks.js';
 import { ResourceManager } from '../systems/resources.js';
 import { detectRooms } from '../world/rooms.js';
 import { updateFarming } from '../systems/farming.js';
-import { queueCraftingOrder, updateAutoCook } from '../systems/crafting.js';
+import { queueCraftingOrder, updateAutoCook, updateAutoCraft } from '../systems/crafting.js';
 import { Weather } from '../world/weather.js';
 import { updateWildlife, designateHunt, createAnimal } from '../entities/wildlife.js';
 import { CombatSystem } from '../entities/combat.js';
@@ -54,6 +54,7 @@ class Game {
             showFps: false,
             autoSaveInterval: 60,
             activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
+            craftTargets: {},
         };
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
@@ -122,6 +123,25 @@ class Game {
     addColonist(colonist) {
         this.colonists.push(colonist);
         this._colonistById.set(colonist.id, colonist);
+        if (!colonist.golem && !colonist.assignedBed) this._autoAssignBedFor(colonist);
+    }
+
+    _autoAssignBedFor(colonist) {
+        if (!this.mapIndex) return;
+        const bedKeys = this.mapIndex.getStructurePositions('bed');
+        if (bedKeys.size === 0) return;
+        const occupied = new Set();
+        for (const c of this.colonists) {
+            if (c.hp > 0 && c.assignedBed) occupied.add(`${c.assignedBed.x},${c.assignedBed.y}`);
+        }
+        let bestDist = Infinity, bestBed = null;
+        for (const k of bedKeys) {
+            const bx = k & 0xFFFF, by = k >> 16;
+            if (occupied.has(`${bx},${by}`)) continue;
+            const d = Math.abs(colonist.x - bx) + Math.abs(colonist.y - by);
+            if (d < bestDist) { bestDist = d; bestBed = { x: bx, y: by }; }
+        }
+        if (bestBed) colonist.assignedBed = bestBed;
     }
 
     rebuildColonistIndex() {
@@ -266,6 +286,7 @@ class Game {
             this.power.update(this);
             updateTamedAnimals(this);
             updateAutoCook(this);
+            updateAutoCraft(this);
             updateAutoRepair(this);
             for (const c of this.colonists) {
                 c.pedestalWorkBonus = 0;
@@ -560,6 +581,10 @@ class Game {
         designateHunt(this, animalId);
     }
 
+    setAutoCookTarget(value) {
+        this.settings.autoCookTarget = Math.max(0, Math.min(200, value || 0));
+    }
+
     craft(recipeKey) {
         if (queueCraftingOrder(this, recipeKey)) {
             this.notifications.push({ text: `Queued: ${recipeKey.replace(/_/g, ' ')}`, tick: this.tick, type: 'success' });
@@ -575,6 +600,22 @@ class Game {
         if (queued > 0) {
             this.notifications.push({ text: `Queued ${queued}x: ${recipeKey.replace(/_/g, ' ')}`, tick: this.tick, type: 'success' });
         }
+    }
+
+    toggleCraftRepeat(recipeKey) {
+        if (!this.settings.craftTargets[recipeKey]) {
+            this.settings.craftTargets[recipeKey] = { repeat: false, target: 0 };
+        }
+        this.settings.craftTargets[recipeKey].repeat = !this.settings.craftTargets[recipeKey].repeat;
+        const state = this.settings.craftTargets[recipeKey].repeat ? 'ON' : 'OFF';
+        this.notifications.push({ text: `Auto-repeat ${recipeKey.replace(/_/g, ' ')}: ${state}`, tick: this.tick, type: 'info' });
+    }
+
+    setCraftTarget(recipeKey, value) {
+        if (!this.settings.craftTargets[recipeKey]) {
+            this.settings.craftTargets[recipeKey] = { repeat: false, target: 0 };
+        }
+        this.settings.craftTargets[recipeKey].target = Math.max(0, parseInt(value) || 0);
     }
 
     resolveEvent(choice) {
@@ -1429,7 +1470,6 @@ function initPanelOverlay() {
         if (ui.craftPanelVisible) ui.toggleCraftPanel();
         if (ui.researchPanelVisible) ui.toggleResearchPanel();
         if (ui.inventoryVisible) ui.toggleInventoryPanel();
-        if (ui.tamingPanelVisible) ui.toggleTamingPanel();
         if (ui.settingsPanelVisible) ui.toggleSettingsPanel();
         if (ui.storyPanelVisible) ui.toggleStoryPanel();
     });

@@ -1,4 +1,11 @@
 export const CHANGELOG = [
+    { date: '2026-07-27', message: 'Critical colonist alerts: proactive warnings when colonists are near starvation, mental break, or freezing' },
+    { date: '2026-07-27', message: 'Auto-craft system: toggle repeat on any recipe or set a stock target to maintain automatically' },
+    { date: '2026-07-27', message: 'Expedition strength preview: party power rating (Easy/Fair/Tough/Dangerous/Suicidal) shown during setup' },
+    { date: '2026-07-27', message: 'Auto-assign beds: newly built beds and arriving colonists automatically pair up' },
+    { date: '2026-07-27', message: 'Auto-cook control fixed for mobile: replaced slider with +/- buttons and number input' },
+    { date: '2026-07-27', message: 'Equipment effects summary shown below gear slots in colonist info panel' },
+    { date: '2026-07-27', message: 'Removed Tame panel — taming info is in the glossary, animals are in inventory' },
     { date: '2026-07-27', message: 'Helmet slot: new headgear equipment slot with 4 helmets (Leather Cap, Iron Helmet, Runic Helm, Void Crown)' },
     { date: '2026-07-27', message: 'Paper-doll equipment grid: colonist info shows gear in a person-shaped 2x3 layout — click slots to equip' },
     { date: '2026-07-27', message: 'Equipment expansion: 7 new weapons, 5 new armors across all progression tiers' },

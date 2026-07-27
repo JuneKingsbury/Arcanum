@@ -5,6 +5,7 @@ import { getAvailableRecipes } from '../systems/crafting.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
+import { estimatePartyStrength } from '../systems/exploration.js';
 
 export class UI {
     constructor(game) {
@@ -15,7 +16,6 @@ export class UI {
         this.inventoryVisible = false;
         this._invTab = 'resources';
         this._researchTab = 'foundations';
-        this.tamingPanelVisible = false;
         this.settingsPanelVisible = false;
         this.arcanePanelVisible = false;
         this._arcaneTab = 'defense';
@@ -62,7 +62,6 @@ export class UI {
         this.elements.researchPanel = document.getElementById('research-panel');
         this.elements.eventLog = document.getElementById('event-log');
         this.elements.inventoryPanel = document.getElementById('inventory-panel');
-        this.elements.tamingPanel = document.getElementById('taming-panel');
         this.elements.settingsPanel = document.getElementById('settings-panel');
         this.elements.arcanePanel = document.getElementById('arcane-panel');
         this.elements.storyPanel = document.getElementById('story-panel');
@@ -157,7 +156,6 @@ export class UI {
                     case 'priority': this.togglePriorityPanel(); break;
                     case 'craft': this.toggleCraftPanel(); break;
                     case 'research': this.toggleResearchPanel(); break;
-                    case 'tame': this.toggleTamingPanel(); break;
                     case 'inventory': this.toggleInventoryPanel(); break;
                     case 'settings': this.toggleSettingsPanel(); break;
                     case 'arcane': this.toggleArcanePanel(); break;
@@ -210,7 +208,6 @@ export class UI {
                 case 'craft': this.toggleCraftPanel(); break;
                 case 'research': this.toggleResearchPanel(); break;
                 case 'inventory': this.toggleInventoryPanel(); break;
-                case 'taming': this.toggleTamingPanel(); break;
                 case 'settings': this.toggleSettingsPanel(); break;
                 case 'arcane': this.toggleArcanePanel(); break;
                 case 'story': this.toggleStoryPanel(); break;
@@ -251,7 +248,6 @@ export class UI {
         this.updateColonistHud();
         this.updateEventLog();
         if (this.inventoryVisible) this.updateInventoryPanel();
-        if (this.tamingPanelVisible) this.updateTamingPanel();
         if (this.arcanePanelVisible) this.updateArcanePanel();
         if (this.storyPanelVisible) this.updateStoryPanel();
         if (this._viewingRiftGate) this._refreshRiftGateInfo();
@@ -390,7 +386,6 @@ export class UI {
             const researchNeedsAttention = !this.game.research.activeResearch && this.game.research.hasAvailableResearch();
             const researchStyle = researchNeedsAttention ? ' style="color:#ffcc44"' : '';
             html += `<span class="mode-opt" data-mode-action="research"${researchStyle}>[R]Research${researchNeedsAttention ? ' •' : ''}</span>`;
-            html += `<span class="mode-opt" data-mode-action="tame">[T]Tame</span>`;
             html += `<span class="mode-opt" data-mode-action="inventory">[I]Inventory</span>`;
             html += `<span class="mode-opt" data-mode-action="arcane">[V]Portal</span>`;
             const storyNew = this.game.story.hasUnviewed() ? ' style="color:#ffcc44"' : '';
@@ -1267,7 +1262,7 @@ export class UI {
     _updateOverlay() {
         const anyOpen = this.priorityPanelVisible || this.craftPanelVisible ||
             this.researchPanelVisible || this.inventoryVisible ||
-            this.tamingPanelVisible || this.settingsPanelVisible ||
+            this.settingsPanelVisible ||
             this.arcanePanelVisible || this.storyPanelVisible;
         const overlay = document.getElementById('panel-overlay');
         if (overlay) overlay.classList.toggle('visible', anyOpen);
@@ -1289,10 +1284,6 @@ export class UI {
         if (this.inventoryVisible) {
             this.inventoryVisible = false;
             this.elements.inventoryPanel.style.display = 'none';
-        }
-        if (this.tamingPanelVisible) {
-            this.tamingPanelVisible = false;
-            this.elements.tamingPanel.style.display = 'none';
         }
         if (this.settingsPanelVisible) {
             this.settingsPanelVisible = false;
@@ -1387,9 +1378,13 @@ export class UI {
                 return `${k}:${v}`;
             }).join('+');
             const cls = canCraft ? 'craft-available' : 'craft-unavailable';
+            const ct = this.game.settings.craftTargets[key] || {};
+            const repeatActive = ct.repeat ? ' style="background:#336633;border-color:#4a4"' : '';
             html += `<div class="craft-row ${cls}">`;
             html += `<button ${canCraft ? '' : 'disabled'} onclick="window.game.craft('${key}')">${key.replace(/_/g, ' ')}</button>`;
             html += `<button ${canCraft ? '' : 'disabled'} onclick="window.game.craftMultiple('${key}',5)" class="craft-multi">x5</button>`;
+            html += `<button onclick="window.game.toggleCraftRepeat('${key}')" class="craft-multi" title="Auto-repeat"${repeatActive}>&#x27F3;</button>`;
+            html += `<input type="number" min="0" max="999" value="${ct.target || 0}" onchange="window.game.setCraftTarget('${key}',this.value)" title="Maintain stock target (0=off)" style="width:35px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;padding:1px 2px;text-align:center;font-size:0.85em;">`;
             html += `<span>${inputStr} → ${outputStr}</span>`;
             html += `</div>`;
         }
@@ -1399,11 +1394,17 @@ export class UI {
         if (this._craftTab === 'Food & Potions') {
             const target = this.game.settings.autoCookTarget || 0;
             html += '<div style="margin-top:12px; padding-top:8px; border-top:1px solid #444;">';
-            html += `<div style="display:flex; align-items:center; gap:8px;">`;
-            html += `<label style="color:#ccc; white-space:nowrap;">Auto-cook target: <span id="autocook-val" style="color:#88cc88; font-weight:bold;">${target || 'Off'}</span></label>`;
-            html += `<input type="range" id="set-autocook" min="0" max="100" step="10" value="${target}" style="flex:1" oninput="window.game.settings.autoCookTarget=parseInt(this.value);document.getElementById('autocook-val').textContent=this.value||'Off'">`;
+            html += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">`;
+            html += `<label style="color:#ccc; white-space:nowrap;">Auto-cook target:</label>`;
+            html += `<div style="display:flex; align-items:center; gap:2px;">`;
+            html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)-10)" style="padding:2px 6px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;">-10</button>`;
+            html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)-1)" style="padding:2px 6px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;">-1</button>`;
+            html += `<input type="number" id="set-autocook" min="0" max="200" value="${target}" onchange="window.game.setAutoCookTarget(parseInt(this.value)||0)" style="width:45px;text-align:center;background:#1a1a2e;color:#88cc88;border:1px solid #555;border-radius:3px;padding:2px;font-weight:bold;">`;
+            html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)+1)" style="padding:2px 6px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;">+1</button>`;
+            html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)+10)" style="padding:2px 6px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;">+10</button>`;
             html += `</div>`;
-            html += `<div style="color:#777; font-size:0.83em; margin-top:4px;">Automatically queues cooking when food drops below target.</div>`;
+            html += `</div>`;
+            html += `<div style="color:#777; font-size:0.83em; margin-top:4px;">Automatically queues cooking when food drops below target. Set 0 to disable.</div>`;
             html += '</div>';
         }
         if (html !== this._lastCraftHtml) {
@@ -1955,61 +1956,6 @@ export class UI {
         return html;
     }
 
-    toggleTamingPanel() {
-        const opening = !this.tamingPanelVisible;
-        this._closeAllPanels();
-        this.tamingPanelVisible = opening;
-        this._panelPause(opening);
-        this.elements.tamingPanel.style.display = opening ? 'block' : 'none';
-        if (opening) this.updateTamingPanel();
-        this._updateOverlay();
-    }
-
-    updateTamingPanel() {
-        let html = '<div class="panel-close" data-panel-close="taming">&times;</div><h3>Beast Binding</h3>';
-        if (!this.game.research.isResearched('beast_binding')) {
-            html += '<div class="info-row" style="color:#888">Requires research: Beast Binding</div>';
-            if (html !== this._lastTamingHtml) {
-                this._lastTamingHtml = html;
-                this.elements.tamingPanel.innerHTML = html;
-            }
-            return;
-        }
-
-        html += '<div class="info-row" style="color:#aaa;margin-bottom:6px;">Click a tameable animal on the map to tame it. Requires a Beast Circle and food.</div>';
-
-        html += '<div class="info-row" style="margin-top:6px;color:#aaa;"><b>Tameable species:</b></div>';
-        for (const [type, def] of Object.entries(TAMED_ANIMALS)) {
-            html += `<div class="info-row" style="color:${ANIMALS[type]?.color || '#ccc'}">`;
-            html += `${type} — Cost: ${def.foodToTame} food`;
-            if (def.produces) html += ` | Produces: ${def.produces} (every ${def.produceRate} ticks)`;
-            if (def.packAnimal) html += ` | Pack animal (+${Math.round(def.expeditionSpeedBonus * 100)}% expedition speed)`;
-            if (def.happinessAura) html += ` | Happiness aura (radius ${def.auraRadius})`;
-            html += `</div>`;
-        }
-
-        const tamed = this.game.tamedAnimals;
-        if (tamed.length > 0) {
-            html += '<div class="info-row" style="margin-top:8px;color:#88cc88"><b>Your Animals:</b></div>';
-            for (const a of tamed) {
-                const def = TAMED_ANIMALS[a.type];
-                let status = `HP:${a.hp}/${a.maxHp}`;
-                if (a.onExpedition) status += ' | <span style="color:#33ccff">ON EXPEDITION</span>';
-                else if (def?.produces) status += ` | Next ${def.produces}: ${a.produceCooldown} ticks`;
-                else if (def?.packAnimal) status += ' | <span style="color:#bbaa44">Pack animal</span>';
-                else if (def?.happinessAura) status += ' | <span style="color:#ff88cc">Happiness aura</span>';
-                html += `<div class="info-row" style="color:${def?.color || '#ccc'}">${a.type} — ${status}</div>`;
-            }
-        } else {
-            html += '<div class="info-row" style="margin-top:8px;color:#666">No tamed animals yet.</div>';
-        }
-
-        if (html !== this._lastTamingHtml) {
-            this._lastTamingHtml = html;
-            this.elements.tamingPanel.innerHTML = html;
-        }
-    }
-
     toggleSettingsPanel() {
         const opening = !this.settingsPanelVisible;
         this._closeAllPanels();
@@ -2073,13 +2019,12 @@ export class UI {
         html += this._settingsCheck('set-pause-event', s.autoPauseEvent, 'window.game.settings.autoPauseEvent=this.checked', 'Auto-pause on choice events (wanderers, caravans)');
         html += this._settingsCheck('set-pause-death', s.pauseOnDeath, 'window.game.settings.pauseOnDeath=this.checked', 'Auto-pause on colonist death');
         html += this._settingsCheck('set-peaceful', CONFIG.PEACEFUL_MODE, 'window.game.togglePeaceful()', 'Peaceful mode (no raids/hostile animals)');
-        html += `<div class="settings-row">`;
-        html += `<label for="set-autocook">Auto-cook meal target:</label>`;
-        html += `<select id="set-autocook" onchange="window.game.settings.autoCookTarget=parseInt(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
-        for (const val of [0, 5, 10, 20, 50]) {
-            html += `<option value="${val}" ${s.autoCookTarget === val ? 'selected' : ''}>${val === 0 ? 'Off' : val + ' meals'}</option>`;
-        }
-        html += `</select></div>`;
+        html += `<div class="settings-row" style="gap:4px;">`;
+        html += `<label>Auto-cook target:</label>`;
+        html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)-10)" style="padding:1px 5px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;">-10</button>`;
+        html += `<input type="number" min="0" max="200" value="${s.autoCookTarget||0}" onchange="window.game.setAutoCookTarget(parseInt(this.value)||0)" style="width:42px;text-align:center;background:#1a1a2e;color:#88cc88;border:1px solid #555;border-radius:3px;padding:1px;">`;
+        html += `<button onclick="window.game.setAutoCookTarget((window.game.settings.autoCookTarget||0)+10)" style="padding:1px 5px;background:#2a2a3e;color:#ccc;border:1px solid #555;border-radius:3px;">+10</button>`;
+        html += `</div>`;
         html += `<div class="settings-row">`;
         html += `<label for="set-autosave">Auto-save interval:</label>`;
         html += `<select id="set-autosave" onchange="window.game.settings.autoSaveInterval=parseInt(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
@@ -2422,6 +2367,7 @@ export class UI {
         html += `<span id="exp-diff-label" style="min-width:70px;color:#ffaa33;font-size:0.9em;"></span>`;
         html += `</div>`;
         html += `<div id="exp-diff-desc" style="color:#888;font-size:0.8em;padding:2px 4px;"></div>`;
+        html += `<div id="exp-strength-preview" style="margin-top:8px;padding:6px 8px;background:#1a1a2e;border-radius:4px;font-size:0.9em;color:#666;">Select colonists to see party strength</div>`;
         html += this._buildRealmDropsHtml(realmKey);
         html += `<div class="info-actions" style="margin-top:8px;">`;
         html += `<button onclick="window.game.launchExpeditionFromPanel('${realmKey}')" style="background:#1a4466;color:#88ddff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:1em;">Launch Expedition</button>`;
@@ -2487,12 +2433,16 @@ export class UI {
 
     _setupExpCheckboxLimits() {
         const panel = this.elements.arcanePanel;
+        const realmKey = this._arcaneExpSetup;
+        const updateStrength = () => this._updateStrengthPreview(realmKey);
+
         const enforce = (cls, max) => {
             const boxes = panel.querySelectorAll('.' + cls);
             if (!boxes.length) return;
             const handler = () => {
                 const checked = panel.querySelectorAll('.' + cls + ':checked').length;
                 boxes.forEach(el => { if (!el.checked) el.disabled = checked >= max; });
+                updateStrength();
             };
             boxes.forEach(cb => { cb.addEventListener('change', handler); });
         };
@@ -2515,10 +2465,26 @@ export class UI {
                 } else {
                     desc.textContent = `+${lootPct}% loot, +${rarePct}% rare find chance. Enemies & traps hit harder.`;
                 }
+                updateStrength();
             };
             slider.addEventListener('input', updateLabel);
             updateLabel();
         }
+    }
+
+    _updateStrengthPreview(realmKey) {
+        const el = document.getElementById('exp-strength-preview');
+        if (!el) return;
+        const ids = [...document.querySelectorAll('.exp-check:checked')].map(cb => parseInt(cb.value));
+        const diff = this._expDifficulty || 1;
+        if (ids.length === 0) {
+            el.innerHTML = '<span style="color:#666;">Select colonists to see party strength</span>';
+            return;
+        }
+        const result = estimatePartyStrength(this.game, ids, realmKey, diff);
+        if (!result) { el.innerHTML = ''; return; }
+        el.innerHTML = `<div style="color:${result.color};font-weight:bold;">${result.rating}</div>`
+            + `<div style="color:#aaa;font-size:0.85em;margin-top:2px;">Dmg/round: ${result.totalDmg} | HP: ${result.totalHp} | DR: ${result.avgDR}%</div>`;
     }
 
     _renderExpeditionVis() {

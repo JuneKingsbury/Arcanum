@@ -748,3 +748,52 @@ function randInt(min, max) {
 function pickRandom(arr) {
     return arr[randInt(0, arr.length - 1)];
 }
+
+export function estimatePartyStrength(game, colonistIds, realmKey, difficulty) {
+    const realm = REALMS[realmKey];
+    if (!realm) return null;
+    const diff = EXPEDITION_DIFFICULTY[difficulty] || EXPEDITION_DIFFICULTY[1];
+
+    let totalDmg = 0, totalHp = 0, drProduct = 1, size = 0;
+
+    for (const id of colonistIds) {
+        const c = game.getColonist(id);
+        if (!c || c.hp <= 0) continue;
+        size++;
+        let dmg = c.weapon ? c.weapon.damage : EXPLORATION_CONFIG.baseFistDamage;
+        const items = [c.weapon, c.armor, c.helmet, c.artifact].filter(Boolean);
+        for (const item of items) {
+            if (item !== c.weapon && item.damage) dmg += item.damage;
+        }
+        totalDmg += dmg;
+        totalHp += c.hp;
+        let dr = 1;
+        for (const item of items) {
+            if (item.damageReduction) dr *= (1 - item.damageReduction);
+            if (item.expedition && item.expedition.damageReduction) dr *= (1 - item.expedition.damageReduction);
+        }
+        drProduct *= dr;
+    }
+
+    if (size === 0) return null;
+    const avgDR = 1 - Math.pow(drProduct, 1 / size);
+
+    const enemyCount = Math.round(((realm.enemies.count[0] + realm.enemies.count[1]) / 2) * diff.enemyCountMult);
+    const enemyHp = ((realm.enemies.hp[0] + realm.enemies.hp[1]) / 2) * diff.enemyHpMult;
+    const enemyDmg = ((realm.enemies.damage[0] + realm.enemies.damage[1]) / 2) * diff.enemyDmgMult;
+    const combatEncounters = Math.ceil((realm.encounters + (diff.extraEncounters || 0)) * 0.6);
+
+    const totalEnemyHp = enemyHp * enemyCount * combatEncounters;
+    const roundsToKill = totalEnemyHp / Math.max(1, totalDmg + 1.5);
+    const totalDmgToParty = roundsToKill * enemyDmg * enemyCount * (1 - avgDR) * 0.85;
+    const ratio = totalHp / Math.max(1, totalDmgToParty);
+
+    let rating, color;
+    if (ratio > 3.0) { rating = 'Easy'; color = '#44cc44'; }
+    else if (ratio > 1.5) { rating = 'Fair'; color = '#88cc44'; }
+    else if (ratio > 0.8) { rating = 'Tough'; color = '#cccc44'; }
+    else if (ratio > 0.4) { rating = 'Dangerous'; color = '#ff8844'; }
+    else { rating = 'Suicidal'; color = '#ff4444'; }
+
+    return { rating, color, totalDmg, totalHp, avgDR: Math.round(avgDR * 100), size };
+}

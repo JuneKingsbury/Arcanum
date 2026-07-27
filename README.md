@@ -17,7 +17,7 @@ When you start a new game, you'll have a handful of colonists and basic resource
 4. **Set up cooking** — Build a Cauldron and cook raw food into meals for mood bonuses.
 5. **Research** — Build an Arcanum and assign colonists to study. Research unlocks the rest of the game.
 
-Use the in-game Glossary (accessible from Settings) for quick reference. The Inventory panel (I) is tabbed into Resources, Equipment, Consumables, and Animals for easy browsing.
+Use the in-game Glossary (accessible from Settings) for quick reference. The Inventory panel (I) is tabbed into Resources, Equipment, Consumables, and Animals for easy browsing. Beds auto-assign to new colonists and newly built beds find the nearest homeless colonist automatically.
 
 ---
 
@@ -360,7 +360,7 @@ All food rots over time. Faster-rotting items (milk, berries) decay first. Comba
 Use the lock icon in the Inventory to reserve specific foodstuffs from cooking (for alchemy recipes, etc.).
 
 ### Cooking
-Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a mood bonus; raw food gives a penalty. Set an Auto-Cook threshold to keep food levels topped up automatically. Use the x5 button for bulk crafting.
+Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a mood bonus; raw food gives a penalty. Set an Auto-Cook target (use the +/- buttons) to keep food levels topped up automatically. Use x5 for bulk crafting, or toggle the ⟳ repeat button on any recipe to auto-queue it continuously. Set a stock target number to maintain a specific quantity — crafting stops when you have enough.
 
 ---
 
@@ -435,7 +435,7 @@ Golems cannot be drafted, cannot equip items or learn spells, and have fixed ski
 Build a Rift Gate after researching Planar Rift to send expeditions to other dimensions. This is one of the richest parts of the game — you can watch your colonists' journey unfold in real-time through the expedition event log.
 
 ### Sending an Expedition
-Click the Rift Gate, choose a dimension, select colonists (up to 5) and optional pack animals (up to 2), set a difficulty level, then launch. The party walks to the gate and enters the dimension. While exploring, colonists are removed from your workforce.
+Click the Rift Gate, choose a dimension, select colonists (up to 5) and optional pack animals (up to 2), set a difficulty level, then launch. A party strength indicator (Easy/Fair/Tough/Dangerous/Suicidal) updates in real-time as you select members and adjust difficulty, helping you gauge survivability. The party walks to the gate and enters the dimension. While exploring, colonists are removed from your workforce.
 
 ### Difficulty Levels
 Before launching, choose a difficulty from 1 (Normal) to 5 (Suicidal). Higher difficulty means tougher enemies, more encounters, and deadlier traps — but significantly more loot and dramatically higher chances for rare drops:
@@ -511,7 +511,7 @@ Some items can only be obtained through trade:
 
 ## Research Tree
 
-Build an Arcanum and assign colonists to study. They generate study points over time. Spend points to unlock research.
+Build an Arcanum and assign colonists to study. Select one research topic at a time from the Research panel — all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
 
 | Research | Requires | Unlocks |
 |---|---|---|

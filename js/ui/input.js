@@ -122,14 +122,13 @@ export class InputHandler {
                 const ui = this.game.ui;
                 const hadPanel = ui.priorityPanelVisible || ui.craftPanelVisible ||
                     ui.researchPanelVisible || ui.inventoryVisible ||
-                    ui.tamingPanelVisible || ui.settingsPanelVisible ||
+                    ui.settingsPanelVisible ||
                     ui.arcanePanelVisible || ui.storyPanelVisible;
                 if (hadPanel) {
                     if (ui.priorityPanelVisible) ui.togglePriorityPanel();
                     if (ui.craftPanelVisible) ui.toggleCraftPanel();
                     if (ui.researchPanelVisible) ui.toggleResearchPanel();
                     if (ui.inventoryVisible) ui.toggleInventoryPanel();
-                    if (ui.tamingPanelVisible) ui.toggleTamingPanel();
                     if (ui.settingsPanelVisible) ui.toggleSettingsPanel();
                     if (ui.arcanePanelVisible) ui.toggleArcanePanel();
                     if (ui.storyPanelVisible) ui.toggleStoryPanel();
@@ -143,7 +142,6 @@ export class InputHandler {
             case 'r':
                 if (this.mode === 'normal') this.game.ui.toggleResearchPanel();
                 break;
-            case 't': this.game.ui.toggleTamingPanel(); break;
             case 'i': this.game.ui.toggleInventoryPanel(); break;
             case 'v': this.game.ui.toggleArcanePanel(); break;
             case 'j': this.game.ui.toggleStoryPanel(); break;

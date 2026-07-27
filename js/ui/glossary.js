@@ -11,6 +11,8 @@ export const GLOSSARY = [
             ['Skills', 'Building, Farming, Crafting, Cooking, Hauling, and six Magic schools (Evocation, Enchantment, Abjuration, Conjuration, Transmutation, Divination). Higher skill = faster work completion. Magic skills increase by studying tomes and casting spells.'],
             ['Equipment Slots', 'Weapon, Armor, Helmet, Tool, and Artifact. Displayed in a person-shaped grid. Use "Auto-equip Best" to quickly gear up a colonist with the best available items. Salvage unwanted equipment (♻) to recover 50% of crafting materials.'],
             ['Helmet Slot', 'Separate from body armor. Helmet DR stacks multiplicatively with armor DR.\n\n  Leather Cap     5% DR   (2 leather)\n  Iron Helmet    10% DR   (3 iron)\n  Runic Helm     14% DR   (2 runite, 1 iron, needs Runeforging)\n  Void Crown     18% DR + 10% spell dmg (4 void essence, 1 runite, needs Void Forging)'],
+            ['Critical Alerts', 'Automatic warnings when colonists are near starvation (hunger < 30), mental break (mood 20-30), or freezing. Each alert fires once per episode — recovers at 40 before re-triggering.'],
+            ['Auto-Assign Beds', 'Newly built beds auto-assign to the nearest homeless colonist. New colonists also claim the nearest free bed on arrival.'],
             ['Active Effects', 'Temporary buffs from potions (speed, healing) and magic spells (heal, haste, defense). Shown in colonist info with remaining duration. Colonists with active spell buffs pulse cyan on the map.'],
         ]
     },
@@ -76,7 +78,8 @@ export const GLOSSARY = [
             ['Armor', 'Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%). Leather requires hides from hunting; iron armor needs smelted iron ore.'],
             ['Potions', 'Health Potion (3 berries + 2 wheat), Speed Potion (2 corn + 2 potatoes + 1 berries). Auto-consumed when trigger conditions are met.'],
             ['Cooking', 'Converts raw crops/meat into food at the cauldron. Cooked meals give mood bonus. Raw food gives mood penalty.'],
-            ['Auto-Cook', 'Set a food target in the Food & Potions craft tab. Automatically queues cooking when food drops below target.'],
+            ['Auto-Cook', 'Set a food target in the Food & Potions craft tab using +/- buttons. Automatically queues cooking when food drops below target.'],
+            ['Auto-Craft', 'Toggle the ⟳ repeat button on any recipe to keep it auto-queued. Or set a stock target number — crafting stops when you have enough of the output.'],
         ]
     },
     {
@@ -162,6 +165,7 @@ export const GLOSSARY = [
             ['Difficulty Levels', 'Choose 1-5 before launching:\n\n  1 Normal     Standard. No bonuses.\n  2 Dangerous  +50% loot, +50% rare. Enemies +30% HP/+20% dmg.\n  3 Perilous   +100% loot, +150% rare. Enemies +70% HP/+50% dmg.\n  4 Deadly     +200% loot, +300% rare. Enemies +120% HP/+80% dmg.\n  5 Suicidal   +300% loot, +500% rare. Enemies +200% HP/+120% dmg.'],
             ['Realms', 'Four chains of three realms each, unlocking deeper travel:\n\n  Crystal:  Caves (1) → Mines (2) → Depths (3)\n  Verdant:  Depths (1) → Fungal Hollows (2) → Primeval Canopy (3)\n  Arcane:   Library (2) → University (3) → Laboratory (4)  [Arcane Studies]\n  Shadow:   Realm (3) → Void Abyss (4) → Oblivion Rift (5) [Deep Delving]'],
             ['Equipment Readiness', 'Recommended minimum gear before tackling each difficulty tier:\n\n  Diff 1 (Crystal Caves, Verdant Depths)\n    Weapon: Stone Spear+ (8+ dmg)\n    Armor:  Optional\n    Party:  2-3 colonists\n\n  Diff 2 (Crystal Mines, Fungal Hollows, Arcane Library)\n    Weapon: Iron Sword+ (14+ dmg)\n    Armor:  Leather Vest (10% DR)\n    Party:  3-4 colonists\n\n  Diff 3 (Crystal Depths, Primeval Canopy, Ancient Univ., Shadow Realm)\n    Weapon: Enchanted Glaive+ (18+ dmg)\n    Armor:  Iron Chainmail (18% DR)\n    Helmet: Iron Helmet (10% DR)\n    Party:  4-5 colonists, healer recommended\n\n  Diff 4 (Abandoned Laboratory, Void Abyss)\n    Weapon: Runic Blade+ (22+ dmg)\n    Armor:  Runic Plate (24% DR)\n    Helmet: Runic Helm (14% DR)\n    Party:  5 colonists, healer + tank artifacts\n\n  Diff 5 (Oblivion Rift)\n    Weapon: Runic Greatsword / Void Blade (26-30 dmg)\n    Armor:  Void Armor (30% DR)\n    Helmet: Void Crown (18% DR)\n    Party:  5 colonists, healer, Ward of Sentinel, full buffs'],
+            ['Party Strength', 'Shown during expedition setup. Estimates party power vs. realm difficulty: Easy (green) / Fair (yellow-green) / Tough (orange) / Dangerous (red) / Suicidal (dark red). Based on party damage, HP, and armor vs. expected enemies.'],
             ['Encounters', 'Combat encounters resolve round-by-round in real-time. Colonists attack with equipped weapons; enemies strike back. Traps deal damage to random party members. Discoveries provide bonus loot.'],
             ['Loot on Defeat', 'Even if all party members are defeated, you keep any items found during exploration. You only lose the completion bonus for finishing the expedition.'],
         ]

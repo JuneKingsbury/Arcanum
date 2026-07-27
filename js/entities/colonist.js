@@ -148,6 +148,8 @@ export function updateColonist(colonist, game) {
     }
     colonist.mood = computeMood(colonist);
 
+    if (!colonist.golem) checkCriticalAlerts(colonist, game);
+
     if (colonist.hp <= 0) return;
 
     tryUsePotions(colonist, game);
@@ -277,6 +279,33 @@ function updateThoughts(colonist, game) {
     }
 }
 
+function checkCriticalAlerts(colonist, game) {
+    if (!colonist._alertFlags) colonist._alertFlags = {};
+    const flags = colonist._alertFlags;
+
+    if (colonist.needs.hunger < 30 && !flags.hunger) {
+        flags.hunger = true;
+        game.notifications.push({ text: `${colonist.name} is getting hungry!`, tick: game.tick, type: 'warning' });
+    } else if (colonist.needs.hunger >= 40) {
+        flags.hunger = false;
+    }
+
+    if (colonist.mood < 30 && colonist.mood > 20 && !flags.mood) {
+        flags.mood = true;
+        game.notifications.push({ text: `${colonist.name} is near breaking!`, tick: game.tick, type: 'warning' });
+    } else if (colonist.mood >= 40) {
+        flags.mood = false;
+    }
+
+    const freezing = colonist.thoughts.some(t => t.text === 'Freezing outside');
+    if (freezing && !flags.freezing) {
+        flags.freezing = true;
+        game.notifications.push({ text: `${colonist.name} is freezing!`, tick: game.tick, type: 'danger' });
+    } else if (!freezing) {
+        flags.freezing = false;
+    }
+}
+
 export function addThought(colonist, text, moodEffect, duration, tick) {
     const existing = colonist.thoughts.find(t => t.text === text);
     if (existing) {
@@ -333,6 +362,16 @@ function getWorkSpeed(colonist, game) {
     }
 
     return speed;
+}
+
+function autoAssignNewBed(game, x, y) {
+    let nearest = null, bestDist = Infinity;
+    for (const c of game.colonists) {
+        if (c.hp <= 0 || c.golem || c.assignedBed) continue;
+        const d = Math.abs(c.x - x) + Math.abs(c.y - y);
+        if (d < bestDist) { bestDist = d; nearest = c; }
+    }
+    if (nearest) nearest.assignedBed = { x, y };
 }
 
 export function getEquippedItems(colonist) {
@@ -858,6 +897,7 @@ function completeTask(colonist, task, game) {
             }
             tile.designation = null;
             if (game.mapIndex) game.mapIndex.addStructure(task.x, task.y, task.buildType);
+            if (task.buildType === 'bed') autoAssignNewBed(game, task.x, task.y);
             game.roomsDirty = true;
             if (game.waves && game.waves.active) game.waves.invalidatePathPreview();
             applyThought(colonist, 'built_something', game.tick);

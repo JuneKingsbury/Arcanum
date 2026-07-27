@@ -79,3 +79,35 @@ export function updateAutoCook(game) {
         queueCraftingOrder(game, 'cook_meal');
     }
 }
+
+export function updateAutoCraft(game) {
+    const targets = game.settings.craftTargets;
+    if (!targets) return;
+
+    for (const [recipeKey, config] of Object.entries(targets)) {
+        if (!config.repeat && !config.target) continue;
+        if (recipeKey === 'cook_meal' && game.settings.autoCookTarget > 0) continue;
+
+        const recipe = RECIPES[recipeKey];
+        if (!recipe) continue;
+        if (recipe.research && !game.research.isResearched(recipe.research)) continue;
+        if (!findAvailableStation(game, recipe.station)) continue;
+        if (!game.resources.has(recipe.input)) continue;
+
+        const pendingForRecipe = game.taskQueue.getAll().filter(t =>
+            t.recipe && Object.keys(t.recipe.output)[0] === Object.keys(recipe.output)[0]
+        ).length;
+
+        let shouldQueue = false;
+        if (config.target > 0) {
+            const outputKey = Object.keys(recipe.output)[0];
+            const current = game.resources.stockpile[outputKey] || 0;
+            const expected = current + pendingForRecipe * (recipe.output[outputKey] || 1);
+            shouldQueue = expected < config.target;
+        } else if (config.repeat) {
+            shouldQueue = pendingForRecipe === 0;
+        }
+
+        if (shouldQueue) queueCraftingOrder(game, recipeKey);
+    }
+}
