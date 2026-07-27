@@ -150,6 +150,7 @@ export class UI {
                     case 'build': this.game.input.setMode('build'); break;
                     case 'zone': this.game.input.setMode('zone'); break;
                     case 'gather': this.game.input.setMode('designate'); break;
+                    case 'deconstruct': this.game.input.toggleDeconstructMode(); break;
                     case 'priority': this.togglePriorityPanel(); break;
                     case 'craft': this.toggleCraftPanel(); break;
                     case 'research': this.toggleResearchPanel(); break;
@@ -342,7 +343,9 @@ export class UI {
                 html += `<span class="mode-opt${active}" data-build-opt="${opt}"${dimmed ? ' style="opacity:0.4"' : ''}>${keyLabel ? `[${keyLabel}]` : ''}<span style="color:${def.color}">${def.char}</span> ${opt.replace(/_/g,' ')}(${costStr})${lockStr}</span>`;
             });
             html += '</span>';
-            html += '<span class="mode-hint">[Tab]Cycle category | Click item to select | Left-click/drag to place | Right-click/drag to deconstruct</span>';
+            const deconActive = input.deconstructMode ? ' active' : '';
+            html += `<span class="mode-opt${deconActive}" data-mode-action="deconstruct" style="margin-left:8px;color:#ff6666">[X]Deconstruct</span>`;
+            html += '<span class="mode-hint">[Tab]Cycle category | Click item to select | Right-click/drag to deconstruct</span>';
         } else if (input.mode === 'zone') {
             html += '<span class="mode-opt mode-back" data-mode-action="back">[Esc]Back</span>';
             html += '<span class="mode-options">';

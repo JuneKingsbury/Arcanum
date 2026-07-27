@@ -1786,6 +1786,15 @@ body {
     .event-choices { flex-direction: column; }
     .event-choices button { width: 100%; }
 
+    .craft-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .craft-tab {
+        flex-shrink: 0;
+    }
+
     .craft-row { gap: 6px; font-size: 11px; }
     .col-list-detail { font-size: 10px; }
 

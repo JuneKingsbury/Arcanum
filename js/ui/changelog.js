@@ -1,4 +1,7 @@
 export const CHANGELOG = [
+    { date: '2026-07-27', message: 'Fixed unreachableFailers crash on game load — uses plain object instead of Set for JSON compatibility' },
+    { date: '2026-07-27', message: 'Deconstruct toggle button in build mode — works on mobile and for users without right-click (press X or click button)' },
+    { date: '2026-07-27', message: 'Mobile crafting tabs now scrollable horizontally' },
     { date: '2026-07-24', message: 'Expedition difficulty selector: 5 levels (Normal to Suicidal) with scaling enemies, traps, loot, and rare find chances' },
     { date: '2026-07-24', message: 'Expedition visualization: diagonal perspective for finish line, room dividers, and party positioning' },
     { date: '2026-07-24', message: 'Expedition visualization: pack animals form a separate line behind colonists, smoother finish line rendering' },

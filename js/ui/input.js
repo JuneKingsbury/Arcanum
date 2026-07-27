@@ -23,6 +23,7 @@ export class InputHandler {
         this.singlePlaceTypes = SINGLE_PLACE_TYPES;
         this.cropOptions = Object.keys(CROPS);
         this.designateMode = 'chop';
+        this.deconstructMode = false;
         this.spellTargeting = null;
 
         this.charWidth = 0;
@@ -161,6 +162,9 @@ export class InputHandler {
             case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
                 this.handleNumberKey(e.key === '0' ? 10 : parseInt(e.key));
                 break;
+            case 'x':
+                if (this.mode === 'build') this.toggleDeconstructMode();
+                break;
             case 'tab':
                 e.preventDefault();
                 if (this.mode === 'build') {
@@ -213,6 +217,7 @@ export class InputHandler {
 
     setMode(mode) {
         this.mode = mode;
+        this.deconstructMode = false;
         this.dragStart = null;
         this.dragEnd = null;
         this.dragging = false;
@@ -372,7 +377,7 @@ export class InputHandler {
 
         this.game.cursor = pos;
         if (this.mode === 'zone' || this.mode === 'designate' ||
-            (this.mode === 'build' && this.dragBuildTypes.has(this.buildType)) ||
+            (this.mode === 'build' && (this.deconstructMode || this.dragBuildTypes.has(this.buildType))) ||
             this.mode === 'normal') {
             this.dragStart = pos;
             this.dragEnd = pos;
@@ -448,7 +453,9 @@ export class InputHandler {
         if (this.dragging && this.dragStart) {
             const wasDrag = this._touchMoved && (this.dragStart.x !== pos.x || this.dragStart.y !== pos.y);
             if (wasDrag) {
-                if (this.mode === 'build' && this.dragBuildTypes.has(this.buildType)) {
+                if (this.mode === 'build' && this.deconstructMode) {
+                    this.deconstructArea(this.dragStart, pos);
+                } else if (this.mode === 'build' && this.dragBuildTypes.has(this.buildType)) {
                     this.buildArea(this.dragStart, pos);
                 } else if (this.mode === 'zone') {
                     designateFarmZone(this.game, this.dragStart.x, this.dragStart.y, pos.x, pos.y, this.cropType);
@@ -467,6 +474,11 @@ export class InputHandler {
         } else {
             this.handleLeftClick(pos);
         }
+    }
+
+    toggleDeconstructMode() {
+        this.deconstructMode = !this.deconstructMode;
+        this.game.ui.updateModeDisplay(this);
     }
 
     toggleTouchPanMode() {
@@ -526,6 +538,10 @@ export class InputHandler {
                 this.selectAt(pos);
                 break;
             case 'build':
+                if (this.deconstructMode) {
+                    cancelDesignation(this.game, pos.x, pos.y);
+                    break;
+                }
                 if (!this.buildType) break;
                 designateBuild(this.game, pos.x, pos.y, this.buildType);
                 if (this.singlePlaceTypes.has(this.buildType)) {
