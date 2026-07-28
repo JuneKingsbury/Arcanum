@@ -1,9 +1,10 @@
-import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
+import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
 import { moveEntity, computeMoveDuration } from '../systems/movement-lerp.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
+import { createSummon } from './summons.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 
 function applyQuality(item, colonist, ...statKeys) {
@@ -601,20 +602,12 @@ function applySpellEffect(colonist, spell, game) {
             break;
         }
         case 'summon': {
+            const summonDef = SUMMON_TYPES[spell.summonType];
+            if (!summonDef) break;
             if (!game.summons) game.summons = [];
-            game.summons.push({
-                x: colonist.x + (Math.random() > 0.5 ? 1 : -1),
-                y: colonist.y + (Math.random() > 0.5 ? 1 : -1),
-                ownerId: colonist.id,
-                hp: spell.summonHp,
-                maxHp: spell.summonHp,
-                damage: spell.summonDamage,
-                char: spell.summonChar || 'f',
-                color: spell.summonColor || '#9966ff',
-                expiresAt: game.tick + spell.summonDuration,
-                hostile: false,
-            });
-            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: spell.summonChar || 'f', color: spell.summonColor || '#9966ff', ttl: 3 });
+            const sx = colonist.x + (Math.random() > 0.5 ? 1 : -1);
+            const sy = colonist.y + (Math.random() > 0.5 ? 1 : -1);
+            game.summons.push(createSummon(spell.summonType, sx, sy, colonist.id, game));
             break;
         }
         case 'divination_modifier': {

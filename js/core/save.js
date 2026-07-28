@@ -2,6 +2,7 @@ import { CONFIG, SKILLS, MAGIC_SKILLS, MANA_CONFIG, COLONIST_CONFIG, EXPEDITION_
 import { syncColonistIdCounter } from '../entities/colonist.js';
 import { syncAnimalIdCounter } from '../entities/wildlife.js';
 import { syncTamedIdCounter } from '../entities/taming.js';
+import { syncSummonIdCounter } from '../entities/summons.js';
 
 const SAVE_KEY = 'colony_save';
 
@@ -21,6 +22,7 @@ export function saveGame(game) {
         wildlife: game.wildlife,
         raiders: game.raiders,
         tamedAnimals: game.tamedAnimals,
+        summons: game.summons || [],
 
         resources: {
             stockpile: game.resources.stockpile,
@@ -160,6 +162,7 @@ export function loadGame(game) {
     game.wildlife = data.wildlife;
     game.raiders = data.raiders;
     game.tamedAnimals = data.tamedAnimals || [];
+    game.summons = data.summons || [];
 
     game.resources.stockpile = data.resources.stockpile;
     game.resources.weapons = data.resources.weapons;
@@ -254,6 +257,7 @@ export function loadGame(game) {
     syncColonistIdCounter(game.colonists);
     syncAnimalIdCounter(game.wildlife);
     syncTamedIdCounter(game.tamedAnimals);
+    syncSummonIdCounter(game.summons);
 
     game.roomsDirty = true;
 

@@ -337,6 +337,16 @@ export class Renderer {
                 }
             }
         }
+        if (game.summons) {
+            for (const s of game.summons) {
+                if (s.hp <= 0) continue;
+                if (isEntityMoving(s)) {
+                    movingEntities.push({ entity: s, char: s.char, color: s.color, type: s.type });
+                } else {
+                    entityMap.set(s.y * CONFIG.MAP_WIDTH + s.x, { char: s.char, color: s.color, type: s.type });
+                }
+            }
+        }
         for (const r of raiders) {
             if (r.hp <= 0) continue;
             if (isEntityMoving(r)) {

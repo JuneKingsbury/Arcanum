@@ -540,6 +540,7 @@ export const RECIPES = {
     craft_tome_fireball: { input: { planks: 5, runite: 3, void_essence: 2 }, output: { tome_fireball: 1 }, skill: 'crafting', ticks: 50, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
     craft_tome_shield: { input: { planks: 4, runite: 3, stone: 3 }, output: { tome_shield: 1 }, skill: 'crafting', ticks: 45, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
     craft_tome_summon_familiar: { input: { planks: 5, runite: 3, void_essence: 3 }, output: { tome_summon_familiar: 1 }, skill: 'crafting', ticks: 55, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_summon_ghost: { input: { planks: 6, runite: 4, void_essence: 4 }, output: { tome_summon_ghost: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
     craft_tome_circle_of_growth: { input: { planks: 4, runite: 2, wheat: 3 }, output: { tome_circle_of_growth: 1 }, skill: 'crafting', ticks: 40, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_level_field: { input: { planks: 5, runite: 4, void_essence: 3 }, output: { tome_level_field: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
     craft_tome_foresight: { input: { planks: 2, berries: 1 }, output: { tome_foresight: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
@@ -918,11 +919,18 @@ export const SPELLS = {
         castType: 'auto',
         trigger: 'inCombat',
         effect: 'summon',
-        summonHp: 40,
-        summonDamage: 8,
-        summonDuration: 80,
-        summonChar: 'f',
-        summonColor: '#9966ff',
+        summonType: 'familiar',
+    },
+    summon_ghost: {
+        name: 'Summon Ghost',
+        school: 'conjuration',
+        minLevel: 4,
+        manaCost: 35,
+        cooldown: 500,
+        castType: 'auto',
+        trigger: 'inCombat',
+        effect: 'summon',
+        summonType: 'ghost',
     },
     circle_of_growth: {
         name: 'Circle of Growth',
@@ -1026,6 +1034,7 @@ export const SPELL_TOMES = {
     tome_shield: { name: 'Tome: Shield', spell: 'shield', learningWork: 320, minSchoolLevel: 3 },
     tome_warp: { name: 'Tome: Warp', spell: 'warp', learningWork: 230, minSchoolLevel: 2 },
     tome_summon_familiar: { name: 'Tome: Summon Familiar', spell: 'summon_familiar', learningWork: 380, minSchoolLevel: 3 },
+    tome_summon_ghost: { name: 'Tome: Summon Ghost', spell: 'summon_ghost', learningWork: 440, minSchoolLevel: 4 },
     tome_circle_of_growth: { name: 'Tome: Circle of Growth', spell: 'circle_of_growth', learningWork: 240, minSchoolLevel: 2 },
     tome_level_field: { name: 'Tome: Level Field', spell: 'level_field', learningWork: 440, minSchoolLevel: 4 },
     tome_foresight: { name: 'Tome: Foresight', spell: 'foresight', learningWork: 60, minSchoolLevel: 0 },
@@ -1120,6 +1129,11 @@ export const GOLEM_TYPES = {
     farmer_golem:  { name: 'Farmer Golem', char: 'G', color: '#55aa33', hp: 150, speed: 0.3, specialty: 'farming', skillLevel: 6, cost: { stone: 10, runite: 3, void_essence: 2 }, craftTicks: 80 },
     miner_golem:   { name: 'Miner Golem', char: 'G', color: '#888888', hp: 180, speed: 0.25, specialty: 'building', skillLevel: 6, cost: { stone: 12, runite: 4, void_essence: 2 }, craftTicks: 90 },
     combat_golem:  { name: 'Combat Golem', char: 'G', color: '#cc4444', hp: 250, speed: 0.35, specialty: 'combat', damage: 20, cost: { stone: 15, runite: 5, void_essence: 4 }, craftTicks: 110 },
+};
+
+export const SUMMON_TYPES = {
+    familiar: { name: 'Familiar', char: 'f', color: '#9966ff', hp: 40, damage: 8, speed: 0.5, duration: 80, guardRadius: 6, patrolRadius: 3 },
+    ghost:    { name: 'Ghost',    char: 'g', color: '#88ccff', hp: 25, damage: 14, speed: 0.7, duration: 60, guardRadius: 8, patrolRadius: 4 },
 };
 
 // Raid system tuning. Used by combat.js. Raiders spawn at map edges and attack colonists.

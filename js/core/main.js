@@ -18,6 +18,7 @@ import { UI } from '../ui/ui.js';
 import { Minimap } from '../ui/minimap.js';
 import { ResearchSystem, updateResearch } from '../systems/research.js';
 import { updateTamedAnimals, designateTame } from '../entities/taming.js';
+import { updateSummons, syncSummonIdCounter } from '../entities/summons.js';
 import { PowerSystem } from '../systems/power.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { ExplorationSystem } from '../systems/exploration.js';
@@ -83,6 +84,7 @@ class Game {
         this.wildlife = [];
         this.raiders = [];
         this.tamedAnimals = [];
+        this.summons = [];
         this.combatEffects = [];
         this.divinationModifiers = [];
         this.activeComplexStructures = [];
@@ -308,6 +310,8 @@ class Game {
                 updateColonist(colonist, this);
             }
         }
+
+        updateSummons(this);
 
         this.combatEffects = this.combatEffects.filter(e => e.ttl-- > 0);
         if (this.divinationModifiers) {

@@ -13,6 +13,8 @@ const ENTITY_SPECIALS = [
     { key: 'farmer_golem', char: 'G', color: '#55aa33', desc: 'Farmer Golem' },
     { key: 'miner_golem', char: 'G', color: '#888888', desc: 'Miner Golem' },
     { key: 'combat_golem', char: 'G', color: '#cc4444', desc: 'Combat Golem' },
+    { key: 'familiar', char: 'f', color: '#9966ff', desc: 'Summoned familiar' },
+    { key: 'ghost', char: 'g', color: '#88ccff', desc: 'Summoned ghost' },
     { key: 'raider', char: 'R', color: '#ff3333', desc: 'Enemy raider' },
     { key: 'wave_enemy', char: 'E', color: '#ff2222', desc: 'Void nexus wave enemy' },
 ];
@@ -35,6 +37,7 @@ const EFFECT_ITEMS = [
     { key: 'spell_growth', char: '%', color: '#44ff44', desc: 'Growth spell effect' },
     { key: 'spell_terraform', char: '.', color: '#88ff88', desc: 'Terraform spell effect' },
     { key: 'spell_divination', char: '?', color: '#ccaaff', desc: 'Divination spell effect' },
+    { key: 'summon_sparkle', char: '✦', color: '#9966ff', desc: 'Summon appear/disappear sparkle' },
 ];
 
 let editorInstance = null;
