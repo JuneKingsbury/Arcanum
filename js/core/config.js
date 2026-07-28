@@ -312,8 +312,6 @@ export const WORK_CONFIG = {
     poweredWorkbenchDivisor: 2,  // enchanting table divides craft time by this
     alchemyFoodBonus: 2,         // extra food per cook_meal when alchemy researched
     wealthPerWeapon: 10,         // wealth value added per weapon in stockpile (affects raid scaling)
-    penWanderRadius: 3,          // max tiles a tamed animal wanders from its pen
-    tamedMoveChance: 0.1,        // probability per tick a tamed animal moves
     guardPatrolRadius: 6,        // how far a guarding colonist patrols from their post
     guardEngageRadius: 10,       // how far they'll chase a threat before returning
     guardReturnThreshold: 12,    // distance at which they abandon chase and return to post
