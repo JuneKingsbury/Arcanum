@@ -1,6 +1,7 @@
-import { CONFIG } from './config.js';
+import { CONFIG, ENTITIES } from './config.js';
 import { syncColonistIdCounter } from '../entities/colonist.js';
 import { syncEntityIdCounter } from '../entities/entity-factory.js';
+import { initEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
 const SAVE_VERSION = 3;
@@ -191,6 +192,36 @@ export function loadGame(game) {
 
         syncColonistIdCounter(game.colonists);
         syncEntityIdCounter(game.entities);
+
+        for (const entity of game.entities) {
+            if (!entity.roles || entity.roles.length === 0) {
+                const def = ENTITIES[entity.type];
+                if (def) {
+                    const roles = entity.tamed && def.tamed ? def.tamed.roles : def.roles;
+                    entity.roles = (roles || []).map(r => ({ ...r }));
+                }
+            }
+            if (!entity.roleState) entity.roleState = {};
+            initEntityRoles(entity);
+        }
+        for (const raider of game.raiders) {
+            if (!raider.roleState) raider.roleState = {};
+            if (!raider.roles) {
+                const def = ENTITIES[raider.type];
+                raider.roles = def ? (def.roles || []).map(r => ({ ...r })) : [];
+            }
+            initEntityRoles(raider);
+        }
+        if (game.waves && game.waves.enemies) {
+            for (const enemy of game.waves.enemies) {
+                if (!enemy.roleState) enemy.roleState = {};
+                if (!enemy.roles) {
+                    const def = ENTITIES[enemy.type];
+                    enemy.roles = def ? (def.roles || []).map(r => ({ ...r })) : [];
+                }
+                initEntityRoles(enemy);
+            }
+        }
 
         game.roomsDirty = true;
 

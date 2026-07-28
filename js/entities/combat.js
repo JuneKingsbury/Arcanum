@@ -6,7 +6,7 @@ import { findPathForEnemies, manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
 import { createRaidEntity } from './entity-factory.js';
-import { updateEntityRoles, initEntityRoles } from './roles.js';
+import { updateEntityRoles } from './roles.js';
 
 let nextRaiderId = 1;
 
@@ -55,7 +55,6 @@ export class CombatSystem {
                     const pos = getEdgePosition(edge, spawned);
                     const entity = createRaidEntity(entry.entity, pos.x, pos.y, raidLevel, raidType.scaling);
                     if (entity) {
-                        initEntityRoles(entity);
                         game.raiders.push(entity);
                         spawned++;
                     }

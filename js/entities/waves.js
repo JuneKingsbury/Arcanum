@@ -4,7 +4,7 @@ import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
 import { createWaveEntity } from './entity-factory.js';
-import { updateEntityRoles, initEntityRoles } from './roles.js';
+import { updateEntityRoles } from './roles.js';
 
 let nextWaveEnemyId = 10000;
 
@@ -129,7 +129,6 @@ export class WaveSystem {
             if (entityType) {
                 const entity = createWaveEntity(entityType, portal.x, portal.y, this.currentWave);
                 if (entity) {
-                    initEntityRoles(entity);
                     this.enemies.push(entity);
                     this.enemiesSpawned++;
                     return;

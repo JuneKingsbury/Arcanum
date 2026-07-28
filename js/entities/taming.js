@@ -1,9 +1,7 @@
-import { CONFIG, ANIMALS, TAMED_ANIMALS, WORK_CONFIG, THOUGHTS } from '../core/config.js';
+import { ANIMALS, TAMED_ANIMALS, WORK_CONFIG, THOUGHTS } from '../core/config.js';
 import { colonistTakeDamage, addThought } from './colonist.js';
-import { manhattanDist } from '../world/pathfinding.js';
-import { isPassable } from '../world/map.js';
-import { moveEntity } from '../systems/movement-lerp.js';
 import { createTamedEntity } from './entity-factory.js';
+import { updateEntityRoles, updateEntityEffects } from './roles.js';
 
 export function updateTamedAnimals(game) {
     if (!game.research.isResearched('beast_binding')) return;
@@ -11,73 +9,11 @@ export function updateTamedAnimals(game) {
     const tamedAnimals = game.entities.filter(e => e.tamed);
     for (const animal of tamedAnimals) {
         if (animal.onExpedition) continue;
-        const def = TAMED_ANIMALS[animal.type];
-        if (!def) continue;
-        if (def.produces) {
-            animal.produceCooldown--;
-            if (animal.produceCooldown <= 0) {
-                const output = {};
-                output[def.produces] = def.produceAmount;
-                game.resources.add(output);
-                animal.produceCooldown = def.produceRate;
-            }
-        }
-
-        if (Math.random() < WORK_CONFIG.tamedMoveChance) {
-            const pen = findNearestPen(game, animal);
-            if (pen) {
-                wanderInPen(animal, pen, game.map, CONFIG.TICK_RATE / game.speed);
-            }
-        }
-
-        if (def.guardAnimal) {
-            updateGuardWolf(animal, def, game);
-        }
-
-        if (def.happinessAura) {
-            const radius = def.auraRadius || 4;
-            for (const c of game.colonists) {
-                if (c.hp <= 0) continue;
-                const dist = Math.abs(c.x - animal.x) + Math.abs(c.y - animal.y);
-                if (dist <= radius) {
-                    c.mood = Math.min(100, c.mood + (def.auraMoodBonus || 5) * 0.01);
-                }
-            }
-        }
+        updateEntityRoles(animal, game);
+        updateEntityEffects(animal, game);
     }
 }
 
-function findNearestPen(game, animal) {
-    if (game.mapIndex) {
-        return game.mapIndex.findNearest('beast_circle', animal.x, animal.y);
-    }
-    let bestDist = Infinity;
-    let bestPen = null;
-    for (let y = 0; y < game.map.length; y++) {
-        for (let x = 0; x < game.map[y].length; x++) {
-            if (game.map[y][x].structure === 'beast_circle') {
-                const dist = Math.abs(animal.x - x) + Math.abs(animal.y - y);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestPen = { x, y };
-                }
-            }
-        }
-    }
-    return bestPen;
-}
-
-function wanderInPen(animal, pen, map, dur) {
-    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-    const dir = dirs[Math.floor(Math.random() * 4)];
-    const nx = animal.x + dir[0];
-    const ny = animal.y + dir[1];
-    if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
-    const dist = Math.abs(nx - pen.x) + Math.abs(ny - pen.y);
-    if (dist <= WORK_CONFIG.penWanderRadius && map[ny][nx].passable) {
-        moveEntity(animal, nx, ny, dur);
-    }
-}
 
 export function designateTame(game, wildAnimalId) {
     if (!game.research.isResearched('beast_binding')) return false;
@@ -165,100 +101,6 @@ export function attemptDangerousTame(game, colonist, wildAnimalId) {
     return 'fail';
 }
 
-function updateGuardWolf(animal, def, game) {
-    if (!animal.guardState) animal.guardState = 'patrolling';
-
-    const hostiles = [
-        ...game.raiders.filter(r => r.hp > 0),
-        ...(game.waves && game.waves.enemies ? game.waves.enemies.filter(e => e.hp > 0) : []),
-        ...game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile && w.hp > 0),
-    ];
-
-    const dur = CONFIG.TICK_RATE / game.speed;
-    if (animal.guardState === 'retreating') {
-        const nearestColonist = findNearestAliveColonist(animal, game);
-        if (!nearestColonist) { animal.guardState = 'patrolling'; return; }
-        if (manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y) <= 2) {
-            animal.guardState = 'patrolling';
-            return;
-        }
-        moveToward(animal, nearestColonist, game.map, dur);
-        return;
-    }
-
-    if (animal.hp < (def.hp || 60) * 0.2) {
-        animal.guardState = 'retreating';
-        animal.guardTarget = null;
-        return;
-    }
-
-    let target = null;
-    let minDist = def.guardRadius || 8;
-    for (const h of hostiles) {
-        const d = manhattanDist(animal.x, animal.y, h.x, h.y);
-        if (d < minDist) { minDist = d; target = h; }
-    }
-
-    if (target) {
-        animal.guardState = 'engaging';
-        animal.guardTarget = { x: target.x, y: target.y };
-        const dist = manhattanDist(animal.x, animal.y, target.x, target.y);
-        if (dist <= 1) {
-            target.hp -= (def.guardDamage || 8);
-            game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#aaaaaa', ttl: 2 });
-        } else {
-            moveToward(animal, target, game.map, dur);
-        }
-    } else {
-        animal.guardState = 'patrolling';
-        animal.guardTarget = null;
-        const nearestColonist = findNearestAliveColonist(animal, game);
-        if (nearestColonist) {
-            const dist = manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y);
-            if (dist > 3) {
-                moveToward(animal, nearestColonist, game.map, dur);
-            } else if (Math.random() < 0.1) {
-                randomMoveNear(animal, nearestColonist, game.map, dur);
-            }
-        }
-    }
-}
-
-function findNearestAliveColonist(animal, game) {
-    let nearest = null;
-    let minDist = Infinity;
-    for (const c of game.colonists) {
-        if (c.hp <= 0) continue;
-        const d = manhattanDist(animal.x, animal.y, c.x, c.y);
-        if (d < minDist) { minDist = d; nearest = c; }
-    }
-    return nearest;
-}
-
-function moveToward(entity, target, map, dur) {
-    const dx = Math.sign(target.x - entity.x);
-    const dy = Math.sign(target.y - entity.y);
-    if (Math.random() < 0.5 && dx !== 0) {
-        if (isPassable(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); return; }
-    }
-    if (dy !== 0) {
-        if (isPassable(map, entity.x, entity.y + dy)) { moveEntity(entity, entity.x, entity.y + dy, dur); return; }
-    }
-    if (dx !== 0) {
-        if (isPassable(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); }
-    }
-}
-
-function randomMoveNear(animal, anchor, map, dur) {
-    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-    const dir = dirs[Math.floor(Math.random() * 4)];
-    const nx = animal.x + dir[0];
-    const ny = animal.y + dir[1];
-    if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
-    if (manhattanDist(nx, ny, anchor.x, anchor.y) <= 4 && isPassable(map, nx, ny)) {
-        moveEntity(animal, nx, ny, dur);
-    }
-}
 
 function findAnyPen(game) {
     if (game.mapIndex) {

@@ -1,4 +1,5 @@
 import { ENTITIES } from '../core/config.js';
+import { initEntityRoles } from './roles.js';
 
 let nextEntityId = 1;
 
@@ -50,9 +51,7 @@ export function createEntity(type, x, y, options = {}) {
         entity.expiresAt = (options.currentTick || 0) + (options.duration || def.summonDuration);
     }
 
-    for (const role of entity.roles) {
-        entity.roleState[role.type] = { state: 'idle' };
-    }
+    initEntityRoles(entity);
 
     return entity;
 }
@@ -106,12 +105,7 @@ export function createTamedEntity(type, x, y) {
         penY: y,
     };
 
-    for (const role of entity.roles) {
-        entity.roleState[role.type] = { state: 'idle' };
-        if (role.type === 'production') {
-            entity.roleState.production.cooldown = role.produceRate || 80;
-        }
-    }
+    initEntityRoles(entity);
 
     return entity;
 }

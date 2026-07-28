@@ -281,6 +281,29 @@ export const ROLE_HANDLERS = {
         },
     },
 
+    wander: {
+        init() {},
+        info(entity, role) {
+            return `<div class="info-row" style="color:#aabb88">Wanders near pen</div>`;
+        },
+        update(entity, role, game) {
+            if (entity.onExpedition) return;
+            if (Math.random() >= (role.moveChance || 0.1)) return;
+            const pen = findPen(entity, game);
+            if (!pen) return;
+            const dur = CONFIG.TICK_RATE / (entity.speed * game.speed);
+            const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+            const dir = dirs[Math.floor(Math.random() * 4)];
+            const nx = entity.x + dir[0];
+            const ny = entity.y + dir[1];
+            if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
+            const wanderRadius = role.wanderRadius || 3;
+            if (manhattanDist(nx, ny, pen.x, pen.y) <= wanderRadius && isPassable(game.map, nx, ny)) {
+                moveEntity(entity, nx, ny, dur);
+            }
+        },
+    },
+
     worker: {
         init() {},
         info(entity, role) {
@@ -336,7 +359,9 @@ export function updateEntityRoles(entity, game) {
 }
 
 export function initEntityRoles(entity) {
+    if (!entity.roleState) entity.roleState = {};
     for (const role of entity.roles) {
+        if (entity.roleState[role.type]) continue;
         const handler = ROLE_HANDLERS[role.type];
         if (handler && handler.init) {
             handler.init(entity, role);
@@ -355,6 +380,58 @@ export function getRoleInfoHtml(entity) {
     }
     return html;
 }
+
+export function getEffectInfoHtml(entity) {
+    if (!entity.effects || entity.effects.length === 0) return '';
+    let html = '';
+    for (const effect of entity.effects) {
+        const handler = EFFECT_HANDLERS[effect.type];
+        if (handler) html += handler.info(entity, effect);
+    }
+    return html;
+}
+
+export function updateEntityEffects(entity, game) {
+    if (!entity.effects || entity.effects.length === 0) return;
+    for (const effect of entity.effects) {
+        const handler = EFFECT_HANDLERS[effect.type];
+        if (handler) handler.update(entity, effect, game);
+    }
+}
+
+const EFFECT_HANDLERS = {
+    mood_aura: {
+        info(entity, effect) {
+            const bonus = effect.moodBonus || 5;
+            const scope = effect.scope || 'aura';
+            if (scope === 'self') return `<div class="info-row" style="color:#ffaacc">Mood: +${bonus} (self)</div>`;
+            if (scope === 'global') return `<div class="info-row" style="color:#ffaacc">Mood: +${bonus} (all colonists)</div>`;
+            return `<div class="info-row" style="color:#ffaacc">Mood Aura: +${bonus} (${effect.radius || 4} tile radius)</div>`;
+        },
+        update(entity, effect, game) {
+            if (entity.onExpedition) return;
+            const bonus = (effect.moodBonus || 5) * 0.01;
+            const scope = effect.scope || 'aura';
+
+            if (scope === 'self') {
+                if (entity.mood !== undefined) entity.mood = Math.min(100, entity.mood + bonus);
+                return;
+            }
+            if (scope === 'global') {
+                for (const c of game.colonists) {
+                    if (c.hp > 0) c.mood = Math.min(100, c.mood + bonus);
+                }
+                return;
+            }
+            const radius = effect.radius || 4;
+            for (const c of game.colonists) {
+                if (c.hp <= 0) continue;
+                const dist = Math.abs(c.x - entity.x) + Math.abs(c.y - entity.y);
+                if (dist <= radius) c.mood = Math.min(100, c.mood + bonus);
+            }
+        },
+    },
+};
 
 function getHostiles(game, entity) {
     const hostiles = [];
@@ -381,6 +458,23 @@ function findAnchor(entity, game) {
     if (entity.penX !== undefined) return { x: entity.penX, y: entity.penY };
     const nearest = game.colonists.find(c => c.hp > 0);
     return nearest || null;
+}
+
+function findPen(entity, game) {
+    if (game.mapIndex) {
+        return game.mapIndex.findNearest('beast_circle', entity.x, entity.y);
+    }
+    let bestDist = Infinity;
+    let bestPen = null;
+    for (let y = 0; y < game.map.length; y++) {
+        for (let x = 0; x < game.map[y].length; x++) {
+            if (game.map[y][x].structure === 'beast_circle') {
+                const dist = Math.abs(entity.x - x) + Math.abs(entity.y - y);
+                if (dist < bestDist) { bestDist = dist; bestPen = { x, y }; }
+            }
+        }
+    }
+    return bestPen;
 }
 
 function moveToward(entity, target, map, dur) {

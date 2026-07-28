@@ -10,7 +10,7 @@ export const EFFECT_TYPES = [
     { value: 'teleport', label: 'Teleport', contexts: ['on_cast'] },
     { value: 'boost_crops', label: 'Boost Crops', contexts: ['on_cast', 'aura'] },
     { value: 'terraform', label: 'Terraform', contexts: ['on_cast'] },
-    { value: 'mood_aura', label: 'Mood Aura', contexts: ['aura'] },
+    { value: 'mood_aura', label: 'Mood Effect', contexts: ['passive', 'aura'] },
     { value: 'divination', label: 'Divination Modifier', contexts: ['on_cast'] },
     { value: 'damage_aura', label: 'Damage Aura', contexts: ['aura'] },
     { value: 'heal_aura', label: 'Heal Aura', contexts: ['aura'] },
@@ -238,9 +238,16 @@ export class EffectPicker {
 
             case 'mood_aura':
                 html += `<div class="fe-row">`;
-                html += `<div class="fe-field"><label>Radius</label><input type="number" class="fe-ep-radius" value="${effect.radius || 5}"></div>`;
+                html += `<div class="fe-field"><label>Scope</label><select class="fe-ep-scope">`;
+                html += `<option value="aura" ${(effect.scope || 'aura') === 'aura' ? 'selected' : ''}>Aura (radius)</option>`;
+                html += `<option value="self" ${effect.scope === 'self' ? 'selected' : ''}>Self</option>`;
+                html += `<option value="global" ${effect.scope === 'global' ? 'selected' : ''}>Global (all colonists)</option>`;
+                html += `</select></div>`;
                 html += `<div class="fe-field"><label>Mood Bonus</label><input type="number" class="fe-ep-moodBonus" value="${effect.moodBonus || 5}"></div>`;
                 html += `</div>`;
+                if ((effect.scope || 'aura') === 'aura') {
+                    html += `<div class="fe-row"><div class="fe-field"><label>Radius</label><input type="number" class="fe-ep-radius" value="${effect.radius || 5}"></div></div>`;
+                }
                 break;
 
             case 'divination':
@@ -566,8 +573,10 @@ export class EffectPicker {
                 break;
             }
             case 'mood_aura': {
+                const scope = row.querySelector('.fe-ep-scope');
                 const radius = row.querySelector('.fe-ep-radius');
                 const mood = row.querySelector('.fe-ep-moodBonus');
+                if (scope) effect.scope = scope.value;
                 if (radius) effect.radius = parseInt(radius.value) || 0;
                 if (mood) effect.moodBonus = parseInt(mood.value) || 0;
                 break;
@@ -789,8 +798,9 @@ export function formatEffectsCode(effects, indent = '    ') {
                 parts.push(`targetTerrain: '${e.targetTerrain}'`);
                 break;
             case 'mood_aura':
-                parts.push(`radius: ${e.radius}`);
+                parts.push(`scope: ${e.scope || 'aura'}`);
                 parts.push(`moodBonus: ${e.moodBonus}`);
+                if ((e.scope || 'aura') === 'aura') parts.push(`radius: ${e.radius}`);
                 break;
             case 'divination':
                 parts.push(`modifiers: ${JSON.stringify(e.modifiers || {})}`);

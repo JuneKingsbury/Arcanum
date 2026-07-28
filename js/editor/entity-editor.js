@@ -805,7 +805,7 @@ class EntityEditor {
     _legacyToEffects(tamed) {
         const effects = [];
         if (tamed.happinessAura) {
-            effects.push({ type: 'mood_aura', radius: tamed.auraRadius || 5, moodBonus: tamed.auraMoodBonus || 5, context: 'aura' });
+            effects.push({ type: 'mood_aura', scope: 'aura', radius: tamed.auraRadius || 5, moodBonus: tamed.auraMoodBonus || 5 });
         }
         return effects;
     }

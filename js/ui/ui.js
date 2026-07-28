@@ -6,7 +6,7 @@ import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
 import { estimatePartyStrength } from '../systems/exploration.js';
-import { getRoleInfoHtml } from '../entities/roles.js';
+import { getRoleInfoHtml, getEffectInfoHtml } from '../entities/roles.js';
 
 export class UI {
     constructor(game) {
@@ -1205,6 +1205,7 @@ export class UI {
                 if (def?.packAnimal) html += `<div class="info-row" style="color:#bbaa44">Pack animal (+${Math.round(def.expeditionSpeedBonus * 100)}% expedition speed)</div>`;
                 if (def?.happinessAura) html += `<div class="info-row" style="color:#ff88cc">Happiness aura (radius ${def.auraRadius})</div>`;
             }
+            html += getEffectInfoHtml(a);
             if (a.onExpedition) html += `<div class="info-row" style="color:#33ccff">On expedition</div>`;
             html += `</div>`;
         }
