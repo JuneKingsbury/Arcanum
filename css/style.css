@@ -1248,6 +1248,11 @@ body {
     opacity: 0.5;
 }
 
+.research-node.demo-locked {
+    border-color: #333;
+    opacity: 0.4;
+}
+
 .research-node-name {
     font-weight: bold;
     color: #ffcc00;

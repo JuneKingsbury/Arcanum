@@ -57,6 +57,7 @@ class Game {
             showFps: false,
             autoSaveInterval: 60,
             activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
+            demoMode: false,
             craftTargets: {},
         };
         this._fpsFrames = 0;
@@ -1678,6 +1679,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showColonistNames: document.getElementById('start-names').value,
             uiFontSize: parseInt(document.getElementById('start-ui-font-size').value) || 12,
             activeSkin: document.getElementById('start-skin').value || 'ascii',
+            demoMode: document.getElementById('start-demo-mode').checked,
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);

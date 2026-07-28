@@ -1077,6 +1077,12 @@ export const RESEARCH = {
     deep_delving: { name: 'Deep Delving', cost: 550, requires: ['planar_rift'], tab: 'void', description: 'Access deeper, more dangerous realms' },
 };
 
+export const DEMO_LOCKED_RESEARCH = new Set([
+    'advanced_arcana', 'masterwork', 'golem_craft', 'mana_weaving',
+    'brilliance', 'pyroclasm', 'void_summoning', 'void_forging',
+    'planar_rift', 'deep_delving'
+]);
+
 // Auto-derive unlocks from the 'research' field on buildings, recipes, and crops.
 for (const [key, tech] of Object.entries(RESEARCH)) {
     tech.unlocks = { buildings: [], recipes: [], crops: [] };

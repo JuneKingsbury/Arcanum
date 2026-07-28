@@ -1,4 +1,4 @@
-import { RESEARCH, WORK_CONFIG } from '../core/config.js';
+import { RESEARCH, WORK_CONFIG, DEMO_LOCKED_RESEARCH } from '../core/config.js';
 
 export class ResearchSystem {
     constructor() {
@@ -7,10 +7,15 @@ export class ResearchSystem {
         this.progress = {};
     }
 
+    isDemoLocked(key) {
+        return window.game?.settings?.demoMode && DEMO_LOCKED_RESEARCH.has(key);
+    }
+
     getAvailable() {
         const available = [];
         for (const [key, tech] of Object.entries(RESEARCH)) {
             if (this.completed.has(key)) continue;
+            if (this.isDemoLocked(key)) continue;
             const prereqsMet = tech.requires.every(r => this.completed.has(r));
             if (prereqsMet) available.push({ key, ...tech });
         }
@@ -20,6 +25,7 @@ export class ResearchSystem {
     hasAvailableResearch() {
         for (const [key, tech] of Object.entries(RESEARCH)) {
             if (this.completed.has(key)) continue;
+            if (this.isDemoLocked(key)) continue;
             if (tech.requires.every(r => this.completed.has(r))) return true;
         }
         return false;
@@ -28,6 +34,7 @@ export class ResearchSystem {
     selectResearch(key) {
         const tech = RESEARCH[key];
         if (!tech || this.completed.has(key)) return false;
+        if (this.isDemoLocked(key)) return false;
         if (!tech.requires.every(r => this.completed.has(r))) return false;
         this.activeResearch = key;
         return true;

@@ -1,4 +1,4 @@
-import { RESEARCH, RESEARCH_TABS } from '../core/config.js';
+import { RESEARCH, RESEARCH_TABS, DEMO_LOCKED_RESEARCH } from '../core/config.js';
 
 export function installResearchPanel(UI) {
     Object.assign(UI.prototype, researchMethods);
@@ -54,11 +54,13 @@ const researchMethods = {
             for (const key of layers[depth]) {
                 const tech = RESEARCH[key];
                 const completed = research.completed.has(key);
-                const available = !completed && tech.requires.every(r => research.completed.has(r));
+                const demoLocked = this.game.settings.demoMode && DEMO_LOCKED_RESEARCH.has(key);
+                const available = !completed && !demoLocked && tech.requires.every(r => research.completed.has(r));
                 const isActive = research.activeResearch === key;
                 const prog = research.getProgress(key);
                 let cls = 'research-node';
-                if (completed) cls += ' completed';
+                if (demoLocked) cls += ' demo-locked';
+                else if (completed) cls += ' completed';
                 else if (isActive) cls += ' affordable';
                 else if (available) cls += ' available';
                 else cls += ' locked';
@@ -66,7 +68,9 @@ const researchMethods = {
                 html += `<div class="${cls}" data-key="${key}" data-requires="${sameTabReqs.join(',')}">`;
                 html += `<div class="research-node-name">${tech.name}</div>`;
                 html += `<div class="research-node-desc">${tech.description}</div>`;
-                if (completed) {
+                if (demoLocked) {
+                    html += `<div class="research-node-cost" style="color:#ff6666;">Available in Full Version</div>`;
+                } else if (completed) {
                     html += `<div class="research-node-cost">Researched</div>`;
                 } else if (isActive) {
                     const pct = Math.min(100, Math.floor((prog / tech.cost) * 100));
