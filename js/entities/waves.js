@@ -2,6 +2,7 @@ import { CONFIG, WAVE_CONFIG, BUILDINGS, COMBAT_VISUALS } from '../core/config.j
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
+import { moveEntity } from '../systems/movement-lerp.js';
 
 let nextWaveEnemyId = 10000;
 
@@ -132,6 +133,8 @@ export class WaveSystem {
         if (enemy.moveCooldown > 0) return;
         enemy.moveCooldown = 1;
 
+        const dur = CONFIG.TICK_RATE / (enemy.speed * game.speed);
+
         const nearbyColonists = game.spatial
             ? game.spatial.colonists.query(enemy.x, enemy.y, 1)
             : game.colonists.filter(c => c.hp > 0 && manhattanDist(enemy.x, enemy.y, c.x, c.y) <= 1);
@@ -175,15 +178,14 @@ export class WaveSystem {
                 return;
             }
             if (isPassableForEnemies(game.map, next.x, next.y)) {
-                enemy.x = next.x;
-                enemy.y = next.y;
+                moveEntity(enemy, next.x, next.y, dur);
                 enemy.path.shift();
                 enemy.pathAge++;
             } else {
                 enemy.path = null;
             }
         } else {
-            moveTowardDirect(enemy, this.nexusPosition, game.map);
+            moveTowardDirect(enemy, this.nexusPosition, game.map, dur);
         }
     }
 
@@ -234,20 +236,20 @@ export class WaveSystem {
     }
 }
 
-function moveTowardDirect(entity, target, map) {
+function moveTowardDirect(entity, target, map, dur) {
     const dx = Math.sign(target.x - entity.x);
     const dy = Math.sign(target.y - entity.y);
     if (Math.random() < 0.5 && dx !== 0) {
         const nx = entity.x + dx;
-        if (isPassableForEnemies(map, nx, entity.y)) { entity.x = nx; return; }
+        if (isPassableForEnemies(map, nx, entity.y)) { moveEntity(entity, nx, entity.y, dur); return; }
     }
     if (dy !== 0) {
         const ny = entity.y + dy;
-        if (isPassableForEnemies(map, entity.x, ny)) { entity.y = ny; return; }
+        if (isPassableForEnemies(map, entity.x, ny)) { moveEntity(entity, entity.x, ny, dur); return; }
     }
     if (dx !== 0) {
         const nx = entity.x + dx;
-        if (isPassableForEnemies(map, nx, entity.y)) { entity.x = nx; }
+        if (isPassableForEnemies(map, nx, entity.y)) { moveEntity(entity, nx, entity.y, dur); }
     }
 }
 

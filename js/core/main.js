@@ -27,6 +27,7 @@ import { saveGame, loadGame, hasSave, exportSave, importSave } from './save.js';
 import { initResizeHandles } from '../ui/resize.js';
 import { SpatialHash } from '../world/spatial.js';
 import { MapIndex } from '../world/mapindex.js';
+import { teleportEntity, getEntityRenderPos } from '../systems/movement-lerp.js';
 import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
@@ -221,7 +222,8 @@ class Game {
         if (this.followingColonist) {
             const fc = this.getColonist(this.followingColonist);
             if (fc && fc.hp > 0) {
-                this.camera.centerOn(fc.x, fc.y);
+                const pos = getEntityRenderPos(fc, performance.now());
+                this.camera.centerOn(Math.round(pos.x), Math.round(pos.y));
             } else {
                 this.followingColonist = null;
             }
@@ -911,8 +913,7 @@ class Game {
     castTargetedSpell(colonist, spell, pos) {
         switch (spell.effect) {
             case 'teleport': {
-                colonist.x = pos.x;
-                colonist.y = pos.y;
+                teleportEntity(colonist, pos.x, pos.y);
                 colonist.path = [];
                 this.combatEffects.push({ x: pos.x, y: pos.y, char: COMBAT_VISUALS.spellTeleportChar, color: COMBAT_VISUALS.spellTeleportColor, ttl: 3 });
                 this.notifications.push({ text: `${colonist.name} warped!`, tick: this.tick, type: 'success' });

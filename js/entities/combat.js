@@ -4,6 +4,7 @@ const RAIDER_WEAPONS = ['wooden_club', 'etched_axe', 'runic_blade'];
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { findPathForEnemies, manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
+import { moveEntity } from '../systems/movement-lerp.js';
 
 let nextRaiderId = 1;
 
@@ -146,14 +147,15 @@ function updateRaider(raider, game) {
     if (raider.moveCooldown > 0) return;
     raider.moveCooldown = 1;
 
+    const dur = CONFIG.TICK_RATE / (raider.speed * game.speed);
     if (raider.fleeing) {
-        moveToEdge(raider, game);
+        moveToEdge(raider, game, dur);
         return;
     }
 
     const nearest = findNearestColonist(raider, game);
     if (!nearest) {
-        moveTowardCenter(raider, game);
+        moveTowardCenter(raider, game, dur);
         return;
     }
 
@@ -182,8 +184,7 @@ function updateRaider(raider, game) {
     if (raider.path.length > 0) {
         const next = raider.path[0];
         if (isPassableForEnemies(game.map, next.x, next.y)) {
-            raider.x = next.x;
-            raider.y = next.y;
+            moveEntity(raider, next.x, next.y, dur);
             raider.path.shift();
         } else if (isBreakableByEnemies(game.map, next.x, next.y)) {
             // Will break next tick
@@ -215,22 +216,21 @@ function findNearestColonist(raider, game) {
     return nearest;
 }
 
-function moveTowardCenter(raider, game) {
+function moveTowardCenter(raider, game, dur) {
     const cx = Math.floor(CONFIG.MAP_WIDTH / 2);
     const cy = Math.floor(CONFIG.MAP_HEIGHT / 2);
     const dx = Math.sign(cx - raider.x);
     const dy = Math.sign(cy - raider.y);
     if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) {
-        raider.x += dx;
+        moveEntity(raider, raider.x + dx, raider.y, dur);
     } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) {
-        raider.y += dy;
+        moveEntity(raider, raider.x, raider.y + dy, dur);
     } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y + dy)) {
-        raider.x += dx;
-        raider.y += dy;
+        moveEntity(raider, raider.x + dx, raider.y + dy, dur);
     }
 }
 
-function moveToEdge(raider, game) {
+function moveToEdge(raider, game, dur) {
     const edges = [
         { x: 0, y: raider.y },
         { x: CONFIG.MAP_WIDTH - 1, y: raider.y },
@@ -245,9 +245,9 @@ function moveToEdge(raider, game) {
     const dx = Math.sign(target.x - raider.x);
     const dy = Math.sign(target.y - raider.y);
     if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) {
-        raider.x += dx;
+        moveEntity(raider, raider.x + dx, raider.y, dur);
     } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) {
-        raider.y += dy;
+        moveEntity(raider, raider.x, raider.y + dy, dur);
     }
 }
 

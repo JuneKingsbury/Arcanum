@@ -2,6 +2,7 @@ import { CONFIG, TILE_COLORS, BUILDINGS, RENDER_CONFIG, COMBAT_VISUALS } from '.
 import { getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { OverlayRenderer } from './overlay-renderer.js';
 import { SkinManager } from './skin-manager.js';
+import { getEntityRenderPos, isEntityMoving } from '../systems/movement-lerp.js';
 
 export class Renderer {
     constructor(container, skinManager) {
@@ -28,6 +29,7 @@ export class Renderer {
         this._portalPathMap = new Map();
         this._shotMap = new Map();
         this._effectMap = new Map();
+        this._movingEntities = [];
 
         // Terrain dithering
         this._ditherMasks = null;
@@ -302,23 +304,46 @@ export class Renderer {
 
         // --- Build entity/effect lookup maps (flat key = y*MAP_WIDTH + x) ---
         // These let the tile loop do O(1) lookups instead of scanning arrays per tile.
+        // Moving entities (mid-lerp) are collected separately for fractional-position rendering.
         const entityMap = this._entityMap;
         entityMap.clear();
+        const movingEntities = this._movingEntities;
+        movingEntities.length = 0;
         for (const a of wildlife) {
-            if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
+            if (a.hp <= 0) continue;
+            if (isEntityMoving(a)) {
+                movingEntities.push({ entity: a, char: a.char, color: a.color, type: a.type });
+            } else {
+                entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
+            }
         }
         if (tamedAnimals) {
             for (const a of tamedAnimals) {
-                if (a.hp > 0) entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
+                if (a.hp <= 0) continue;
+                if (isEntityMoving(a)) {
+                    movingEntities.push({ entity: a, char: a.char, color: a.color, type: a.type });
+                } else {
+                    entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
+                }
             }
         }
         if (game.waves) {
             for (const e of game.waves.enemies) {
-                if (e.hp > 0) entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy' });
+                if (e.hp <= 0) continue;
+                if (isEntityMoving(e)) {
+                    movingEntities.push({ entity: e, char: e.char, color: e.color, type: 'wave_enemy' });
+                } else {
+                    entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy' });
+                }
             }
         }
         for (const r of raiders) {
-            if (r.hp > 0) entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: 'R', color: TILE_COLORS.raider, type: 'raider' });
+            if (r.hp <= 0) continue;
+            if (isEntityMoving(r)) {
+                movingEntities.push({ entity: r, char: 'R', color: TILE_COLORS.raider, type: 'raider' });
+            } else {
+                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: 'R', color: TILE_COLORS.raider, type: 'raider' });
+            }
         }
         const rallySet = this._rallySet;
         rallySet.clear();
@@ -334,7 +359,12 @@ export class Renderer {
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
-                entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType });
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType };
+                if (isEntityMoving(c)) {
+                    movingEntities.push({ entity: c, ...entData });
+                } else {
+                    entityMap.set(c.y * CONFIG.MAP_WIDTH + c.x, entData);
+                }
                 if (drafted && c.draftTarget) {
                     rallySet.set(c.draftTarget.y * CONFIG.MAP_WIDTH + c.draftTarget.x, true);
                 }
@@ -572,6 +602,38 @@ export class Renderer {
             }
         }
 
+        // --- Draw moving entities at interpolated positions ---
+        const now = performance.now();
+        for (const me of movingEntities) {
+            const pos = getEntityRenderPos(me.entity, now);
+            const sx = pos.x - camera.x;
+            const sy = pos.y - camera.y;
+            if (sx < -1 || sx >= CONFIG.VIEWPORT_WIDTH + 1 || sy < -1 || sy >= CONFIG.VIEWPORT_HEIGHT + 1) continue;
+            const rpx = Math.round(sx * cw);
+            const rpy = Math.round(sy * ch);
+            if (this.skinManager.isActive) {
+                const destTile = map[me.entity.y]?.[me.entity.x];
+                if (destTile) {
+                    const ground = this._resolveGroundSprite(destTile, game.weather.season);
+                    if (ground) ctx.drawImage(ground, rpx, rpy, cw, ch);
+                }
+                const sprite = this._resolveSprite(destTile || {}, me, game.weather.season);
+                if (sprite) {
+                    ctx.drawImage(sprite, rpx, rpy, cw, ch);
+                } else {
+                    ctx.fillStyle = me.color;
+                    ctx.fillText(me.char, rpx + this._textOffsetX, rpy);
+                }
+                if (me.type === 'colonist') {
+                    ctx.fillStyle = me.color;
+                    ctx.fillRect(rpx + cw - 4, rpy, 4, 4);
+                }
+            } else {
+                ctx.fillStyle = me.color;
+                ctx.fillText(me.char, rpx + this._textOffsetX, rpy);
+            }
+        }
+
         const nameMode = game.settings.showColonistNames;
         if (nameMode === 'always' || nameMode === 'selected') {
             ctx.save();
@@ -581,11 +643,12 @@ export class Renderer {
             for (const c of colonists) {
                 if (c.hp <= 0 || c.onExpedition) continue;
                 if (nameMode === 'selected' && c !== game.selectedColonist) continue;
-                const sx = c.x - camera.x;
-                const sy = c.y - camera.y;
+                const pos = getEntityRenderPos(c, now);
+                const sx = pos.x - camera.x;
+                const sy = pos.y - camera.y;
                 if (sx < 0 || sx >= CONFIG.VIEWPORT_WIDTH || sy < 0 || sy >= CONFIG.VIEWPORT_HEIGHT) continue;
                 ctx.fillStyle = c.nameColor || '#ffff00';
-                ctx.fillText(c.name, sx * cw, sy * ch - 1);
+                ctx.fillText(c.name, Math.round(sx * cw), Math.round(sy * ch) - 1);
             }
             ctx.restore();
         }

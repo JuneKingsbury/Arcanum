@@ -1,6 +1,7 @@
 import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, RESOURCES, THOUGHTS, IMPASSABLE_STRUCTURES, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, QUALITY_TIERS, ANIMALS, TAMED_ANIMALS, GOLEM_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
+import { moveEntity, computeMoveDuration } from '../systems/movement-lerp.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
@@ -723,8 +724,7 @@ function wander(colonist, game) {
     const nx = colonist.x + dir[0];
     const ny = colonist.y + dir[1];
     if (isPassable(game.map, nx, ny)) {
-        colonist.x = nx;
-        colonist.y = ny;
+        moveEntity(colonist, nx, ny, CONFIG.TICK_RATE / game.speed);
     }
 }
 
@@ -737,7 +737,7 @@ function updateGuarding(colonist, game) {
         const distFromPost = manhattanDist(colonist.x, colonist.y, post.x, post.y);
 
         if (distFromPost > WORK_CONFIG.guardReturnThreshold) {
-            moveTowardPoint(colonist, post.x, post.y, game.map);
+            moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed);
             return;
         }
 
@@ -749,28 +749,27 @@ function updateGuarding(colonist, game) {
 
     const distFromPost = manhattanDist(colonist.x, colonist.y, post.x, post.y);
     if (distFromPost > WORK_CONFIG.guardPatrolRadius) {
-        moveTowardPoint(colonist, post.x, post.y, game.map);
+        moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed);
     } else if (Math.random() < 0.15) {
         const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
         const dir = dirs[Math.floor(Math.random() * 4)];
         const nx = colonist.x + dir[0];
         const ny = colonist.y + dir[1];
         if (isPassable(game.map, nx, ny) && manhattanDist(nx, ny, post.x, post.y) <= WORK_CONFIG.guardPatrolRadius) {
-            colonist.x = nx;
-            colonist.y = ny;
+            moveEntity(colonist, nx, ny, CONFIG.TICK_RATE / game.speed);
         }
     }
 }
 
-function moveTowardPoint(colonist, tx, ty, map) {
+function moveTowardPoint(colonist, tx, ty, map, dur) {
     const dx = Math.sign(tx - colonist.x);
     const dy = Math.sign(ty - colonist.y);
     if (Math.random() < 0.5 && dx !== 0 && isPassable(map, colonist.x + dx, colonist.y)) {
-        colonist.x += dx;
+        moveEntity(colonist, colonist.x + dx, colonist.y, dur);
     } else if (dy !== 0 && isPassable(map, colonist.x, colonist.y + dy)) {
-        colonist.y += dy;
+        moveEntity(colonist, colonist.x, colonist.y + dy, dur);
     } else if (dx !== 0 && isPassable(map, colonist.x + dx, colonist.y)) {
-        colonist.x += dx;
+        moveEntity(colonist, colonist.x + dx, colonist.y, dur);
     }
 }
 
@@ -807,13 +806,13 @@ function updateMoving(colonist, game) {
     }
     const next = colonist.path[0];
     if (isPassable(game.map, next.x, next.y)) {
-        colonist.x = next.x;
-        colonist.y = next.y;
-        colonist.path.shift();
         const cost = getMoveCost(game.map, next.x, next.y);
+        const moveBonus = getMoveSpeedBonus(colonist);
+        const dur = computeMoveDuration(cost, moveBonus, game.speed);
+        moveEntity(colonist, next.x, next.y, dur);
+        colonist.path.shift();
         if (cost > 1) {
             let moveCost = cost - 1;
-            const moveBonus = getMoveSpeedBonus(colonist);
             if (moveBonus > 0) moveCost = Math.max(0, Math.round(moveCost * (1 - moveBonus)));
             colonist.moveCooldown = moveCost;
         }
@@ -1221,10 +1220,11 @@ function updateFighting(colonist, game) {
     if (dist > 1) {
         const dx = Math.sign(target.x - colonist.x);
         const dy = Math.sign(target.y - colonist.y);
+        const dur = CONFIG.TICK_RATE / game.speed;
         if (dx !== 0 && isPassable(game.map, colonist.x + dx, colonist.y)) {
-            colonist.x += dx;
+            moveEntity(colonist, colonist.x + dx, colonist.y, dur);
         } else if (dy !== 0 && isPassable(game.map, colonist.x, colonist.y + dy)) {
-            colonist.y += dy;
+            moveEntity(colonist, colonist.x, colonist.y + dy, dur);
         }
         return;
     }
@@ -1262,8 +1262,7 @@ function updateFleeing(colonist, game) {
     const nx = colonist.x + dx;
     const ny = colonist.y + dy;
     if (isPassable(game.map, nx, ny)) {
-        colonist.x = nx;
-        colonist.y = ny;
+        moveEntity(colonist, nx, ny, CONFIG.TICK_RATE / game.speed);
     }
 }
 
@@ -1284,12 +1283,12 @@ function updateDrafted(colonist, game) {
         if (colonist.path.length > 0) {
             const next = colonist.path.shift();
             if (isPassable(game.map, next.x, next.y)) {
-                colonist.x = next.x;
-                colonist.y = next.y;
                 const cost = getMoveCost(game.map, next.x, next.y);
+                const moveBonus = getMoveSpeedBonus(colonist);
+                const dur = computeMoveDuration(cost, moveBonus, game.speed);
+                moveEntity(colonist, next.x, next.y, dur);
                 if (cost > 1) {
                     let moveCost = cost - 1;
-                    const moveBonus = getMoveSpeedBonus(colonist);
                     if (moveBonus > 0) moveCost = Math.max(0, Math.round(moveCost * (1 - moveBonus)));
                     colonist.moveCooldown = moveCost;
                 }

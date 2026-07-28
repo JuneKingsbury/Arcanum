@@ -96,7 +96,7 @@ export function saveGame(game) {
         eventLog: game.eventLog.entries,
     };
 
-    const json = JSON.stringify(data);
+    const json = JSON.stringify(data, (key, value) => key.startsWith('_') ? undefined : value);
     localStorage.setItem(SAVE_KEY, json);
     return true;
 }

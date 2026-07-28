@@ -2,6 +2,7 @@ import { CONFIG, ANIMALS, TAMED_ANIMALS, WORK_CONFIG, THOUGHTS } from '../core/c
 import { colonistTakeDamage, addThought } from './colonist.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { isPassable } from '../world/map.js';
+import { moveEntity } from '../systems/movement-lerp.js';
 
 let nextTamedId = 1;
 
@@ -45,7 +46,7 @@ export function updateTamedAnimals(game) {
         if (Math.random() < WORK_CONFIG.tamedMoveChance) {
             const pen = findNearestPen(game, animal);
             if (pen) {
-                wanderInPen(animal, pen, game.map);
+                wanderInPen(animal, pen, game.map, CONFIG.TICK_RATE / game.speed);
             }
         }
 
@@ -86,7 +87,7 @@ function findNearestPen(game, animal) {
     return bestPen;
 }
 
-function wanderInPen(animal, pen, map) {
+function wanderInPen(animal, pen, map, dur) {
     const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     const dir = dirs[Math.floor(Math.random() * 4)];
     const nx = animal.x + dir[0];
@@ -94,8 +95,7 @@ function wanderInPen(animal, pen, map) {
     if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
     const dist = Math.abs(nx - pen.x) + Math.abs(ny - pen.y);
     if (dist <= WORK_CONFIG.penWanderRadius && map[ny][nx].passable) {
-        animal.x = nx;
-        animal.y = ny;
+        moveEntity(animal, nx, ny, dur);
     }
 }
 
@@ -192,6 +192,7 @@ function updateGuardWolf(animal, def, game) {
         ...game.wildlife.filter(w => w.hostile && w.hp > 0),
     ];
 
+    const dur = CONFIG.TICK_RATE / game.speed;
     if (animal.guardState === 'retreating') {
         const nearestColonist = findNearestAliveColonist(animal, game);
         if (!nearestColonist) { animal.guardState = 'patrolling'; return; }
@@ -199,7 +200,7 @@ function updateGuardWolf(animal, def, game) {
             animal.guardState = 'patrolling';
             return;
         }
-        moveToward(animal, nearestColonist, game.map);
+        moveToward(animal, nearestColonist, game.map, dur);
         return;
     }
 
@@ -224,7 +225,7 @@ function updateGuardWolf(animal, def, game) {
             target.hp -= (def.guardDamage || 8);
             game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#aaaaaa', ttl: 2 });
         } else {
-            moveToward(animal, target, game.map);
+            moveToward(animal, target, game.map, dur);
         }
     } else {
         animal.guardState = 'patrolling';
@@ -233,9 +234,9 @@ function updateGuardWolf(animal, def, game) {
         if (nearestColonist) {
             const dist = manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y);
             if (dist > 3) {
-                moveToward(animal, nearestColonist, game.map);
+                moveToward(animal, nearestColonist, game.map, dur);
             } else if (Math.random() < 0.1) {
-                randomMoveNear(animal, nearestColonist, game.map);
+                randomMoveNear(animal, nearestColonist, game.map, dur);
             }
         }
     }
@@ -252,29 +253,28 @@ function findNearestAliveColonist(animal, game) {
     return nearest;
 }
 
-function moveToward(entity, target, map) {
+function moveToward(entity, target, map, dur) {
     const dx = Math.sign(target.x - entity.x);
     const dy = Math.sign(target.y - entity.y);
     if (Math.random() < 0.5 && dx !== 0) {
-        if (isPassable(map, entity.x + dx, entity.y)) { entity.x += dx; return; }
+        if (isPassable(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); return; }
     }
     if (dy !== 0) {
-        if (isPassable(map, entity.x, entity.y + dy)) { entity.y += dy; return; }
+        if (isPassable(map, entity.x, entity.y + dy)) { moveEntity(entity, entity.x, entity.y + dy, dur); return; }
     }
     if (dx !== 0) {
-        if (isPassable(map, entity.x + dx, entity.y)) { entity.x += dx; }
+        if (isPassable(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); }
     }
 }
 
-function randomMoveNear(animal, anchor, map) {
+function randomMoveNear(animal, anchor, map, dur) {
     const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     const dir = dirs[Math.floor(Math.random() * 4)];
     const nx = animal.x + dir[0];
     const ny = animal.y + dir[1];
     if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
     if (manhattanDist(nx, ny, anchor.x, anchor.y) <= 4 && isPassable(map, nx, ny)) {
-        animal.x = nx;
-        animal.y = ny;
+        moveEntity(animal, nx, ny, dur);
     }
 }
 

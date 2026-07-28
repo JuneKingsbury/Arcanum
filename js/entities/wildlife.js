@@ -2,6 +2,7 @@ import { CONFIG, ANIMALS, SEASON_EFFECTS, WILDLIFE_CONFIG } from '../core/config
 import { isPassableForAnimals } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
+import { moveEntity } from '../systems/movement-lerp.js';
 
 let nextAnimalId = 1;
 
@@ -102,10 +103,11 @@ function updateAnimal(animal, game) {
 
     if (def.tameable && isBeingTamed(animal, game)) return;
 
+    const dur = CONFIG.TICK_RATE / (animal.speed * game.speed);
     if (def.hostile) {
-        updateHostileAnimal(animal, def, game);
+        updateHostileAnimal(animal, def, game, dur);
     } else {
-        updatePassiveAnimal(animal, def, game);
+        updatePassiveAnimal(animal, def, game, dur);
     }
 
     if (animal.x < 0 || animal.x >= CONFIG.MAP_WIDTH || animal.y < 0 || animal.y >= CONFIG.MAP_HEIGHT) {
@@ -129,25 +131,24 @@ function isBeingTamed(animal, game) {
     return game.taskQueue.getAll().some(t => t.type === 'tame' && t.targetAnimalId === animal.id);
 }
 
-function updatePassiveAnimal(animal, def, game) {
-    // Animals being tamed stay put (lured by food)
+function updatePassiveAnimal(animal, def, game, dur) {
     if (isBeingTamed(animal, game)) return;
 
     const nearestColonist = findNearestColonist(animal, game);
     if (nearestColonist && manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y) <= def.fleeRange) {
-        fleeFrom(animal, nearestColonist, game.map);
+        fleeFrom(animal, nearestColonist, game.map, dur);
         return;
     }
 
     if (Math.random() < WILDLIFE_CONFIG.passiveMoveChance) {
-        randomMove(animal, game.map);
+        randomMove(animal, game.map, dur);
     }
 }
 
-function updateHostileAnimal(animal, def, game) {
+function updateHostileAnimal(animal, def, game, dur) {
     const nearestColonist = findNearestColonist(animal, game);
     if (!nearestColonist) {
-        randomMove(animal, game.map);
+        randomMove(animal, game.map, dur);
         return;
     }
 
@@ -156,9 +157,9 @@ function updateHostileAnimal(animal, def, game) {
     if (dist <= 1) {
         colonistTakeDamage(nearestColonist, def.damage, game, animal);
     } else if (dist <= def.aggroRange) {
-        moveToward(animal, nearestColonist, game.map);
+        moveToward(animal, nearestColonist, game.map, dur);
     } else {
-        if (Math.random() < WILDLIFE_CONFIG.hostileIdleMoveChance) randomMove(animal, game.map);
+        if (Math.random() < WILDLIFE_CONFIG.hostileIdleMoveChance) randomMove(animal, game.map, dur);
     }
 }
 
@@ -179,43 +180,41 @@ function findNearestColonist(animal, game) {
     return nearest;
 }
 
-function fleeFrom(animal, threat, map) {
+function fleeFrom(animal, threat, map, dur) {
     const dx = Math.sign(animal.x - threat.x);
     const dy = Math.sign(animal.y - threat.y);
     const nx = animal.x + dx;
     const ny = animal.y + dy;
     if (isPassableForAnimals(map, nx, ny)) {
-        animal.x = nx;
-        animal.y = ny;
+        moveEntity(animal, nx, ny, dur);
     } else {
-        randomMove(animal, map);
+        randomMove(animal, map, dur);
     }
 }
 
-function moveToward(animal, target, map) {
+function moveToward(animal, target, map, dur) {
     const dx = Math.sign(target.x - animal.x);
     const dy = Math.sign(target.y - animal.y);
     if (Math.random() < 0.5 && dx !== 0) {
         const nx = animal.x + dx;
-        if (isPassableForAnimals(map, nx, animal.y)) { animal.x = nx; return; }
+        if (isPassableForAnimals(map, nx, animal.y)) { moveEntity(animal, nx, animal.y, dur); return; }
     }
     if (dy !== 0) {
         const ny = animal.y + dy;
-        if (isPassableForAnimals(map, animal.x, ny)) { animal.y = ny; return; }
+        if (isPassableForAnimals(map, animal.x, ny)) { moveEntity(animal, animal.x, ny, dur); return; }
     }
     if (dx !== 0) {
         const nx = animal.x + dx;
-        if (isPassableForAnimals(map, nx, animal.y)) { animal.x = nx; }
+        if (isPassableForAnimals(map, nx, animal.y)) { moveEntity(animal, nx, animal.y, dur); }
     }
 }
 
-function randomMove(animal, map) {
+function randomMove(animal, map, dur) {
     const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     const dir = dirs[Math.floor(Math.random() * 4)];
     const nx = animal.x + dir[0], ny = animal.y + dir[1];
     if (isPassableForAnimals(map, nx, ny)) {
-        animal.x = nx;
-        animal.y = ny;
+        moveEntity(animal, nx, ny, dur);
     }
 }
 
