@@ -1,4 +1,10 @@
-import { BUILDINGS, BUILD_CATEGORIES } from '../core/config.js';
+import { BUILDINGS, BUILD_CATEGORIES, RESEARCH } from '../core/config.js';
+
+const STRUCTURE_EFFECT_KEYS = [
+    'craftSpeedMult', 'manaCostReduction', 'spellCooldownMult', 'researchSpeedMult',
+    'manaGenBonus', 'tradeDiscount', 'healingBonus', 'warmthRadius',
+    'workSpeedBonus', 'damageBonusMult', 'lightRadius',
+];
 import { EditorRenderer } from './editor-renderer.js';
 
 const GRID_WIDTH = 100;
@@ -117,28 +123,46 @@ class BlueprintEditor {
         const sidebar = document.createElement('div');
         sidebar.id = 'bp-sidebar';
         sidebar.innerHTML = `
-            <div class="bp-section">
-                <div class="bp-section-title">Building Palette</div>
-                <div id="bp-category-filter">
-                    <button class="bp-cat active" data-cat="All">All</button>
-                    ${BUILD_CATEGORIES.map(c => `<button class="bp-cat" data-cat="${c}">${c}</button>`).join('')}
-                </div>
-                <div id="bp-palette"></div>
-                <button id="bp-new-building">+ New Building</button>
+            <div id="bp-sidebar-tabs">
+                <button class="active" data-bp-tab="tools">Tools</button>
+                <button data-bp-tab="export">Export</button>
             </div>
-            <div class="bp-section">
-                <div class="bp-section-title">Cell Properties</div>
-                <div id="bp-cell-props">
-                    <div class="bp-muted">Select a placed cell to see properties</div>
+            <div id="bp-sidebar-tools">
+                <div class="bp-section">
+                    <div class="bp-section-title">Building Palette</div>
+                    <div id="bp-category-filter">
+                        <button class="bp-cat active" data-cat="All">All</button>
+                        ${BUILD_CATEGORIES.map(c => `<button class="bp-cat" data-cat="${c}">${c}</button>`).join('')}
+                    </div>
+                    <div id="bp-palette"></div>
+                    <button id="bp-new-building">+ New Building</button>
+                </div>
+                <div class="bp-section">
+                    <div class="bp-section-title">Cell Properties</div>
+                    <div id="bp-cell-props">
+                        <div class="bp-muted">Select a placed cell to see properties</div>
+                    </div>
+                </div>
+                <div class="bp-section">
+                    <div class="bp-section-title">Structure Properties</div>
+                    <div id="bp-struct-props">
+                        <label>Research: <input type="text" id="bp-struct-research" placeholder="tech_key"></label>
+                        <label>Effects (JSON): <input type="text" id="bp-struct-effects" placeholder='{"craftSpeedMult": 2.0}'></label>
+                        <label>Description: <textarea id="bp-struct-desc" rows="2" placeholder="Description..."></textarea></label>
+                    </div>
+                </div>
+                <div class="bp-section">
+                    <div class="bp-section-title">ID Reference</div>
+                    <input type="text" class="bp-ref-search" id="bp-ref-search" placeholder="Search IDs...">
+                    <div id="bp-ref-list"></div>
                 </div>
             </div>
-            <div class="bp-section">
-                <div class="bp-section-title">Structure Properties</div>
-                <div id="bp-struct-props">
-                    <label>Research: <input type="text" id="bp-struct-research" placeholder="tech_key"></label>
-                    <label>Effects (JSON): <input type="text" id="bp-struct-effects" placeholder='{"craftSpeedMult": 2.0}'></label>
-                    <label>Description: <textarea id="bp-struct-desc" rows="2" placeholder="Description..."></textarea></label>
+            <div id="bp-sidebar-export">
+                <div class="bp-export-header">
+                    <span style="color:#ffcc00;font-size:11px;font-weight:bold;">LIVE EXPORT</span>
+                    <button id="bp-copy-live">Copy</button>
                 </div>
+                <div id="bp-export-live">// Place buildings to see export</div>
             </div>
         `;
         workspace.appendChild(sidebar);
@@ -147,6 +171,7 @@ class BlueprintEditor {
         this.canvas = canvas;
         this.renderer = new EditorRenderer(canvas);
         this._buildPalette();
+        this._buildReferencePanel();
         this._refreshSavedList();
     }
 
@@ -185,11 +210,30 @@ class BlueprintEditor {
         document.getElementById('bp-load-select').addEventListener('change', (e) => this._loadBlueprint(e.target.value));
         document.getElementById('bp-new-building').addEventListener('click', () => this._showNewBuildingForm());
 
-        document.getElementById('bp-name').addEventListener('input', (e) => { this.blueprintName = e.target.value; this._autoSave(); });
-        document.getElementById('bp-id').addEventListener('input', (e) => { this.blueprintId = e.target.value; this._autoSave(); });
-        document.getElementById('bp-struct-research').addEventListener('input', (e) => { this.structureResearch = e.target.value; this._autoSave(); });
-        document.getElementById('bp-struct-effects').addEventListener('input', (e) => { this.structureEffects = e.target.value; this._autoSave(); });
-        document.getElementById('bp-struct-desc').addEventListener('input', (e) => { this.structureDescription = e.target.value; this._autoSave(); });
+        document.getElementById('bp-name').addEventListener('input', (e) => { this.blueprintName = e.target.value; this._autoSave(); this._updateLiveExport(); });
+        document.getElementById('bp-id').addEventListener('input', (e) => { this.blueprintId = e.target.value; this._autoSave(); this._updateLiveExport(); });
+        document.getElementById('bp-struct-research').addEventListener('input', (e) => { this.structureResearch = e.target.value; this._autoSave(); this._updateLiveExport(); });
+        document.getElementById('bp-struct-effects').addEventListener('input', (e) => { this.structureEffects = e.target.value; this._autoSave(); this._updateLiveExport(); });
+        document.getElementById('bp-struct-desc').addEventListener('input', (e) => { this.structureDescription = e.target.value; this._autoSave(); this._updateLiveExport(); });
+
+        document.getElementById('bp-sidebar-tabs').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-bp-tab]');
+            if (!btn) return;
+            const tab = btn.dataset.bpTab;
+            document.querySelectorAll('#bp-sidebar-tabs button').forEach(b => b.classList.toggle('active', b.dataset.bpTab === tab));
+            document.getElementById('bp-sidebar-tools').classList.toggle('hidden', tab !== 'tools');
+            const exportPanel = document.getElementById('bp-sidebar-export');
+            exportPanel.classList.toggle('visible', tab === 'export');
+            if (tab === 'export') this._updateLiveExport();
+        });
+
+        document.getElementById('bp-copy-live').addEventListener('click', () => {
+            const text = document.getElementById('bp-export-live').textContent;
+            navigator.clipboard.writeText(text);
+            const btn = document.getElementById('bp-copy-live');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 1000);
+        });
 
         // Tool buttons
         this.container.querySelectorAll('.bp-tool').forEach(btn => {
@@ -294,6 +338,7 @@ class BlueprintEditor {
             }
             this._lastAction = { before: this._strokeCells, after, undone: false };
             this._autoSave();
+            this._updateLiveExport();
         }
         this._strokeCells = null;
     }
@@ -336,6 +381,7 @@ class BlueprintEditor {
             this.grid[y][x] = cell ? { ...cell } : null;
         }
         this._lastAction.undone = !undone;
+        this._updateLiveExport();
     }
 
     _onKeyUp(e) {
@@ -407,6 +453,7 @@ class BlueprintEditor {
                 break;
             case 'setCore':
                 this.coreCell = { x, y };
+                this._updateLiveExport();
                 break;
         }
         if (this.tool === 'place' || this.tool === 'erase') {
@@ -523,6 +570,7 @@ class BlueprintEditor {
         this.selectedCell = null;
         this.reqOverrides = {};
         this._updateCellProps();
+        this._updateLiveExport();
     }
 
     _clampCamera() {
@@ -578,6 +626,136 @@ class BlueprintEditor {
     _goBack() {
         this.hide();
         document.getElementById('start-screen').style.display = '';
+    }
+
+    _buildReferencePanel() {
+        const container = document.getElementById('bp-ref-list');
+        const categories = [
+            { title: 'Effect Keys', ids: STRUCTURE_EFFECT_KEYS },
+            { title: 'Research IDs', ids: Object.keys(RESEARCH) },
+            { title: 'Building IDs', ids: Object.keys(BUILDINGS) },
+        ];
+
+        let html = '';
+        for (const cat of categories) {
+            html += `<div class="bp-ref-category-title">${cat.title}</div>`;
+            for (const id of cat.ids) {
+                html += `<span class="bp-ref-id" data-ref-id="${id}">${id}</span>`;
+            }
+        }
+        container.innerHTML = html;
+
+        container.addEventListener('click', (e) => {
+            const pill = e.target.closest('.bp-ref-id');
+            if (!pill) return;
+            navigator.clipboard.writeText(pill.dataset.refId);
+            pill.classList.add('copied');
+            setTimeout(() => pill.classList.remove('copied'), 600);
+        });
+
+        document.getElementById('bp-ref-search').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            container.querySelectorAll('.bp-ref-id').forEach(el => {
+                el.style.display = el.dataset.refId.includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    _updateLiveExport() {
+        const el = document.getElementById('bp-export-live');
+        if (!el) return;
+        const code = this._generateExportCode();
+        el.textContent = code;
+    }
+
+    _generateExportCode() {
+        const cells = [];
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                if (this.grid[y][x]) cells.push({ x, y, cell: this.grid[y][x] });
+            }
+        }
+        if (cells.length === 0) return '// Place buildings to see export';
+
+        const name = this.blueprintName || 'unnamed_structure';
+        const id = this.blueprintId || name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+        let output = '';
+
+        const usedCustoms = new Set();
+        cells.forEach(c => {
+            if (c.cell.isCustom) usedCustoms.add(c.cell.customIndex);
+            if (c.cell.floorKey?.isCustom) usedCustoms.add(c.cell.floorKey.customIndex);
+        });
+        if (usedCustoms.size > 0) {
+            output += '// === Add to BUILDINGS in config.js ===\n';
+            for (const idx of usedCustoms) {
+                const def = this.customBuildings[idx];
+                output += this._formatBuildingDef(def) + '\n';
+            }
+            output += '\n';
+        }
+
+        if (cells.length === 1 && !cells[0].cell.isCustom) {
+            const key = cells[0].cell.buildingKey;
+            output += `// Single building: ${key} (already exists in config)\n`;
+            return output;
+        }
+        if (cells.length === 1 && cells[0].cell.isCustom) {
+            return output || '// Custom building defined above';
+        }
+
+        if (!this.coreCell || !this.grid[this.coreCell.y]?.[this.coreCell.x]) {
+            return output + '// Set a core cell (tool 4) for multi-cell export';
+        }
+
+        const coreCell = this.grid[this.coreCell.y][this.coreCell.x];
+        const coreBuild = coreCell.isCustom ? coreCell.customDef.key : coreCell.buildingKey;
+
+        const layout = [];
+        for (const { x, y, cell } of cells) {
+            if (x === this.coreCell.x && y === this.coreCell.y) continue;
+            const dx = x - this.coreCell.x;
+            const dy = y - this.coreCell.y;
+            const posKey = `${x},${y}`;
+            const req = this.reqOverrides[posKey] || (cell.isCustom ? cell.customDef.key : cell.buildingKey);
+            const entry = { dx, dy, req };
+            if (cell.floorKey) {
+                entry.floor = cell.floorKey.isCustom ? cell.floorKey.customDef.key : cell.floorKey.buildingKey;
+            }
+            layout.push(entry);
+        }
+
+        layout.sort((a, b) => a.dy - b.dy || a.dx - b.dx);
+
+        let effectStr = '{}';
+        if (this.structureEffects.trim()) {
+            try { JSON.parse(this.structureEffects); effectStr = this.structureEffects.trim(); }
+            catch { effectStr = '{ /* invalid JSON */ }'; }
+        }
+
+        output += '// === Add to COMPLEX_STRUCTURES in config.js ===\n';
+        output += `${id}: {\n`;
+        output += `    name: '${name.replace(/'/g, "\\'")}',\n`;
+        if (this.structureResearch) output += `    research: '${this.structureResearch}',\n`;
+        output += `    coreBuild: '${coreBuild}',\n`;
+        if (coreCell.floorKey) {
+            const coreFloor = coreCell.floorKey.isCustom ? coreCell.floorKey.customDef.key : coreCell.floorKey.buildingKey;
+            output += `    coreFloor: '${coreFloor}',\n`;
+        }
+        output += `    layout: [\n`;
+        for (const l of layout) {
+            let line = `        { dx: ${l.dx}, dy: ${l.dy}, req: '${l.req}'`;
+            if (l.floor) line += `, floor: '${l.floor}'`;
+            line += ` },`;
+            output += line + '\n';
+        }
+        output += `    ],\n`;
+        output += `    effect: ${effectStr},\n`;
+        output += `    description: '${(this.structureDescription || '').replace(/'/g, "\\'")}',\n`;
+        output += `},\n`;
+
+        return output;
     }
 
     // --- New Building Form ---

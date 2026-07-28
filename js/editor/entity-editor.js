@@ -1,3 +1,5 @@
+import { ANIMALS, SPELLS, RESEARCH, CONFIG, SUMMON_TYPES, GOLEM_TYPES } from '../core/config.js';
+
 const STORAGE_KEY = 'convocation_entity_drafts';
 
 const SPAWN_CONDITIONS = [
@@ -13,6 +15,17 @@ const TAMED_ROLES = [
     { value: 'happiness', label: 'Happiness Aura' },
 ];
 
+const REFERENCE_DATA = [
+    { title: 'Resource IDs', ids: Object.keys(CONFIG.START_RESOURCES) },
+    { title: 'Animal IDs', ids: Object.keys(ANIMALS) },
+    { title: 'Summon Types', ids: Object.keys(SUMMON_TYPES) },
+    { title: 'Golem Types', ids: Object.keys(GOLEM_TYPES) },
+    { title: 'Spell IDs', ids: Object.keys(SPELLS) },
+    { title: 'Research IDs', ids: Object.keys(RESEARCH) },
+];
+
+const CONFIG_ANIMALS = Object.entries(ANIMALS).map(([key, def]) => ({ key, ...def }));
+
 let editorInstance = null;
 
 export function launchEntityEditor() {
@@ -25,13 +38,17 @@ export function launchEntityEditor() {
 
 class EntityEditor {
     constructor() {
+        this.activeDraftKey = null;
+        this.undoStack = [];
+        this.undoIndex = -1;
         this.container = document.getElementById('entity-editor');
         this._buildDOM();
         this._bindEvents();
-        this._refreshLoadDropdown();
         this._autoRestore();
         this._updateConditionals();
+        this._renderDraftList();
         this._schedulePreview();
+        this._pushUndoState();
     }
 
     show() { this.container.style.display = 'flex'; }
@@ -51,14 +68,23 @@ class EntityEditor {
         toolbar.innerHTML = `
             <button id="en-back">← Back</button>
             <span class="fe-sep"></span>
-            <select id="en-load-select"><option value="">Load draft...</option></select>
-            <button id="en-save">Save</button>
-            <button id="en-delete">Delete</button>
+            <button id="en-new">+ New</button>
+            <button id="en-duplicate">Duplicate</button>
             <span class="fe-sep"></span>
-            <button id="en-export">Export</button>
-            <button id="en-copy">Copy</button>
+            <select id="en-load-config"><option value="">Load from Config...</option></select>
+            <span class="fe-sep"></span>
+            <button id="en-export-all">Export All</button>
+            <button id="en-copy">Copy Current</button>
         `;
         this.container.appendChild(toolbar);
+
+        const configSelect = document.getElementById('en-load-config');
+        CONFIG_ANIMALS.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.key;
+            opt.textContent = `${a.char || '?'} ${a.key}`;
+            configSelect.appendChild(opt);
+        });
 
         const workspace = document.createElement('div');
         workspace.className = 'fe-workspace';
@@ -71,11 +97,15 @@ class EntityEditor {
         const previewPanel = document.createElement('div');
         previewPanel.className = 'fe-preview-panel';
         previewPanel.innerHTML = `
-            <div class="fe-preview-header">
-                <span>Live Preview</span>
+            <div class="fe-preview-tabs">
+                <button class="fe-tab-btn active" data-tab="preview">Preview</button>
+                <button class="fe-tab-btn" data-tab="reference">Reference</button>
             </div>
-            <div id="en-char-preview" style="text-align:center;padding:16px;font-size:48px;font-family:'Courier New',monospace;background:#0a0a14;border-bottom:1px solid #333;">?</div>
-            <div class="fe-preview-code" id="en-preview"></div>
+            <div class="fe-preview-content">
+                <div id="en-char-preview" style="text-align:center;padding:16px;font-size:48px;font-family:'Courier New',monospace;background:#0a0a14;border-bottom:1px solid #333;">?</div>
+                <div class="fe-preview-code" id="en-preview"></div>
+            </div>
+            <div class="fe-reference-content" id="en-reference"></div>
         `;
 
         workspace.appendChild(formPanel);
@@ -259,18 +289,21 @@ class EntityEditor {
                     </div>
                 </div>
             </div>
+
+            <div class="fe-section-title">Saved Drafts</div>
+            <div id="en-draft-list" class="fe-draft-list"></div>
         `;
     }
 
     _bindEvents() {
         document.getElementById('en-back').addEventListener('click', () => this._goBack());
-        document.getElementById('en-save').addEventListener('click', () => this._saveDraft());
-        document.getElementById('en-delete').addEventListener('click', () => this._deleteDraft());
-        document.getElementById('en-export').addEventListener('click', () => this._showExportModal());
+        document.getElementById('en-new').addEventListener('click', () => this._newDraft());
+        document.getElementById('en-duplicate').addEventListener('click', () => this._duplicateDraft());
+        document.getElementById('en-export-all').addEventListener('click', () => this._exportAll());
         document.getElementById('en-copy').addEventListener('click', () => this._copyPreview());
-
-        document.getElementById('en-load-select').addEventListener('change', (e) => {
-            if (e.target.value) this._loadDraft(e.target.value);
+        document.getElementById('en-load-config').addEventListener('change', (e) => {
+            if (e.target.value) this._loadFromConfig(e.target.value);
+            e.target.value = '';
         });
 
         document.getElementById('en-hostile').addEventListener('change', () => this._updateConditionals());
@@ -281,13 +314,73 @@ class EntityEditor {
         document.getElementById('en-char').addEventListener('input', () => this._updateCharPreview());
         document.getElementById('en-color').addEventListener('input', () => this._updateCharPreview());
 
+        this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
+        });
+
         this.container.addEventListener('input', () => this._schedulePreview());
         this.container.addEventListener('change', () => this._schedulePreview());
 
         window.addEventListener('keydown', (e) => {
             if (this.container.style.display === 'none') return;
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this._undo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                this._redo();
+                return;
+            }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             if (e.key === 'Escape') this._goBack();
+        });
+    }
+
+    _switchTab(tab) {
+        this.container.querySelectorAll('.fe-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        this.container.querySelector('.fe-preview-content').style.display = tab === 'preview' ? '' : 'none';
+        const ref = this.container.querySelector('.fe-reference-content');
+        ref.classList.toggle('visible', tab === 'reference');
+        if (tab === 'reference' && !ref.dataset.built) {
+            this._buildReference();
+            ref.dataset.built = '1';
+        }
+    }
+
+    _buildReference() {
+        const container = document.getElementById('en-reference');
+        let html = `<input type="text" class="fe-ref-search" placeholder="Search IDs..." id="en-ref-search">`;
+        html += `<div id="en-ref-list">`;
+        for (const cat of REFERENCE_DATA) {
+            html += `<div class="fe-ref-category">`;
+            html += `<div class="fe-ref-category-title">${cat.title}</div>`;
+            for (const id of cat.ids) {
+                html += `<span class="fe-ref-id" data-ref-id="${id}">${id}</span>`;
+            }
+            html += `</div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+
+        container.addEventListener('click', (e) => {
+            const pill = e.target.closest('.fe-ref-id');
+            if (!pill) return;
+            navigator.clipboard.writeText(pill.dataset.refId);
+            pill.classList.add('copied');
+            setTimeout(() => pill.classList.remove('copied'), 600);
+        });
+
+        document.getElementById('en-ref-search').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            container.querySelectorAll('.fe-ref-id').forEach(el => {
+                el.style.display = el.dataset.refId.includes(q) ? '' : 'none';
+            });
+            container.querySelectorAll('.fe-ref-category').forEach(cat => {
+                const hasVisible = [...cat.querySelectorAll('.fe-ref-id')].some(el => el.style.display !== 'none');
+                cat.style.display = hasVisible ? '' : 'none';
+            });
         });
     }
 
@@ -321,31 +414,154 @@ class EntityEditor {
         clearTimeout(this._previewTimer);
         this._previewTimer = setTimeout(() => {
             this._updatePreview();
-            this._autoSave();
+            this._scheduleDraftSave();
+            this._scheduleUndoPush();
         }, 50);
+    }
+
+    _scheduleDraftSave() {
+        clearTimeout(this._draftSaveTimer);
+        this._draftSaveTimer = setTimeout(() => this._autoSaveDraft(), 500);
     }
 
     _updatePreview() {
         this._updateCharPreview();
+        this._validateForm();
         const data = this._collectFormData();
         const code = data ? this._formatOutput(data) : '// Fill in fields to see preview';
         document.getElementById('en-preview').textContent = code;
     }
 
-    _autoSave() {
+    _autoSaveDraft() {
+        const data = this._collectFormData();
+        if (!data || !data.key) return;
+        const saved = this._getSaved();
+        const idx = saved.findIndex(s => s.key === data.key);
+        if (idx >= 0) saved[idx] = data;
+        else saved.push(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        this.activeDraftKey = data.key;
+        this._renderDraftList();
         try {
-            const data = this._collectFormData();
-            localStorage.setItem(STORAGE_KEY + '_autosave', JSON.stringify(data));
+            localStorage.setItem(STORAGE_KEY + '_active', data.key);
         } catch {}
     }
 
     _autoRestore() {
         try {
+            const activeKey = localStorage.getItem(STORAGE_KEY + '_active');
+            if (activeKey) {
+                const saved = this._getSaved();
+                const item = saved.find(s => s.key === activeKey);
+                if (item) {
+                    this.activeDraftKey = activeKey;
+                    this._populateForm(item);
+                    return;
+                }
+            }
             const raw = localStorage.getItem(STORAGE_KEY + '_autosave');
             if (!raw) return;
             const data = JSON.parse(raw);
-            if (data && data.key) this._populateForm(data);
+            if (data && data.key) {
+                this.activeDraftKey = data.key;
+                this._populateForm(data);
+            }
         } catch {}
+    }
+
+    _newDraft() {
+        this._autoSaveDraft();
+        this._clearForm();
+        this.activeDraftKey = null;
+        localStorage.removeItem(STORAGE_KEY + '_active');
+        this._renderDraftList();
+        this._schedulePreview();
+    }
+
+    _clearForm() {
+        document.getElementById('en-key').value = '';
+        document.getElementById('en-char').value = '';
+        document.getElementById('en-color').value = '#bb8855';
+        document.getElementById('en-hp').value = '40';
+        document.getElementById('en-speed').value = '0.5';
+        document.getElementById('en-hostile').checked = false;
+        document.getElementById('en-p-meatYield').value = '3';
+        document.getElementById('en-p-hideYield').value = '2';
+        document.getElementById('en-p-fleeRange').value = '5';
+        document.getElementById('en-p-spawnWeight').value = '10';
+        document.getElementById('en-h-meatYield').value = '2';
+        document.getElementById('en-h-hideYield').value = '1';
+        document.getElementById('en-h-damage').value = '8';
+        document.getElementById('en-h-aggroRange').value = '6';
+        document.getElementById('en-h-spawnWeight').value = '0';
+        document.getElementById('en-h-spawnCondition').value = '';
+        document.getElementById('en-tameable').checked = false;
+        document.getElementById('en-tame-role').value = 'guard';
+        document.getElementById('en-tame-foodToTame').value = '4';
+        document.getElementById('en-tame-guardRadius').value = '8';
+        document.getElementById('en-tame-guardDamage').value = '8';
+        document.getElementById('en-tame-dangerousTame').checked = false;
+        document.getElementById('en-tame-baseTameChance').value = '0.4';
+        document.getElementById('en-tame-retaliationDamage').value = '12';
+        document.getElementById('en-tame-produces').value = '';
+        document.getElementById('en-tame-produceRate').value = '80';
+        document.getElementById('en-tame-produceAmount').value = '1';
+        document.getElementById('en-tame-expeditionSpeedBonus').value = '0.25';
+        document.getElementById('en-tame-auraRadius').value = '5';
+        document.getElementById('en-tame-auraMoodBonus').value = '5';
+        this._updateConditionals();
+    }
+
+    _renderDraftList() {
+        const container = document.getElementById('en-draft-list');
+        const saved = this._getSaved();
+        if (!saved.length) {
+            container.innerHTML = '<div style="color:#666;font-size:11px;">No drafts yet. Start filling in the form above.</div>';
+            return;
+        }
+        container.innerHTML = saved.map(item => `
+            <div class="fe-draft-row${item.key === this.activeDraftKey ? ' active' : ''}" data-draft-key="${item.key}">
+                <span class="fe-draft-char" style="color:${item.color || '#ccc'}">${item.char || '?'}</span>
+                <span class="fe-draft-key">${item.key}</span>
+                <span class="fe-draft-actions">
+                    <button data-draft-load="${item.key}">Edit</button>
+                    <button data-draft-del="${item.key}" class="fe-draft-del">✕</button>
+                </span>
+            </div>
+        `).join('');
+
+        container.querySelectorAll('[data-draft-load]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._loadDraft(btn.dataset.draftLoad);
+            });
+        });
+        container.querySelectorAll('[data-draft-del]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._deleteDraft(btn.dataset.draftDel);
+            });
+        });
+    }
+
+    _loadDraft(key) {
+        const saved = this._getSaved();
+        const item = saved.find(s => s.key === key);
+        if (!item) return;
+        this.activeDraftKey = key;
+        this._populateForm(item);
+        this._renderDraftList();
+        localStorage.setItem(STORAGE_KEY + '_active', key);
+    }
+
+    _deleteDraft(key) {
+        const saved = this._getSaved().filter(s => s.key !== key);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        if (this.activeDraftKey === key) {
+            this.activeDraftKey = null;
+            localStorage.removeItem(STORAGE_KEY + '_active');
+        }
+        this._renderDraftList();
     }
 
     _collectFormData() {
@@ -470,17 +686,21 @@ class EntityEditor {
         navigator.clipboard.writeText(text);
     }
 
-    _showExportModal() {
-        const data = this._collectFormData();
-        if (!data) return;
-        const output = this._formatOutput(data);
+    _exportAll() {
+        const saved = this._getSaved();
+        if (!saved.length) return;
+        let output = '// === Add to ANIMALS in config.js ===\n';
+        saved.forEach(item => {
+            output += this._formatOutput(item) + '\n\n';
+        });
+        output = output.trimEnd();
 
         const modal = document.createElement('div');
         modal.className = 'fe-export-modal';
         modal.innerHTML = `
             <div class="fe-export-modal-content">
-                <div style="color:#ffcc00;font-weight:bold;margin-bottom:12px;">Export Entity: ${data.key}</div>
-                <textarea readonly>// === Add to ANIMALS in config.js ===\n${output}</textarea>
+                <div style="color:#ffcc00;font-weight:bold;margin-bottom:12px;">Export All Entities (${saved.length} items)</div>
+                <textarea readonly>${output}</textarea>
                 <div class="fe-modal-actions">
                     <button id="en-modal-copy">Copy to Clipboard</button>
                     <button id="en-modal-close">Close</button>
@@ -490,30 +710,11 @@ class EntityEditor {
         this.container.appendChild(modal);
 
         document.getElementById('en-modal-copy').addEventListener('click', () => {
-            navigator.clipboard.writeText(`// === Add to ANIMALS in config.js ===\n${output}`);
+            navigator.clipboard.writeText(output);
             document.getElementById('en-modal-copy').textContent = 'Copied!';
         });
         document.getElementById('en-modal-close').addEventListener('click', () => modal.remove());
         modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-    }
-
-    _saveDraft() {
-        const data = this._collectFormData();
-        if (!data) return;
-        const saved = this._getSaved();
-        const idx = saved.findIndex(s => s.key === data.key);
-        if (idx >= 0) saved[idx] = data;
-        else saved.push(data);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-        this._refreshLoadDropdown();
-    }
-
-    _loadDraft(key) {
-        const saved = this._getSaved();
-        const item = saved.find(s => s.key === key);
-        if (!item) return;
-        this._populateForm(item);
-        document.getElementById('en-load-select').value = '';
     }
 
     _populateForm(data) {
@@ -571,23 +772,91 @@ class EntityEditor {
         this._schedulePreview();
     }
 
-    _deleteDraft() {
-        const key = document.getElementById('en-key').value.trim();
-        if (!key) return;
-        const saved = this._getSaved().filter(s => s.key !== key);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-        this._refreshLoadDropdown();
+    _loadFromConfig(key) {
+        const def = ANIMALS[key];
+        if (!def) return;
+        const data = { key, ...def };
+        if (def.tamed) { data.tameable = true; }
+        this._populateForm(data);
+        this.activeDraftKey = null;
+        this._renderDraftList();
+        this._schedulePreview();
+        this._pushUndoState();
+    }
+
+    _duplicateDraft() {
+        const data = this._collectFormData();
+        if (!data || !data.key) return;
+        data.key = data.key + '_copy';
+        this._populateForm(data);
+        this.activeDraftKey = null;
+        this._renderDraftList();
+        this._schedulePreview();
+        this._pushUndoState();
+    }
+
+    _getFormSnapshot() {
+        const inputs = this.container.querySelectorAll('#en-form input, #en-form select');
+        const snap = {};
+        inputs.forEach(el => {
+            const id = el.id;
+            if (!id) return;
+            if (el.type === 'checkbox') snap[id] = el.checked;
+            else snap[id] = el.value;
+        });
+        return JSON.stringify(snap);
+    }
+
+    _restoreFormSnapshot(json) {
+        const snap = JSON.parse(json);
+        for (const [id, val] of Object.entries(snap)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            if (el.type === 'checkbox') el.checked = val;
+            else el.value = val;
+        }
+        this._updateConditionals();
+        this._updatePreview();
+    }
+
+    _pushUndoState() {
+        const snap = this._getFormSnapshot();
+        if (this.undoStack[this.undoIndex] === snap) return;
+        this.undoStack = this.undoStack.slice(0, this.undoIndex + 1);
+        this.undoStack.push(snap);
+        if (this.undoStack.length > 50) this.undoStack.shift();
+        this.undoIndex = this.undoStack.length - 1;
+    }
+
+    _scheduleUndoPush() {
+        clearTimeout(this._undoTimer);
+        this._undoTimer = setTimeout(() => this._pushUndoState(), 800);
+    }
+
+    _undo() {
+        if (this.undoIndex <= 0) return;
+        this.undoIndex--;
+        this._restoreFormSnapshot(this.undoStack[this.undoIndex]);
+    }
+
+    _redo() {
+        if (this.undoIndex >= this.undoStack.length - 1) return;
+        this.undoIndex++;
+        this._restoreFormSnapshot(this.undoStack[this.undoIndex]);
+    }
+
+    _validateForm() {
+        const key = document.getElementById('en-key');
+        const char = document.getElementById('en-char');
+        let valid = true;
+        key.closest('.fe-field').classList.toggle('fe-error', !key.value.trim());
+        char.closest('.fe-field').classList.toggle('fe-error', !char.value.trim());
+        if (!key.value.trim() || !char.value.trim()) valid = false;
+        return valid;
     }
 
     _getSaved() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
         catch { return []; }
-    }
-
-    _refreshLoadDropdown() {
-        const select = document.getElementById('en-load-select');
-        const saved = this._getSaved();
-        select.innerHTML = '<option value="">Load draft...</option>' +
-            saved.map(s => `<option value="${s.key}">${s.key} (${s.char})</option>`).join('');
     }
 }

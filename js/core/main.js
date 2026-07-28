@@ -1719,6 +1719,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.getElementById('start-spell-editor').addEventListener('click', () => {
+        import('../editor/spell-editor.js').then(({ launchSpellEditor }) => {
+            launchSpellEditor();
+        });
+    });
+
     const importFileInput = document.getElementById('import-file');
     document.getElementById('import-game').addEventListener('click', () => {
         importFileInput.click();

@@ -1941,10 +1941,12 @@ body {
 
 #bp-sidebar {
     width: 280px;
-    overflow-y: auto;
+    overflow-y: hidden;
     border-left: 1px solid #333;
     background: #141422;
     padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .bp-section {
@@ -2763,4 +2765,312 @@ body {
         border-left: none;
         border-top: 1px solid #333;
     }
+}
+
+/* --- Reference Panel Tabs --- */
+
+.form-editor .fe-preview-tabs {
+    display: flex;
+    background: #1a1a2e;
+    border-bottom: 1px solid #333;
+}
+
+.form-editor .fe-tab-btn {
+    flex: 1;
+    padding: 6px 12px;
+    background: transparent;
+    color: #888;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.form-editor .fe-tab-btn:hover {
+    color: #ccc;
+}
+
+.form-editor .fe-tab-btn.active {
+    color: #ffcc00;
+    border-bottom-color: #ffcc00;
+}
+
+.form-editor .fe-preview-content,
+.form-editor .fe-reference-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.form-editor .fe-reference-content {
+    padding: 8px 12px;
+    display: none;
+}
+
+.form-editor .fe-reference-content.visible {
+    display: block;
+}
+
+.form-editor .fe-ref-search {
+    width: 100%;
+    background: #1a1a2e;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 5px 8px;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+}
+
+.form-editor .fe-ref-search:focus {
+    border-color: #6688bb;
+    outline: none;
+}
+
+.form-editor .fe-ref-category {
+    margin-bottom: 12px;
+}
+
+.form-editor .fe-ref-category-title {
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.form-editor .fe-ref-id {
+    display: inline-block;
+    background: #2a2a3e;
+    color: #8fc;
+    border: 1px solid #444;
+    padding: 2px 6px;
+    margin: 2px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.form-editor .fe-ref-id:hover {
+    background: #3a4a5e;
+    border-color: #6688bb;
+}
+
+.form-editor .fe-ref-id.copied {
+    background: #224422;
+    border-color: #88cc88;
+    color: #aaffaa;
+}
+
+/* --- Draft List --- */
+
+.form-editor .fe-draft-list {
+    margin-top: 8px;
+}
+
+.form-editor .fe-draft-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    cursor: pointer;
+}
+
+.form-editor .fe-draft-row:hover {
+    background: #2a2a3e;
+}
+
+.form-editor .fe-draft-row.active {
+    border-color: #6688bb;
+    background: #1a2a3e;
+}
+
+.form-editor .fe-draft-row .fe-draft-char {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+}
+
+.form-editor .fe-draft-row .fe-draft-key {
+    flex: 1;
+    color: #8fc;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.form-editor .fe-draft-row .fe-draft-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.form-editor .fe-draft-row .fe-draft-actions button {
+    background: #2a2a3e;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 10px;
+    border-radius: 3px;
+}
+
+.form-editor .fe-draft-row .fe-draft-actions button:hover {
+    background: #3a3a4e;
+}
+
+.form-editor .fe-draft-row .fe-draft-actions button.fe-draft-del {
+    color: #ff6666;
+}
+
+/* --- Blueprint Export Tab --- */
+
+#bp-sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid #333;
+    background: #1a1a2e;
+    flex-shrink: 0;
+}
+
+#bp-sidebar-tabs button {
+    flex: 1;
+    padding: 6px 8px;
+    background: transparent;
+    color: #888;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#bp-sidebar-tabs button:hover {
+    color: #ccc;
+}
+
+#bp-sidebar-tabs button.active {
+    color: #ffcc00;
+    border-bottom-color: #ffcc00;
+}
+
+#bp-sidebar-tools {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+}
+
+#bp-sidebar-tools.hidden {
+    display: none;
+}
+
+#bp-sidebar-export {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+#bp-sidebar-export.visible {
+    display: flex;
+}
+
+#bp-sidebar-export .bp-export-header {
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+}
+
+#bp-sidebar-export .bp-export-header button {
+    background: #2a2a3e;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 10px;
+    border-radius: 3px;
+}
+
+#bp-sidebar-export .bp-export-header button:hover {
+    background: #3a3a4e;
+}
+
+#bp-export-live {
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    color: #8fc;
+    background: #0a0a14;
+    flex: 1;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+/* --- Blueprint Reference Section --- */
+
+#bp-sidebar .bp-ref-search {
+    width: 100%;
+    background: #1a1a2e;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    box-sizing: border-box;
+}
+
+#bp-sidebar .bp-ref-search:focus {
+    border-color: #6688bb;
+    outline: none;
+}
+
+#bp-sidebar .bp-ref-category-title {
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    margin: 6px 0 3px;
+    letter-spacing: 0.5px;
+}
+
+#bp-sidebar .bp-ref-id {
+    display: inline-block;
+    background: #2a2a3e;
+    color: #8fc;
+    border: 1px solid #444;
+    padding: 2px 5px;
+    margin: 1px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+#bp-sidebar .bp-ref-id:hover {
+    background: #3a4a5e;
+    border-color: #6688bb;
+}
+
+#bp-sidebar .bp-ref-id.copied {
+    background: #224422;
+    border-color: #88cc88;
+    color: #aaffaa;
 }

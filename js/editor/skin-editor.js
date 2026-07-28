@@ -124,11 +124,8 @@ class SkinEditor {
         this._refImage = null; // HTMLImageElement
         this._showRefImage = false;
 
-        // Dither tool state
-        this._ditherColor2 = { r: 0, g: 0, b: 0, a: 255 };
-
-        // Gradient tool state
-        this._gradientColor2 = null;
+        // Secondary color (used by gradient + dither tools)
+        this._secondaryColor = { r: 0, g: 0, b: 0, a: 255 };
 
         this._buildDOM();
         this._bindEvents();
@@ -294,7 +291,16 @@ class SkinEditor {
                         <button id="se-color-darker" style="flex:1;font-size:10px;padding:2px 4px;" title="Darken current color 10%">Darker</button>
                         <button id="se-color-lighter" style="flex:1;font-size:10px;padding:2px 4px;" title="Lighten current color 10%">Lighter</button>
                     </div>
-                    <div id="se-current-color" title="Current color"></div>
+                    <div style="display:flex;align-items:center;gap:4px;margin:4px 0;">
+                        <div id="se-current-color" title="Primary color (left-click to pick)" style="flex:1;height:24px;border:2px solid #888;border-radius:3px;cursor:pointer;"></div>
+                        <button id="se-swap-colors" title="Swap primary/secondary" style="font-size:11px;padding:2px 5px;line-height:1;">&#8644;</button>
+                        <div id="se-secondary-color" title="Secondary color (for gradient/dither)" style="flex:1;height:24px;border:2px solid #555;border-radius:3px;cursor:pointer;background:#000;"></div>
+                    </div>
+                    <div class="se-color-row" style="margin-top:2px;">
+                        <label style="font-size:10px;color:#888;">Secondary:</label>
+                        <input type="color" id="se-secondary-picker" value="#000000" style="width:32px;height:20px;border:1px solid #444;padding:0;cursor:pointer;">
+                        <button id="se-set-secondary" style="font-size:10px;padding:2px 6px;" title="Set current color as secondary">Use Current</button>
+                    </div>
                     <div id="se-recent-colors"></div>
                 </div>
             </div>
@@ -321,6 +327,7 @@ class SkinEditor {
         this._refreshSavedList();
         this._refreshLoadDropdown();
         this._updateCurrentColor();
+        this._updateSecondaryColorSwatch();
     }
 
     _buildCategoryFilter() {
@@ -625,6 +632,34 @@ class SkinEditor {
         // Darker/Lighter buttons
         document.getElementById('se-color-darker').addEventListener('click', () => this._shiftColorLightness(-10));
         document.getElementById('se-color-lighter').addEventListener('click', () => this._shiftColorLightness(10));
+
+        // Secondary color controls
+        document.getElementById('se-secondary-picker').addEventListener('input', (e) => {
+            const hex = e.target.value;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            this._secondaryColor = { r, g, b, a: this._secondaryColor.a };
+            this._updateSecondaryColorSwatch();
+        });
+        document.getElementById('se-set-secondary').addEventListener('click', () => {
+            this._secondaryColor = { ...this.color };
+            this._updateSecondaryColorSwatch();
+        });
+        document.getElementById('se-swap-colors').addEventListener('click', () => {
+            const temp = { ...this.color };
+            this.color = { ...this._secondaryColor };
+            this._secondaryColor = temp;
+            this._syncColorUI();
+            this._updateSecondaryColorSwatch();
+        });
+        document.getElementById('se-secondary-color').addEventListener('click', () => {
+            const temp = { ...this.color };
+            this.color = { ...this._secondaryColor };
+            this._secondaryColor = temp;
+            this._syncColorUI();
+            this._updateSecondaryColorSwatch();
+        });
 
         // Recent colors
         document.getElementById('se-recent-colors').addEventListener('click', (e) => {
@@ -1051,7 +1086,8 @@ class SkinEditor {
 
     _pickColor(x, y) {
         const { r, g, b, a } = this._getPixel(x, y);
-        this._lastPickedColor = { r, g, b, a };
+        this._secondaryColor = { ...this.color };
+        this._updateSecondaryColorSwatch();
         this.color = { r, g, b, a };
         this._syncColorUI();
         this._setTool('draw');
@@ -1215,6 +1251,16 @@ class SkinEditor {
         if (!el) return;
         const { r, g, b, a } = this.color;
         el.style.background = `rgba(${r},${g},${b},${a / 255})`;
+    }
+
+    _updateSecondaryColorSwatch() {
+        const el = document.getElementById('se-secondary-color');
+        if (!el) return;
+        const { r, g, b, a } = this._secondaryColor;
+        el.style.background = `rgba(${r},${g},${b},${a / 255})`;
+        const hex = '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+        const picker = document.getElementById('se-secondary-picker');
+        if (picker) picker.value = hex;
     }
 
     _rgbToHsl(r, g, b) {
@@ -1822,11 +1868,7 @@ class SkinEditor {
 
     // --- Replace Color ---
     _replaceColor() {
-        if (!this._lastPickedColor) {
-            document.getElementById('se-status').textContent = 'Pick a color first (tool 4), then set your desired color and click Replace';
-            return;
-        }
-        const target = this._lastPickedColor;
+        const target = this._secondaryColor;
         const fill = this.color;
         if (target.r === fill.r && target.g === fill.g && target.b === fill.b && target.a === fill.a) {
             document.getElementById('se-status').textContent = 'Source and target colors are the same';
@@ -1872,7 +1914,7 @@ class SkinEditor {
     _ditherFill(x, y) {
         const target = this._getPixel(x, y);
         const c1 = this.color;
-        const c2 = this._lastPickedColor || this._ditherColor2;
+        const c2 = this._secondaryColor;
         if (target.r === c1.r && target.g === c1.g && target.b === c1.b && target.a === c1.a) return;
 
         const size = this.canvasSize;
@@ -1899,7 +1941,7 @@ class SkinEditor {
     // --- Gradient Tool ---
     _computeGradientPixels(x0, y0, x1, y1) {
         const c1 = this.color;
-        const c2 = this._lastPickedColor || this._ditherColor2;
+        const c2 = this._secondaryColor;
         const pixels = [];
         const dx = x1 - x0, dy = y1 - y0;
         const len = Math.sqrt(dx * dx + dy * dy);

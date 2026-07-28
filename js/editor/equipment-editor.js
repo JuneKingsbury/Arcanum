@@ -1,3 +1,5 @@
+import { WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS } from '../core/config.js';
+
 const STORAGE_KEY = 'convocation_equipment_drafts';
 
 const CATEGORIES = {
@@ -71,6 +73,14 @@ const ARTIFACT_COMBAT_FIELDS = [
     { key: 'autoReviveHp', label: 'Auto-Revive HP (fraction)', type: 'number', step: 0.1 },
 ];
 
+const CONFIG_EQUIPMENT = {
+    weapon: WEAPONS,
+    armor: ARMORS,
+    helmet: HELMETS,
+    tool: TOOLS,
+    artifact: ARTIFACTS,
+};
+
 let editorInstance = null;
 
 export function launchEquipmentEditor() {
@@ -85,12 +95,16 @@ class EquipmentEditor {
     constructor() {
         this.category = 'weapon';
         this.batchItems = [];
+        this.undoStack = [];
+        this.undoIndex = -1;
         this.container = document.getElementById('equipment-editor');
         this._buildDOM();
         this._bindEvents();
         this._refreshLoadDropdown();
+        this._refreshConfigDropdown();
         this._autoRestore();
         this._switchCategory(this.category);
+        this._pushUndoState();
     }
 
     show() {
@@ -119,9 +133,11 @@ class EquipmentEditor {
                 `<button class="eq-cat-tab" data-cat="${k}">${v.label}</button>`
             ).join('')}
             <span class="fe-sep"></span>
+            <select id="eq-load-config"><option value="">Load from Config...</option></select>
             <select id="eq-load-select"><option value="">Load draft...</option></select>
             <button id="eq-save">Save</button>
             <button id="eq-delete">Delete</button>
+            <button id="eq-duplicate">Duplicate</button>
             <span class="fe-sep"></span>
             <button id="eq-export">Export All</button>
         `;
@@ -137,11 +153,19 @@ class EquipmentEditor {
         const previewPanel = document.createElement('div');
         previewPanel.className = 'fe-preview-panel';
         previewPanel.innerHTML = `
-            <div class="fe-preview-header">
-                <span>Live Preview</span>
-                <button id="eq-copy-preview" style="font-size:10px;padding:2px 8px;">Copy</button>
+            <div class="fe-preview-tabs">
+                <button class="fe-tab-btn active" data-tab="preview">Preview</button>
+                <button class="fe-tab-btn" data-tab="reference">Reference</button>
             </div>
-            <div class="fe-preview-code" id="eq-preview"></div>
+            <div class="fe-preview-content">
+                <div id="eq-char-preview" style="text-align:center;padding:16px;font-size:48px;font-family:'Courier New',monospace;background:#0a0a14;border-bottom:1px solid #333;">/</div>
+                <div class="fe-preview-header">
+                    <span>Live Preview</span>
+                    <button id="eq-copy-preview" style="font-size:10px;padding:2px 8px;">Copy</button>
+                </div>
+                <div class="fe-preview-code" id="eq-preview"></div>
+            </div>
+            <div class="fe-reference-content" id="eq-reference"></div>
         `;
 
         workspace.appendChild(formPanel);
@@ -163,6 +187,16 @@ class EquipmentEditor {
                 <div class="fe-field">
                     <label>Display Name</label>
                     <input type="text" id="eq-name" placeholder="Iron Sword">
+                </div>
+            </div>
+            <div class="fe-row">
+                <div class="fe-field" style="flex:0 0 60px;">
+                    <label>Char</label>
+                    <input type="text" id="eq-char" maxlength="2" placeholder="/">
+                </div>
+                <div class="fe-field" style="flex:0 0 60px;">
+                    <label>Color</label>
+                    <input type="color" id="eq-color" value="#cccccc">
                 </div>
             </div>
 
@@ -275,12 +309,24 @@ class EquipmentEditor {
         document.getElementById('eq-back').addEventListener('click', () => this._goBack());
         document.getElementById('eq-save').addEventListener('click', () => this._saveDraft());
         document.getElementById('eq-delete').addEventListener('click', () => this._deleteDraft());
+        document.getElementById('eq-duplicate').addEventListener('click', () => this._duplicateDraft());
         document.getElementById('eq-export').addEventListener('click', () => this._showExportModal());
         document.getElementById('eq-add-batch').addEventListener('click', () => this._addToBatch());
         document.getElementById('eq-copy-preview').addEventListener('click', () => this._copyPreview());
 
         document.getElementById('eq-load-select').addEventListener('change', (e) => {
             if (e.target.value) this._loadDraft(e.target.value);
+        });
+        document.getElementById('eq-load-config').addEventListener('change', (e) => {
+            if (e.target.value) this._loadFromConfig(e.target.value);
+            e.target.value = '';
+        });
+
+        document.getElementById('eq-char').addEventListener('input', () => this._updateCharPreview());
+        document.getElementById('eq-color').addEventListener('input', () => this._updateCharPreview());
+
+        this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
         });
 
         this.container.querySelectorAll('.eq-cat-tab').forEach(btn => {
@@ -296,6 +342,16 @@ class EquipmentEditor {
 
         window.addEventListener('keydown', (e) => {
             if (this.container.style.display === 'none') return;
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this._undo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                this._redo();
+                return;
+            }
             if (e.key === 'Escape') this._goBack();
         });
     }
@@ -317,6 +373,7 @@ class EquipmentEditor {
             artifactSection.classList.remove('visible');
             this._buildStatsSection();
         }
+        this._refreshConfigDropdown();
         this._updateConditionals();
         this._schedulePreview();
     }
@@ -335,13 +392,31 @@ class EquipmentEditor {
         this._previewTimer = setTimeout(() => {
             this._updatePreview();
             this._autoSave();
+            this._scheduleUndoPush();
         }, 50);
     }
 
     _updatePreview() {
+        this._updateCharPreview();
+        this._validateForm();
         const data = this._collectFormData();
         const code = this._formatItem(data);
         document.getElementById('eq-preview').textContent = code || '// Fill in fields to see preview';
+    }
+
+    _updateCharPreview() {
+        const char = document.getElementById('eq-char').value || this._getDefaultChar();
+        const color = document.getElementById('eq-color').value;
+        const preview = document.getElementById('eq-char-preview');
+        if (preview) {
+            preview.textContent = char;
+            preview.style.color = color;
+        }
+    }
+
+    _getDefaultChar() {
+        const chars = { weapon: '/', armor: '[', helmet: '^', tool: '\\', artifact: '*' };
+        return chars[this.category] || '?';
     }
 
     _autoSave() {
@@ -524,15 +599,24 @@ class EquipmentEditor {
 
     _addToBatch() {
         const data = this._collectFormData();
-        if (!data || !data.key) return;
+        if (!data || !data.key) {
+            this._validateForm();
+            return;
+        }
         if (!data.name) data.name = data.key;
 
         if (data.category !== 'artifact') {
             const fields = STAT_FIELDS[data.category];
             const hasRequired = fields.filter(f => f.required).every(f => data[f.key]);
             const hasAnyStat = fields.some(f => data[f.key]);
-            if (data.category === 'tool' && !hasAnyStat) return;
-            if (data.category !== 'tool' && !hasRequired) return;
+            if (data.category === 'tool' && !hasAnyStat) {
+                this._validateForm();
+                return;
+            }
+            if (data.category !== 'tool' && !hasRequired) {
+                this._validateForm();
+                return;
+            }
         }
 
         const existing = this.batchItems.findIndex(i => i.key === data.key);
@@ -550,6 +634,8 @@ class EquipmentEditor {
     _clearForm() {
         document.getElementById('eq-key').value = '';
         document.getElementById('eq-name').value = '';
+        document.getElementById('eq-char').value = '';
+        document.getElementById('eq-color').value = '#cccccc';
         this.container.querySelectorAll('#eq-stats-section input').forEach(el => el.value = '');
         this.container.querySelectorAll('#eq-artifact-section input[type="number"]').forEach(el => el.value = '');
         this.container.querySelectorAll('#eq-artifact-section input[type="text"]').forEach(el => el.value = '');
@@ -721,6 +807,63 @@ class EquipmentEditor {
     }
 
 
+    _switchTab(tab) {
+        this.container.querySelectorAll('.fe-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        this.container.querySelector('.fe-preview-content').style.display = tab === 'preview' ? '' : 'none';
+        const ref = this.container.querySelector('.fe-reference-content');
+        ref.classList.toggle('visible', tab === 'reference');
+        if (tab === 'reference' && !ref.dataset.built) {
+            this._buildReference();
+            ref.dataset.built = '1';
+        }
+    }
+
+    _buildReference() {
+        const container = document.getElementById('eq-reference');
+        const categories = [
+            { title: 'Weapon Stats', ids: STAT_FIELDS.weapon.map(f => f.key) },
+            { title: 'Armor Stats', ids: STAT_FIELDS.armor.map(f => f.key) },
+            { title: 'Helmet Stats', ids: STAT_FIELDS.helmet.map(f => f.key) },
+            { title: 'Tool Stats', ids: STAT_FIELDS.tool.map(f => f.key) },
+            { title: 'Artifact Equipped Stats', ids: ARTIFACT_EQUIPPED_STATS.map(f => f.key) },
+            { title: 'Artifact Pedestal Effects', ids: ARTIFACT_PEDESTAL_FIELDS.map(f => f.key) },
+            { title: 'Artifact Expedition Effects', ids: ARTIFACT_EXPEDITION_FIELDS.map(f => f.key) },
+            { title: 'Artifact Combat Effects', ids: ARTIFACT_COMBAT_FIELDS.map(f => f.key) },
+        ];
+
+        let html = `<input type="text" class="fe-ref-search" placeholder="Search stats..." id="eq-ref-search">`;
+        html += `<div id="eq-ref-list">`;
+        for (const cat of categories) {
+            html += `<div class="fe-ref-category" data-cat-title="${cat.title.toLowerCase()}">`;
+            html += `<div class="fe-ref-category-title">${cat.title}</div>`;
+            for (const id of cat.ids) {
+                html += `<span class="fe-ref-id" data-ref-id="${id}">${id}</span>`;
+            }
+            html += `</div>`;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+
+        container.addEventListener('click', (e) => {
+            const pill = e.target.closest('.fe-ref-id');
+            if (!pill) return;
+            navigator.clipboard.writeText(pill.dataset.refId);
+            pill.classList.add('copied');
+            setTimeout(() => pill.classList.remove('copied'), 600);
+        });
+
+        document.getElementById('eq-ref-search').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            container.querySelectorAll('.fe-ref-id').forEach(el => {
+                el.style.display = el.dataset.refId.includes(q) ? '' : 'none';
+            });
+            container.querySelectorAll('.fe-ref-category').forEach(cat => {
+                const hasVisible = [...cat.querySelectorAll('.fe-ref-id')].some(el => el.style.display !== 'none');
+                cat.style.display = hasVisible ? '' : 'none';
+            });
+        });
+    }
+
     _saveDraft() {
         const data = this._collectFormData();
         if (!data || !data.key) return;
@@ -801,5 +944,141 @@ class EquipmentEditor {
         const saved = this._getSaved();
         select.innerHTML = '<option value="">Load draft...</option>' +
             saved.map(s => `<option value="${s.key}">${s.name || s.key} (${s.category})</option>`).join('');
+    }
+
+    _refreshConfigDropdown() {
+        const select = document.getElementById('eq-load-config');
+        if (!select) return;
+        const items = CONFIG_EQUIPMENT[this.category] || {};
+        select.innerHTML = '<option value="">Load from Config...</option>' +
+            Object.entries(items).map(([k, v]) => `<option value="${k}">${v.name || k}</option>`).join('');
+    }
+
+    _loadFromConfig(key) {
+        const items = CONFIG_EQUIPMENT[this.category];
+        const def = items && items[key];
+        if (!def) return;
+        this._clearForm();
+        document.getElementById('eq-key').value = key;
+        document.getElementById('eq-name').value = def.name || key;
+
+        if (this.category === 'artifact') {
+            ARTIFACT_EQUIPPED_STATS.forEach(f => {
+                if (def[f.key]) document.getElementById(`eq-arteq-${f.key}`).value = def[f.key];
+            });
+            if (def.consumable) document.getElementById('eq-art-consumable').checked = true;
+            if (def.pedestal) {
+                document.getElementById('eq-art-pedestal-toggle').checked = true;
+                ARTIFACT_PEDESTAL_FIELDS.forEach(f => {
+                    const el = document.getElementById(`eq-ped-${f.key}`);
+                    if (f.type === 'checkbox') el.checked = !!def.pedestal[f.key];
+                    else if (def.pedestal[f.key] !== undefined) el.value = def.pedestal[f.key];
+                });
+            }
+            if (def.expedition) {
+                document.getElementById('eq-art-expedition-toggle').checked = true;
+                ARTIFACT_EXPEDITION_FIELDS.forEach(f => {
+                    if (def.expedition[f.key] !== undefined) document.getElementById(`eq-exp-${f.key}`).value = def.expedition[f.key];
+                });
+            }
+            if (def.combat) {
+                document.getElementById('eq-art-combat-toggle').checked = true;
+                ARTIFACT_COMBAT_FIELDS.forEach(f => {
+                    if (def.combat[f.key] !== undefined) document.getElementById(`eq-com-${f.key}`).value = def.combat[f.key];
+                });
+            }
+            if (def.durability) {
+                document.getElementById('eq-art-durability-toggle').checked = true;
+                if (def.durability.max) document.getElementById('eq-dur-max').value = def.durability.max;
+                if (def.durability.breakOnUse) document.getElementById('eq-dur-breakOnUse').checked = true;
+            }
+            this._updateConditionals();
+        } else {
+            const fields = STAT_FIELDS[this.category];
+            if (fields) fields.forEach(f => {
+                const el = document.getElementById(`eq-stat-${f.key}`);
+                if (el && def[f.key]) el.value = def[f.key];
+            });
+        }
+        this._schedulePreview();
+        this._pushUndoState();
+    }
+
+    _duplicateDraft() {
+        const data = this._collectFormData();
+        if (!data || !data.key) return;
+        document.getElementById('eq-key').value = data.key + '_copy';
+        document.getElementById('eq-name').value = (data.name || data.key) + ' Copy';
+        this._schedulePreview();
+        this._pushUndoState();
+    }
+
+    _validateForm() {
+        const keyField = document.getElementById('eq-key');
+        const nameField = document.getElementById('eq-name');
+        keyField.closest('.fe-field').classList.toggle('fe-error', !keyField.value.trim());
+        nameField.closest('.fe-field').classList.toggle('fe-error', !nameField.value.trim());
+
+        if (this.category !== 'artifact') {
+            const fields = STAT_FIELDS[this.category];
+            if (fields) {
+                fields.forEach(f => {
+                    const el = document.getElementById(`eq-stat-${f.key}`);
+                    if (el && f.required) {
+                        el.closest('.fe-field').classList.toggle('fe-error', !parseFloat(el.value));
+                    }
+                });
+            }
+        }
+    }
+
+    _getFormSnapshot() {
+        const inputs = this.container.querySelectorAll('#eq-form input, #eq-form select, #eq-form textarea');
+        const snap = {};
+        inputs.forEach(el => {
+            const id = el.id;
+            if (!id) return;
+            if (el.type === 'checkbox') snap[id] = el.checked;
+            else snap[id] = el.value;
+        });
+        return JSON.stringify(snap);
+    }
+
+    _restoreFormSnapshot(json) {
+        const snap = JSON.parse(json);
+        for (const [id, val] of Object.entries(snap)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            if (el.type === 'checkbox') el.checked = val;
+            else el.value = val;
+        }
+        this._updateConditionals();
+        this._updatePreview();
+    }
+
+    _pushUndoState() {
+        const snap = this._getFormSnapshot();
+        if (this.undoStack[this.undoIndex] === snap) return;
+        this.undoStack = this.undoStack.slice(0, this.undoIndex + 1);
+        this.undoStack.push(snap);
+        if (this.undoStack.length > 50) this.undoStack.shift();
+        this.undoIndex = this.undoStack.length - 1;
+    }
+
+    _scheduleUndoPush() {
+        clearTimeout(this._undoTimer);
+        this._undoTimer = setTimeout(() => this._pushUndoState(), 800);
+    }
+
+    _undo() {
+        if (this.undoIndex <= 0) return;
+        this.undoIndex--;
+        this._restoreFormSnapshot(this.undoStack[this.undoIndex]);
+    }
+
+    _redo() {
+        if (this.undoIndex >= this.undoStack.length - 1) return;
+        this.undoIndex++;
+        this._restoreFormSnapshot(this.undoStack[this.undoIndex]);
     }
 }
