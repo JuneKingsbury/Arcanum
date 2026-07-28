@@ -1,10 +1,12 @@
-import { CONFIG, RAID_CONFIG, WEAPONS, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG } from '../core/config.js';
+import { CONFIG, RAID_CONFIG, RAID_TYPES, WEAPONS, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG } from '../core/config.js';
 
 const RAIDER_WEAPONS = ['wooden_club', 'etched_axe', 'runic_blade'];
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { findPathForEnemies, manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
+import { createRaidEntity } from './entity-factory.js';
+import { updateEntityRoles, initEntityRoles } from './roles.js';
 
 let nextRaiderId = 1;
 
@@ -39,9 +41,37 @@ export class CombatSystem {
             Math.floor(RAID_CONFIG.baseRaiders + scaledRaiders));
 
         const edge = Math.floor(Math.random() * 4);
-        for (let i = 0; i < numRaiders; i++) {
-            const pos = getEdgePosition(edge, i);
-            game.raiders.push(createRaider(pos.x, pos.y));
+        const raidTypeKeys = Object.keys(RAID_TYPES);
+        const raidType = raidTypeKeys.length > 0 ? RAID_TYPES[raidTypeKeys[Math.floor(Math.random() * raidTypeKeys.length)]] : null;
+
+        if (raidType) {
+            const raidLevel = Math.floor(timeFactor * 10) + 1;
+            let spawned = 0;
+            for (const entry of raidType.composition) {
+                if (entry.minRaidLevel && raidLevel < entry.minRaidLevel) continue;
+                const [minCount, maxCount] = entry.count;
+                const count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
+                for (let i = 0; i < count && spawned < numRaiders + 3; i++) {
+                    const pos = getEdgePosition(edge, spawned);
+                    const entity = createRaidEntity(entry.entity, pos.x, pos.y, raidLevel, raidType.scaling);
+                    if (entity) {
+                        initEntityRoles(entity);
+                        game.raiders.push(entity);
+                        spawned++;
+                    }
+                }
+            }
+            if (spawned === 0) {
+                for (let i = 0; i < numRaiders; i++) {
+                    const pos = getEdgePosition(edge, i);
+                    game.raiders.push(createRaider(pos.x, pos.y));
+                }
+            }
+        } else {
+            for (let i = 0; i < numRaiders; i++) {
+                const pos = getEdgePosition(edge, i);
+                game.raiders.push(createRaider(pos.x, pos.y));
+            }
         }
 
         this.raidActive = true;
@@ -102,6 +132,13 @@ export class CombatSystem {
         for (let i = game.raiders.length - 1; i >= 0; i--) {
             const raider = game.raiders[i];
             if (raider.hp <= 0) {
+                if (raider.loot) {
+                    for (const drop of raider.loot) {
+                        if (Math.random() < (drop.chance || 1)) {
+                            game.resources.add({ [drop.item]: drop.amount || 1 });
+                        }
+                    }
+                }
                 game.raiders.splice(i, 1);
                 continue;
             }
@@ -147,11 +184,17 @@ function updateRaider(raider, game) {
     if (raider.moveCooldown > 0) return;
     raider.moveCooldown = 1;
 
+    if (raider.roles && raider.roles.length > 0) {
+        updateEntityRoles(raider, game);
+    }
+
     const dur = CONFIG.TICK_RATE / (raider.speed * game.speed);
     if (raider.fleeing) {
         moveToEdge(raider, game, dur);
         return;
     }
+
+    if (raider.roles && raider.roles.some(r => r.type === 'ranged_attacker' || r.type === 'melee_charger')) return;
 
     const nearest = findNearestColonist(raider, game);
     if (!nearest) {
@@ -165,8 +208,7 @@ function updateRaider(raider, game) {
         return;
     }
 
-    // Break structure if standing next to one on our path
-    if (raider.path.length > 0) {
+    if (raider.path && raider.path.length > 0) {
         const next = raider.path[0];
         if (isBreakableByEnemies(game.map, next.x, next.y)) {
             attackStructure(game, next.x, next.y, raider.damage);
@@ -174,9 +216,8 @@ function updateRaider(raider, game) {
         }
     }
 
-    // Repath every 15 ticks or if path is empty
-    raider.pathAge++;
-    if (raider.path.length === 0 || raider.pathAge > PATHFINDING_CONFIG.raiderRepathInterval) {
+    raider.pathAge = (raider.pathAge || 0) + 1;
+    if (!raider.path || raider.path.length === 0 || raider.pathAge > PATHFINDING_CONFIG.raiderRepathInterval) {
         raider.path = findPathForEnemies(game.map, raider.x, raider.y, nearest.x, nearest.y) || [];
         raider.pathAge = 0;
     }

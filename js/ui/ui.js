@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, REALMS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, REALMS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -6,6 +6,7 @@ import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
 import { estimatePartyStrength } from '../systems/exploration.js';
+import { getRoleInfoHtml } from '../entities/roles.js';
 
 export class UI {
     constructor(game) {
@@ -1125,22 +1126,23 @@ export class UI {
         this.elements.infoPanel.innerHTML = html;
     }
 
-    showTileEntities(tile, x, y, colonists, animals, raiders = [], tamedAnimals = []) {
+    showTileEntities(tile, x, y, colonists, animals, raiders = [], tamedAnimals = [], summons = []) {
         this._switchToInfoTab();
         this._viewingRiftGate = (tile.structure === 'rift_gate');
-        this._viewingColonistId = (colonists.length === 1 && animals.length === 0 && raiders.length === 0 && tamedAnimals.length === 0)
+        this._viewingColonistId = (colonists.length === 1 && animals.length === 0 && raiders.length === 0 && tamedAnimals.length === 0 && summons.length === 0)
             ? colonists[0].id : null;
         let html = '';
 
         for (const r of raiders) {
-            const isWaveEnemy = r.char === 'E';
-            const label = isWaveEnemy ? 'Void Enemy' : 'Raider';
-            const color = isWaveEnemy ? '#cc00ff' : '#ff3333';
+            const def = ENTITIES[r.type];
+            const label = def?.name || (r.char === 'E' ? 'Void Enemy' : 'Raider');
+            const color = def?.color || (r.char === 'E' ? '#cc00ff' : '#ff3333');
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${label}</div>`;
             html += `<div class="info-row">HP: ${r.hp}/${r.maxHp}</div>`;
-            html += `<div class="info-row">${isWaveEnemy ? 'Damage' : 'Weapon'}: ${r.weapon?.name || ''} (${r.damage} dmg)</div>`;
+            html += `<div class="info-row">Damage: ${r.weapon?.name ? r.weapon.name + ' ' : ''}(${r.damage} dmg)</div>`;
             html += `<div class="info-row">State: ${r.fleeing ? 'Fleeing' : 'Attacking'}</div>`;
+            if (r.roles && r.roles.length > 0) html += getRoleInfoHtml(r);
             html += `</div>`;
         }
 
@@ -1189,17 +1191,39 @@ export class UI {
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${a.type} (tamed)</div>`;
             html += `<div class="info-row">HP: ${a.hp}/${a.maxHp}</div>`;
-            if (def?.produces) {
-                html += `<div class="info-row">Produces: ${def.produces} (every ${def.produceRate} ticks)</div>`;
-                html += `<div class="info-row">Next in: ${a.produceCooldown} ticks</div>`;
+            if (a.roles && a.roles.length > 0) {
+                html += getRoleInfoHtml(a);
+            } else {
+                if (def?.produces) {
+                    html += `<div class="info-row">Produces: ${def.produces} (every ${def.produceRate} ticks)</div>`;
+                    html += `<div class="info-row">Next in: ${a.produceCooldown} ticks</div>`;
+                }
+                if (def?.guardAnimal) {
+                    const stateColor = a.guardState === 'engaging' ? '#ff4444' : a.guardState === 'retreating' ? '#ffaa00' : '#44cc44';
+                    html += `<div class="info-row" style="color:${stateColor}">Guard: ${(a.guardState || 'patrolling').charAt(0).toUpperCase() + (a.guardState || 'patrolling').slice(1)}</div>`;
+                }
+                if (def?.packAnimal) html += `<div class="info-row" style="color:#bbaa44">Pack animal (+${Math.round(def.expeditionSpeedBonus * 100)}% expedition speed)</div>`;
+                if (def?.happinessAura) html += `<div class="info-row" style="color:#ff88cc">Happiness aura (radius ${def.auraRadius})</div>`;
             }
-            if (def?.guardAnimal) {
-                const stateColor = a.guardState === 'engaging' ? '#ff4444' : a.guardState === 'retreating' ? '#ffaa00' : '#44cc44';
-                html += `<div class="info-row" style="color:${stateColor}">Guard: ${(a.guardState || 'patrolling').charAt(0).toUpperCase() + (a.guardState || 'patrolling').slice(1)}</div>`;
-            }
-            if (def?.packAnimal) html += `<div class="info-row" style="color:#bbaa44">Pack animal (+${Math.round(def.expeditionSpeedBonus * 100)}% expedition speed)</div>`;
-            if (def?.happinessAura) html += `<div class="info-row" style="color:#ff88cc">Happiness aura (radius ${def.auraRadius})</div>`;
             if (a.onExpedition) html += `<div class="info-row" style="color:#33ccff">On expedition</div>`;
+            html += `</div>`;
+        }
+
+        for (const s of summons) {
+            const def = ENTITIES[s.type];
+            const color = def?.color || s.color || '#9966ff';
+            const name = def?.name || s.type || 'Summon';
+            html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
+            html += `<div class="info-header" style="color:${color};">${name}</div>`;
+            html += `<div class="info-row">HP: ${s.hp}/${s.maxHp}</div>`;
+            html += `<div class="info-row">Damage: ${s.damage}</div>`;
+            if (s.roles && s.roles.length > 0) {
+                html += getRoleInfoHtml(s);
+            } else {
+                const remaining = s.expiresAt ? Math.max(0, s.expiresAt - (this.game.tick || 0)) : '?';
+                html += `<div class="info-row" style="color:#9966ff">Expires in ${remaining} ticks</div>`;
+                html += `<div class="info-row">State: ${s.guardState || 'idle'}</div>`;
+            }
             html += `</div>`;
         }
 

@@ -349,10 +349,12 @@ export class Renderer {
         }
         for (const r of raiders) {
             if (r.hp <= 0) continue;
+            const rChar = r.char || 'R';
+            const rColor = r.color || TILE_COLORS.raider;
             if (isEntityMoving(r)) {
-                movingEntities.push({ entity: r, char: 'R', color: TILE_COLORS.raider, type: 'raider' });
+                movingEntities.push({ entity: r, char: rChar, color: rColor, type: 'raider' });
             } else {
-                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: 'R', color: TILE_COLORS.raider, type: 'raider' });
+                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: rChar, color: rColor, type: 'raider' });
             }
         }
         const rallySet = this._rallySet;

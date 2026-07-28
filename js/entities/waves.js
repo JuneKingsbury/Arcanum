@@ -1,8 +1,10 @@
-import { CONFIG, WAVE_CONFIG, BUILDINGS, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, WAVE_CONFIG, WAVE_TYPES, BUILDINGS, COMBAT_VISUALS } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
+import { createWaveEntity } from './entity-factory.js';
+import { updateEntityRoles, initEntityRoles } from './roles.js';
 
 let nextWaveEnemyId = 10000;
 
@@ -94,6 +96,13 @@ export class WaveSystem {
             const enemy = this.enemies[i];
             if (enemy.hp <= 0) {
                 game.resources.add({ void_essence: WAVE_CONFIG.essencePerKill });
+                if (enemy.loot) {
+                    for (const drop of enemy.loot) {
+                        if (Math.random() < (drop.chance || 1)) {
+                            game.resources.add({ [drop.item]: drop.amount || 1 });
+                        }
+                    }
+                }
                 this.enemies.splice(i, 1);
                 continue;
             }
@@ -112,6 +121,22 @@ export class WaveSystem {
 
     spawnEnemy(game) {
         const portal = this.portals[Math.floor(Math.random() * this.portals.length)];
+        const waveTypeKeys = Object.keys(WAVE_TYPES);
+        const waveType = waveTypeKeys.length > 0 ? WAVE_TYPES[waveTypeKeys[0]] : null;
+
+        if (waveType) {
+            const entityType = pickFromComposition(waveType.composition, this.currentWave);
+            if (entityType) {
+                const entity = createWaveEntity(entityType, portal.x, portal.y, this.currentWave);
+                if (entity) {
+                    initEntityRoles(entity);
+                    this.enemies.push(entity);
+                    this.enemiesSpawned++;
+                    return;
+                }
+            }
+        }
+
         const hp = WAVE_CONFIG.baseHp + WAVE_CONFIG.hpPerWave * (this.currentWave - 1);
         const damage = WAVE_CONFIG.baseDamage + WAVE_CONFIG.damagePerWave * (this.currentWave - 1);
 
@@ -132,6 +157,11 @@ export class WaveSystem {
         enemy.moveCooldown -= enemy.speed;
         if (enemy.moveCooldown > 0) return;
         enemy.moveCooldown = 1;
+
+        if (enemy.roles && enemy.roles.length > 0) {
+            updateEntityRoles(enemy, game);
+            if (enemy.roles.some(r => r.type === 'nexus_target' || r.type === 'ranged_attacker')) return;
+        }
 
         const dur = CONFIG.TICK_RATE / (enemy.speed * game.speed);
 
@@ -165,7 +195,7 @@ export class WaveSystem {
             return;
         }
 
-        if (!enemy.path || enemy.path.length === 0 || enemy.pathAge > WAVE_CONFIG.repathInterval) {
+        if (!enemy.path || enemy.path.length === 0 || (enemy.pathAge || 0) > WAVE_CONFIG.repathInterval) {
             enemy.path = findEnemyPath(game.map, enemy.x, enemy.y, this.nexusPosition.x, this.nexusPosition.y);
             enemy.pathAge = 0;
         }
@@ -174,13 +204,13 @@ export class WaveSystem {
             const next = enemy.path[0];
             if (isBreakableByEnemies(game.map, next.x, next.y)) {
                 attackStructure(game, next.x, next.y, enemy.damage);
-                enemy.pathAge++;
+                enemy.pathAge = (enemy.pathAge || 0) + 1;
                 return;
             }
             if (isPassableForEnemies(game.map, next.x, next.y)) {
                 moveEntity(enemy, next.x, next.y, dur);
                 enemy.path.shift();
-                enemy.pathAge++;
+                enemy.pathAge = (enemy.pathAge || 0) + 1;
             } else {
                 enemy.path = null;
             }
@@ -234,6 +264,18 @@ export class WaveSystem {
         this.enemies = [];
         this.portals = [];
     }
+}
+
+function pickFromComposition(composition, currentWave) {
+    const eligible = composition.filter(c => !c.minWave || currentWave >= c.minWave);
+    if (eligible.length === 0) return null;
+    const totalWeight = eligible.reduce((sum, c) => sum + (c.weight || 1), 0);
+    let roll = Math.random() * totalWeight;
+    for (const entry of eligible) {
+        roll -= (entry.weight || 1);
+        if (roll <= 0) return entry.entity;
+    }
+    return eligible[eligible.length - 1].entity;
 }
 
 function moveTowardDirect(entity, target, map, dur) {

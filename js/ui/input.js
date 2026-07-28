@@ -650,13 +650,14 @@ export class InputHandler {
         const tamed = (this.game.tamedAnimals || []).filter(inRect);
         const raiders = this.game.raiders.filter(inRect);
         const waveEnemies = this.game.waves ? this.game.waves.enemies.filter(inRect) : [];
+        const summons = (this.game.summons || []).filter(inRect);
 
-        if (colonists.length === 0 && animals.length === 0 && tamed.length === 0 && raiders.length === 0 && waveEnemies.length === 0) return;
+        if (colonists.length === 0 && animals.length === 0 && tamed.length === 0 && raiders.length === 0 && waveEnemies.length === 0 && summons.length === 0) return;
 
         if (colonists.length > 0) {
             this.game.selectedColonist = colonists[0];
             this.game.selectedColonists = colonists;
-            if (colonists.length > 1 && animals.length === 0 && tamed.length === 0 && raiders.length === 0 && waveEnemies.length === 0) {
+            if (colonists.length > 1 && animals.length === 0 && tamed.length === 0 && raiders.length === 0 && waveEnemies.length === 0 && summons.length === 0) {
                 this.game.ui.showMultiColonistInfo(colonists);
                 this.game.notifications.push({ text: `Selected ${colonists.length} colonists`, tick: this.game.tick, type: 'success' });
                 return;
@@ -666,11 +667,10 @@ export class InputHandler {
             this.game.selectedColonists = [];
         }
 
-        // Mixed selection or non-colonist selection - show as tile entities view
         const cx = Math.floor((minX + maxX) / 2);
         const cy = Math.floor((minY + maxY) / 2);
         const tile = this.game.map[cy][cx];
-        this.game.ui.showTileEntities(tile, cx, cy, colonists, animals, [...raiders, ...waveEnemies], tamed);
+        this.game.ui.showTileEntities(tile, cx, cy, colonists, animals, [...raiders, ...waveEnemies], tamed, summons);
     }
 
     selectAt(pos) {
@@ -679,6 +679,7 @@ export class InputHandler {
         const tamedHere = (this.game.tamedAnimals || []).filter(a => a.x === pos.x && a.y === pos.y && a.hp > 0);
         const raidersHere = this.game.raiders.filter(r => r.x === pos.x && r.y === pos.y && r.hp > 0);
         const waveEnemiesHere = this.game.waves ? this.game.waves.enemies.filter(e => e.x === pos.x && e.y === pos.y && e.hp > 0) : [];
+        const summonsHere = (this.game.summons || []).filter(s => s.x === pos.x && s.y === pos.y && s.hp > 0);
         const tile = this.game.map[pos.y][pos.x];
 
         if (colonistsHere.length > 0) {
@@ -690,7 +691,7 @@ export class InputHandler {
         }
 
         this.game.radiusHighlight = this._getRadiusHighlight(pos, tile, colonistsHere);
-        this.game.ui.showTileEntities(tile, pos.x, pos.y, colonistsHere, animalsHere, [...raidersHere, ...waveEnemiesHere], tamedHere);
+        this.game.ui.showTileEntities(tile, pos.x, pos.y, colonistsHere, animalsHere, [...raidersHere, ...waveEnemiesHere], tamedHere, summonsHere);
     }
 
     _getRadiusHighlight(pos, tile, colonistsHere) {

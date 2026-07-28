@@ -1,7 +1,15 @@
-import { ANIMALS, SPELLS, RESEARCH, CONFIG, SUMMON_TYPES, GOLEM_TYPES } from '../core/config.js';
+import { ENTITIES, ANIMALS, SPELLS, RESEARCH, CONFIG, SUMMON_TYPES, GOLEM_TYPES, RAID_TYPES, WAVE_TYPES } from '../core/config.js';
 import { EffectPicker, formatEffectsCode } from './effect-picker.js';
+import { RolePicker, formatRolesCode } from './role-picker.js';
 
 const STORAGE_KEY = 'convocation_entity_drafts';
+
+const CATEGORIES = [
+    { value: 'animal', label: 'Animal' },
+    { value: 'enemy', label: 'Enemy' },
+    { value: 'summon', label: 'Summon' },
+    { value: 'golem', label: 'Golem' },
+];
 
 const SPAWN_CONDITIONS = [
     { value: '', label: 'None (always)' },
@@ -9,23 +17,14 @@ const SPAWN_CONDITIONS = [
     { value: 'hostileWinter', label: 'Hostile in Winter' },
 ];
 
-const TAMED_ROLES = [
-    { value: 'guard', label: 'Guard Animal' },
-    { value: 'production', label: 'Production (eggs, milk)' },
-    { value: 'pack', label: 'Pack Animal' },
-    { value: 'happiness', label: 'Happiness Aura' },
-];
-
 const REFERENCE_DATA = [
+    { title: 'Entity IDs', ids: Object.keys(ENTITIES) },
     { title: 'Resource IDs', ids: Object.keys(CONFIG.START_RESOURCES) },
-    { title: 'Animal IDs', ids: Object.keys(ANIMALS) },
-    { title: 'Summon Types', ids: Object.keys(SUMMON_TYPES) },
-    { title: 'Golem Types', ids: Object.keys(GOLEM_TYPES) },
     { title: 'Spell IDs', ids: Object.keys(SPELLS) },
     { title: 'Research IDs', ids: Object.keys(RESEARCH) },
 ];
 
-const CONFIG_ANIMALS = Object.entries(ANIMALS).map(([key, def]) => ({ key, ...def }));
+const CONFIG_ENTITIES = Object.entries(ENTITIES).map(([key, def]) => ({ key, ...def }));
 
 let editorInstance = null;
 
@@ -79,11 +78,11 @@ class EntityEditor {
         `;
         this.container.appendChild(toolbar);
 
-        const configSelect = document.getElementById('en-load-config');
-        CONFIG_ANIMALS.forEach(a => {
+        const configSelect = toolbar.querySelector('#en-load-config');
+        CONFIG_ENTITIES.forEach(e => {
             const opt = document.createElement('option');
-            opt.value = a.key;
-            opt.textContent = `${a.char || '?'} ${a.key}`;
+            opt.value = e.key;
+            opt.textContent = `[${e.category}] ${e.char || '?'} ${e.key}`;
             configSelect.appendChild(opt);
         });
 
@@ -120,11 +119,23 @@ class EntityEditor {
             <div class="fe-row">
                 <div class="fe-field">
                     <label>Key (snake_case)</label>
-                    <input type="text" id="en-key" placeholder="deer">
+                    <input type="text" id="en-key" placeholder="skeleton_archer">
+                </div>
+                <div class="fe-field">
+                    <label>Category</label>
+                    <select id="en-category">
+                        ${CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="fe-row">
+                <div class="fe-field">
+                    <label>Name (display)</label>
+                    <input type="text" id="en-name" placeholder="Skeleton Archer">
                 </div>
                 <div class="fe-field" style="flex:0 0 60px;">
                     <label>Char</label>
-                    <input type="text" id="en-char" maxlength="2" placeholder="d">
+                    <input type="text" id="en-char" maxlength="2" placeholder="s">
                 </div>
                 <div class="fe-field" style="flex:0 0 60px;">
                     <label>Color</label>
@@ -134,106 +145,111 @@ class EntityEditor {
             <div class="fe-row">
                 <div class="fe-field">
                     <label>HP</label>
-                    <input type="number" id="en-hp" value="40" min="1">
+                    <input type="number" id="en-hp" value="40">
                 </div>
                 <div class="fe-field">
                     <label>Speed (0-1)</label>
-                    <input type="number" id="en-speed" value="0.5" min="0" max="1" step="0.05">
+                    <input type="number" id="en-speed" value="0.5" step="0.05">
+                </div>
+                <div class="fe-field">
+                    <label>Damage</label>
+                    <input type="number" id="en-damage" value="0">
                 </div>
             </div>
 
-            <div class="fe-section-title">Behavior</div>
+            <div class="fe-section-title">Combat / Behavior</div>
+            <div class="fe-row">
+                <div class="fe-field">
+                    <label>Aggro Range</label>
+                    <input type="number" id="en-aggroRange" value="6">
+                </div>
+                <div class="fe-field">
+                    <label>Spawn Weight</label>
+                    <input type="number" id="en-spawnWeight" value="0">
+                </div>
+                <div class="fe-field">
+                    <label>Spawn Condition</label>
+                    <select id="en-spawnCondition">
+                        ${SPAWN_CONDITIONS.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
             <div class="fe-checkbox-row">
                 <input type="checkbox" id="en-hostile">
                 <label for="en-hostile">Hostile</label>
             </div>
-
-            <div id="en-passive-fields" class="fe-conditional visible">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Meat Yield</label>
-                        <input type="number" id="en-p-meatYield" value="3" min="0">
-                    </div>
-                    <div class="fe-field">
-                        <label>Hide Yield</label>
-                        <input type="number" id="en-p-hideYield" value="2" min="0">
-                    </div>
-                </div>
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Flee Range</label>
-                        <input type="number" id="en-p-fleeRange" value="5" min="0">
-                    </div>
-                    <div class="fe-field">
-                        <label>Spawn Weight</label>
-                        <input type="number" id="en-p-spawnWeight" value="10" min="0">
-                    </div>
-                </div>
-            </div>
-
-            <div id="en-hostile-fields" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Meat Yield</label>
-                        <input type="number" id="en-h-meatYield" value="2" min="0">
-                    </div>
-                    <div class="fe-field">
-                        <label>Hide Yield</label>
-                        <input type="number" id="en-h-hideYield" value="1" min="0">
-                    </div>
-                </div>
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Damage</label>
-                        <input type="number" id="en-h-damage" value="8" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Aggro Range</label>
-                        <input type="number" id="en-h-aggroRange" value="6" min="1">
-                    </div>
-                </div>
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Spawn Weight</label>
-                        <input type="number" id="en-h-spawnWeight" value="0" min="0">
-                    </div>
-                    <div class="fe-field">
-                        <label>Spawn Condition</label>
-                        <select id="en-h-spawnCondition">
-                            ${SPAWN_CONDITIONS.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="fe-section-title">Taming</div>
-            <div class="fe-checkbox-row">
-                <input type="checkbox" id="en-tameable">
-                <label for="en-tameable">Tameable</label>
-            </div>
-
-            <div id="en-tame-fields" class="fe-conditional">
+            <div class="fe-row">
                 <div class="fe-field">
-                    <label>Tamed Role</label>
-                    <select id="en-tame-role">
-                        ${TAMED_ROLES.map(r => `<option value="${r.value}">${r.label}</option>`).join('')}
-                    </select>
+                    <label>Meat Yield</label>
+                    <input type="number" id="en-meatYield" value="0">
                 </div>
                 <div class="fe-field">
-                    <label>Food to Tame</label>
-                    <input type="number" id="en-tame-foodToTame" value="4" min="1">
+                    <label>Hide Yield</label>
+                    <input type="number" id="en-hideYield" value="0">
                 </div>
+                <div class="fe-field">
+                    <label>Flee Range</label>
+                    <input type="number" id="en-fleeRange" value="0">
+                </div>
+            </div>
 
-                <div id="en-tame-guard" class="fe-conditional visible">
+            <div id="en-ranged-section" class="fe-conditional">
+                <div class="fe-checkbox-row">
+                    <input type="checkbox" id="en-ranged">
+                    <label for="en-ranged">Ranged Attack</label>
+                </div>
+                <div id="en-ranged-fields" class="fe-conditional">
                     <div class="fe-row">
-                        <div class="fe-field">
-                            <label>Guard Radius</label>
-                            <input type="number" id="en-tame-guardRadius" value="8" min="1">
+                        <div class="fe-field" style="flex:0 0 60px;">
+                            <label>Proj Char</label>
+                            <input type="text" id="en-projectileChar" maxlength="2" value="-">
                         </div>
-                        <div class="fe-field">
-                            <label>Guard Damage</label>
-                            <input type="number" id="en-tame-guardDamage" value="8" min="1">
+                        <div class="fe-field" style="flex:0 0 60px;">
+                            <label>Color</label>
+                            <input type="color" id="en-projectileColor" value="#ffaa33">
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="en-summon-section" class="fe-conditional">
+                <div class="fe-section-title">Summon Settings</div>
+                <div class="fe-field">
+                    <label>Summon Duration (ticks)</label>
+                    <input type="number" id="en-summonDuration" value="80">
+                </div>
+            </div>
+
+            <div id="en-golem-section" class="fe-conditional">
+                <div class="fe-section-title">Golem Crafting</div>
+                <div class="fe-field">
+                    <label>Craft Ticks</label>
+                    <input type="number" id="en-craftTicks" value="80">
+                </div>
+                <div class="fe-field">
+                    <label>Cost (JSON)</label>
+                    <input type="text" id="en-cost" value='{"stone":10,"runite":3,"void_essence":2}'>
+                </div>
+            </div>
+
+            <div id="en-loot-section" class="fe-conditional">
+                <div class="fe-section-title">Loot Table</div>
+                <div class="fe-field">
+                    <label>Loot (JSON array)</label>
+                    <input type="text" id="en-loot" value='[]' placeholder='[{"item":"bone","chance":0.5}]'>
+                </div>
+            </div>
+
+            <div id="en-tame-section" class="fe-conditional">
+                <div class="fe-section-title">Taming</div>
+                <div class="fe-checkbox-row">
+                    <input type="checkbox" id="en-tameable">
+                    <label for="en-tameable">Tameable</label>
+                </div>
+                <div id="en-tame-fields" class="fe-conditional">
+                    <div class="fe-field">
+                        <label>Food to Tame</label>
+                        <input type="number" id="en-tame-foodToTame" value="4">
                     </div>
                     <div class="fe-checkbox-row">
                         <input type="checkbox" id="en-tame-dangerousTame">
@@ -243,56 +259,26 @@ class EntityEditor {
                         <div class="fe-row">
                             <div class="fe-field">
                                 <label>Base Tame Chance (0-1)</label>
-                                <input type="number" id="en-tame-baseTameChance" value="0.4" min="0" max="1" step="0.05">
+                                <input type="number" id="en-tame-baseTameChance" value="0.4" step="0.05">
                             </div>
                             <div class="fe-field">
                                 <label>Retaliation Damage</label>
-                                <input type="number" id="en-tame-retaliationDamage" value="12" min="0">
+                                <input type="number" id="en-tame-retaliationDamage" value="12">
                             </div>
                         </div>
                     </div>
+                    <div class="fe-section-title" style="margin-top:8px;">Tamed Roles</div>
+                    <div id="en-tame-roles"></div>
+                    <div class="fe-section-title" style="margin-top:8px;">Tamed Effects</div>
+                    <div id="en-tame-effects"></div>
                 </div>
-
-                <div id="en-tame-production" class="fe-conditional">
-                    <div class="fe-row">
-                        <div class="fe-field">
-                            <label>Produces (resource key)</label>
-                            <input type="text" id="en-tame-produces" placeholder="eggs">
-                        </div>
-                        <div class="fe-field">
-                            <label>Produce Rate (ticks)</label>
-                            <input type="number" id="en-tame-produceRate" value="80" min="1">
-                        </div>
-                    </div>
-                    <div class="fe-field">
-                        <label>Produce Amount</label>
-                        <input type="number" id="en-tame-produceAmount" value="1" min="1">
-                    </div>
-                </div>
-
-                <div id="en-tame-pack" class="fe-conditional">
-                    <div class="fe-field">
-                        <label>Expedition Speed Bonus (0-1)</label>
-                        <input type="number" id="en-tame-expeditionSpeedBonus" value="0.25" min="0" max="1" step="0.05">
-                    </div>
-                </div>
-
-                <div id="en-tame-happiness" class="fe-conditional">
-                    <div class="fe-row">
-                        <div class="fe-field">
-                            <label>Aura Radius</label>
-                            <input type="number" id="en-tame-auraRadius" value="5" min="1">
-                        </div>
-                        <div class="fe-field">
-                            <label>Aura Mood Bonus</label>
-                            <input type="number" id="en-tame-auraMoodBonus" value="5" min="1">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="fe-section-title" style="margin-top:12px;">Effects (on tamed creature)</div>
-                <div id="en-tame-effects"></div>
             </div>
+
+            <div class="fe-section-title">Roles</div>
+            <div id="en-roles"></div>
+
+            <div class="fe-section-title">Effects</div>
+            <div id="en-effects"></div>
 
             <div class="fe-section-title">Saved Drafts</div>
             <div id="en-draft-list" class="fe-draft-list"></div>
@@ -310,17 +296,35 @@ class EntityEditor {
             e.target.value = '';
         });
 
+        document.getElementById('en-category').addEventListener('change', () => this._updateConditionals());
         document.getElementById('en-hostile').addEventListener('change', () => this._updateConditionals());
         document.getElementById('en-tameable').addEventListener('change', () => this._updateConditionals());
-        document.getElementById('en-tame-role').addEventListener('change', () => this._updateConditionals());
         document.getElementById('en-tame-dangerousTame').addEventListener('change', () => this._updateConditionals());
+        document.getElementById('en-ranged').addEventListener('change', () => this._updateConditionals());
 
         document.getElementById('en-char').addEventListener('input', () => this._updateCharPreview());
         document.getElementById('en-color').addEventListener('input', () => this._updateCharPreview());
 
-        this._effectPicker = new EffectPicker(document.getElementById('en-tame-effects'), {
+        const onChange = () => this._schedulePreview();
+
+        this._rolePicker = new RolePicker(document.getElementById('en-roles'), {
+            category: document.getElementById('en-category').value,
+            onChange,
+        });
+
+        this._effectPicker = new EffectPicker(document.getElementById('en-effects'), {
+            allowedContexts: ['passive', 'aura', 'buff', 'on_hit', 'on_cast'],
+            onChange,
+        });
+
+        this._tamedRolePicker = new RolePicker(document.getElementById('en-tame-roles'), {
+            category: 'animal',
+            onChange,
+        });
+
+        this._tamedEffectPicker = new EffectPicker(document.getElementById('en-tame-effects'), {
             allowedContexts: ['passive', 'aura'],
-            onChange: () => this._schedulePreview(),
+            onChange,
         });
 
         this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
@@ -332,16 +336,8 @@ class EntityEditor {
 
         window.addEventListener('keydown', (e) => {
             if (this.container.style.display === 'none') return;
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                this._undo();
-                return;
-            }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                e.preventDefault();
-                this._redo();
-                return;
-            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this._undo(); return; }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); this._redo(); return; }
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             if (e.key === 'Escape') this._goBack();
         });
@@ -363,8 +359,7 @@ class EntityEditor {
         let html = `<input type="text" class="fe-ref-search" placeholder="Search IDs..." id="en-ref-search">`;
         html += `<div id="en-ref-list">`;
         for (const cat of REFERENCE_DATA) {
-            html += `<div class="fe-ref-category">`;
-            html += `<div class="fe-ref-category-title">${cat.title}</div>`;
+            html += `<div class="fe-ref-category"><div class="fe-ref-category-title">${cat.title}</div>`;
             for (const id of cat.ids) {
                 html += `<span class="fe-ref-id" data-ref-id="${id}">${id}</span>`;
             }
@@ -394,21 +389,24 @@ class EntityEditor {
     }
 
     _updateConditionals() {
-        const hostile = document.getElementById('en-hostile').checked;
-        document.getElementById('en-passive-fields').classList.toggle('visible', !hostile);
-        document.getElementById('en-hostile-fields').classList.toggle('visible', hostile);
+        const category = document.getElementById('en-category').value;
+
+        document.getElementById('en-tame-section').classList.toggle('visible', category === 'animal');
+        document.getElementById('en-summon-section').classList.toggle('visible', category === 'summon');
+        document.getElementById('en-golem-section').classList.toggle('visible', category === 'golem');
+        document.getElementById('en-loot-section').classList.toggle('visible', category === 'enemy');
+        document.getElementById('en-ranged-section').classList.toggle('visible', category === 'enemy' || category === 'summon');
 
         const tameable = document.getElementById('en-tameable').checked;
         document.getElementById('en-tame-fields').classList.toggle('visible', tameable);
 
-        const role = document.getElementById('en-tame-role').value;
-        document.getElementById('en-tame-guard').classList.toggle('visible', role === 'guard');
-        document.getElementById('en-tame-production').classList.toggle('visible', role === 'production');
-        document.getElementById('en-tame-pack').classList.toggle('visible', role === 'pack');
-        document.getElementById('en-tame-happiness').classList.toggle('visible', role === 'happiness');
-
         const dangerous = document.getElementById('en-tame-dangerousTame').checked;
         document.getElementById('en-tame-danger-fields').classList.toggle('visible', dangerous);
+
+        const ranged = document.getElementById('en-ranged').checked;
+        document.getElementById('en-ranged-fields').classList.toggle('visible', ranged);
+
+        this._rolePicker.setCategory(category);
     }
 
     _updateCharPreview() {
@@ -451,9 +449,7 @@ class EntityEditor {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         this.activeDraftKey = data.key;
         this._renderDraftList();
-        try {
-            localStorage.setItem(STORAGE_KEY + '_active', data.key);
-        } catch {}
+        try { localStorage.setItem(STORAGE_KEY + '_active', data.key); } catch {}
     }
 
     _autoRestore() {
@@ -467,13 +463,6 @@ class EntityEditor {
                     this._populateForm(item);
                     return;
                 }
-            }
-            const raw = localStorage.getItem(STORAGE_KEY + '_autosave');
-            if (!raw) return;
-            const data = JSON.parse(raw);
-            if (data && data.key) {
-                this.activeDraftKey = data.key;
-                this._populateForm(data);
             }
         } catch {}
     }
@@ -489,36 +478,36 @@ class EntityEditor {
 
     _clearForm() {
         document.getElementById('en-key').value = '';
+        document.getElementById('en-name').value = '';
+        document.getElementById('en-category').value = 'animal';
         document.getElementById('en-char').value = '';
         document.getElementById('en-color').value = '#bb8855';
         document.getElementById('en-hp').value = '40';
         document.getElementById('en-speed').value = '0.5';
+        document.getElementById('en-damage').value = '0';
+        document.getElementById('en-aggroRange').value = '6';
+        document.getElementById('en-spawnWeight').value = '0';
+        document.getElementById('en-spawnCondition').value = '';
         document.getElementById('en-hostile').checked = false;
-        document.getElementById('en-p-meatYield').value = '3';
-        document.getElementById('en-p-hideYield').value = '2';
-        document.getElementById('en-p-fleeRange').value = '5';
-        document.getElementById('en-p-spawnWeight').value = '10';
-        document.getElementById('en-h-meatYield').value = '2';
-        document.getElementById('en-h-hideYield').value = '1';
-        document.getElementById('en-h-damage').value = '8';
-        document.getElementById('en-h-aggroRange').value = '6';
-        document.getElementById('en-h-spawnWeight').value = '0';
-        document.getElementById('en-h-spawnCondition').value = '';
+        document.getElementById('en-meatYield').value = '0';
+        document.getElementById('en-hideYield').value = '0';
+        document.getElementById('en-fleeRange').value = '0';
+        document.getElementById('en-ranged').checked = false;
+        document.getElementById('en-projectileChar').value = '-';
+        document.getElementById('en-projectileColor').value = '#ffaa33';
+        document.getElementById('en-summonDuration').value = '80';
+        document.getElementById('en-craftTicks').value = '80';
+        document.getElementById('en-cost').value = '{"stone":10,"runite":3,"void_essence":2}';
+        document.getElementById('en-loot').value = '[]';
         document.getElementById('en-tameable').checked = false;
-        document.getElementById('en-tame-role').value = 'guard';
         document.getElementById('en-tame-foodToTame').value = '4';
-        document.getElementById('en-tame-guardRadius').value = '8';
-        document.getElementById('en-tame-guardDamage').value = '8';
         document.getElementById('en-tame-dangerousTame').checked = false;
         document.getElementById('en-tame-baseTameChance').value = '0.4';
         document.getElementById('en-tame-retaliationDamage').value = '12';
-        document.getElementById('en-tame-produces').value = '';
-        document.getElementById('en-tame-produceRate').value = '80';
-        document.getElementById('en-tame-produceAmount').value = '1';
-        document.getElementById('en-tame-expeditionSpeedBonus').value = '0.25';
-        document.getElementById('en-tame-auraRadius').value = '5';
-        document.getElementById('en-tame-auraMoodBonus').value = '5';
+        this._rolePicker.clear();
         this._effectPicker.clear();
+        this._tamedRolePicker.clear();
+        this._tamedEffectPicker.clear();
         this._updateConditionals();
     }
 
@@ -526,13 +515,13 @@ class EntityEditor {
         const container = document.getElementById('en-draft-list');
         const saved = this._getSaved();
         if (!saved.length) {
-            container.innerHTML = '<div style="color:#666;font-size:11px;">No drafts yet. Start filling in the form above.</div>';
+            container.innerHTML = '<div style="color:#666;font-size:11px;">No drafts yet.</div>';
             return;
         }
         container.innerHTML = saved.map(item => `
             <div class="fe-draft-row${item.key === this.activeDraftKey ? ' active' : ''}" data-draft-key="${item.key}">
                 <span class="fe-draft-char" style="color:${item.color || '#ccc'}">${item.char || '?'}</span>
-                <span class="fe-draft-key">${item.key}</span>
+                <span class="fe-draft-key">[${item.category || '?'}] ${item.key}</span>
                 <span class="fe-draft-actions">
                     <button data-draft-load="${item.key}">Edit</button>
                     <button data-draft-del="${item.key}" class="fe-draft-del">✕</button>
@@ -541,16 +530,10 @@ class EntityEditor {
         `).join('');
 
         container.querySelectorAll('[data-draft-load]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._loadDraft(btn.dataset.draftLoad);
-            });
+            btn.addEventListener('click', (e) => { e.stopPropagation(); this._loadDraft(btn.dataset.draftLoad); });
         });
         container.querySelectorAll('[data-draft-del]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._deleteDraft(btn.dataset.draftDel);
-            });
+            btn.addEventListener('click', (e) => { e.stopPropagation(); this._deleteDraft(btn.dataset.draftDel); });
         });
     }
 
@@ -578,69 +561,84 @@ class EntityEditor {
         const key = document.getElementById('en-key').value.trim();
         if (!key) return null;
 
-        const hostile = document.getElementById('en-hostile').checked;
+        const category = document.getElementById('en-category').value;
         const data = {
             key,
+            name: document.getElementById('en-name').value.trim() || undefined,
+            category,
             char: document.getElementById('en-char').value.trim() || '?',
             color: document.getElementById('en-color').value,
             hp: parseInt(document.getElementById('en-hp').value) || 40,
             speed: parseFloat(document.getElementById('en-speed').value) || 0.5,
-            hostile,
         };
 
-        if (hostile) {
-            const meatYield = parseInt(document.getElementById('en-h-meatYield').value);
-            const hideYield = parseInt(document.getElementById('en-h-hideYield').value);
-            if (meatYield) data.meatYield = meatYield;
-            if (hideYield) data.hideYield = hideYield;
-            data.damage = parseInt(document.getElementById('en-h-damage').value) || 8;
-            data.aggroRange = parseInt(document.getElementById('en-h-aggroRange').value) || 6;
-            data.spawnWeight = parseInt(document.getElementById('en-h-spawnWeight').value) || 0;
-            const cond = document.getElementById('en-h-spawnCondition').value;
-            if (cond) data.spawnCondition = cond;
-        } else {
-            const meatYield = parseInt(document.getElementById('en-p-meatYield').value);
-            const hideYield = parseInt(document.getElementById('en-p-hideYield').value);
-            if (meatYield) data.meatYield = meatYield;
-            if (hideYield) data.hideYield = hideYield;
-            const fleeRange = parseInt(document.getElementById('en-p-fleeRange').value);
-            if (fleeRange) data.fleeRange = fleeRange;
-            data.spawnWeight = parseInt(document.getElementById('en-p-spawnWeight').value) || 0;
+        const damage = parseInt(document.getElementById('en-damage').value);
+        if (damage) data.damage = damage;
+
+        const hostile = document.getElementById('en-hostile').checked;
+        if (hostile) data.hostile = true;
+
+        const aggroRange = parseInt(document.getElementById('en-aggroRange').value);
+        if (aggroRange && hostile) data.aggroRange = aggroRange;
+
+        const spawnWeight = parseInt(document.getElementById('en-spawnWeight').value);
+        if (spawnWeight) data.spawnWeight = spawnWeight;
+
+        const spawnCondition = document.getElementById('en-spawnCondition').value;
+        if (spawnCondition) data.spawnCondition = spawnCondition;
+
+        const meatYield = parseInt(document.getElementById('en-meatYield').value);
+        const hideYield = parseInt(document.getElementById('en-hideYield').value);
+        const fleeRange = parseInt(document.getElementById('en-fleeRange').value);
+        if (meatYield) data.meatYield = meatYield;
+        if (hideYield) data.hideYield = hideYield;
+        if (fleeRange) data.fleeRange = fleeRange;
+
+        if (category === 'enemy' || category === 'summon') {
+            const ranged = document.getElementById('en-ranged').checked;
+            if (ranged) {
+                data.ranged = true;
+                data.projectileChar = document.getElementById('en-projectileChar').value || '-';
+                data.projectileColor = document.getElementById('en-projectileColor').value;
+            }
         }
 
-        const tameable = document.getElementById('en-tameable').checked;
-        if (tameable) {
-            data.tameable = true;
-            const role = document.getElementById('en-tame-role').value;
-            const tamed = {};
-            tamed.foodToTame = parseInt(document.getElementById('en-tame-foodToTame').value) || 4;
+        if (category === 'summon') {
+            data.summonDuration = parseInt(document.getElementById('en-summonDuration').value) || 80;
+        }
 
-            if (role === 'guard') {
-                tamed.guardAnimal = true;
-                tamed.guardRadius = parseInt(document.getElementById('en-tame-guardRadius').value) || 8;
-                tamed.guardDamage = parseInt(document.getElementById('en-tame-guardDamage').value) || 8;
+        if (category === 'golem') {
+            data.craftTicks = parseInt(document.getElementById('en-craftTicks').value) || 80;
+            try { data.cost = JSON.parse(document.getElementById('en-cost').value); } catch { data.cost = {}; }
+        }
+
+        if (category === 'enemy') {
+            try { data.loot = JSON.parse(document.getElementById('en-loot').value); } catch { data.loot = []; }
+        }
+
+        const roles = this._rolePicker.getRoles();
+        if (roles.length) data.roles = roles;
+
+        const effects = this._effectPicker.getEffects();
+        if (effects.length) data.effects = effects;
+
+        if (category === 'animal') {
+            const tameable = document.getElementById('en-tameable').checked;
+            if (tameable) {
+                data.tameable = true;
+                const tamed = {};
+                tamed.foodToTame = parseInt(document.getElementById('en-tame-foodToTame').value) || 4;
                 if (document.getElementById('en-tame-dangerousTame').checked) {
                     tamed.dangerousTame = true;
                     tamed.baseTameChance = parseFloat(document.getElementById('en-tame-baseTameChance').value) || 0.4;
                     tamed.retaliationDamage = parseInt(document.getElementById('en-tame-retaliationDamage').value) || 12;
                 }
-            } else if (role === 'production') {
-                tamed.produces = document.getElementById('en-tame-produces').value.trim() || 'eggs';
-                tamed.produceRate = parseInt(document.getElementById('en-tame-produceRate').value) || 80;
-                tamed.produceAmount = parseInt(document.getElementById('en-tame-produceAmount').value) || 1;
-            } else if (role === 'pack') {
-                tamed.packAnimal = true;
-                tamed.expeditionSpeedBonus = parseFloat(document.getElementById('en-tame-expeditionSpeedBonus').value) || 0.25;
-            } else if (role === 'happiness') {
-                tamed.happinessAura = true;
-                tamed.auraRadius = parseInt(document.getElementById('en-tame-auraRadius').value) || 5;
-                tamed.auraMoodBonus = parseInt(document.getElementById('en-tame-auraMoodBonus').value) || 5;
+                const tamedRoles = this._tamedRolePicker.getRoles();
+                if (tamedRoles.length) tamed.roles = tamedRoles;
+                const tamedEffects = this._tamedEffectPicker.getEffects();
+                if (tamedEffects.length) tamed.effects = tamedEffects;
+                data.tamed = tamed;
             }
-
-            const effects = this._effectPicker.getEffects();
-            if (effects.length) tamed.effects = effects;
-
-            data.tamed = tamed;
         }
 
         return data;
@@ -649,47 +647,53 @@ class EntityEditor {
     _formatOutput(data) {
         if (!data) return '';
         const parts = [];
+        if (data.name) parts.push(`name: '${data.name}'`);
         parts.push(`char: '${data.char}'`);
         parts.push(`color: '${data.color}'`);
         parts.push(`hp: ${data.hp}`);
         parts.push(`speed: ${data.speed}`);
-        parts.push(`hostile: ${data.hostile}`);
+        parts.push(`category: '${data.category}'`);
+        if (data.hostile) parts.push(`hostile: true`);
+        if (data.damage) parts.push(`damage: ${data.damage}`);
+        if (data.aggroRange) parts.push(`aggroRange: ${data.aggroRange}`);
         if (data.meatYield) parts.push(`meatYield: ${data.meatYield}`);
         if (data.hideYield) parts.push(`hideYield: ${data.hideYield}`);
+        if (data.fleeRange) parts.push(`fleeRange: ${data.fleeRange}`);
+        if (data.spawnWeight) parts.push(`spawnWeight: ${data.spawnWeight}`);
+        if (data.spawnCondition) parts.push(`spawnCondition: '${data.spawnCondition}'`);
+        if (data.ranged) {
+            parts.push(`ranged: true`);
+            parts.push(`projectileChar: '${data.projectileChar}'`);
+            parts.push(`projectileColor: '${data.projectileColor}'`);
+        }
+        if (data.summonDuration) parts.push(`summonDuration: ${data.summonDuration}`);
+        if (data.craftTicks) parts.push(`craftTicks: ${data.craftTicks}`);
+        if (data.cost) parts.push(`cost: ${JSON.stringify(data.cost)}`);
+        if (data.loot && data.loot.length) parts.push(`loot: ${JSON.stringify(data.loot)}`);
 
-        if (data.hostile) {
-            parts.push(`damage: ${data.damage}`);
-            parts.push(`aggroRange: ${data.aggroRange}`);
-            parts.push(`spawnWeight: ${data.spawnWeight}`);
-            if (data.spawnCondition) parts.push(`spawnCondition: '${data.spawnCondition}'`);
-        } else {
-            if (data.fleeRange) parts.push(`fleeRange: ${data.fleeRange}`);
-            parts.push(`spawnWeight: ${data.spawnWeight}`);
+        if (data.roles && data.roles.length) {
+            parts.push(`roles: ${formatRolesCode(data.roles)}`);
+        }
+
+        if (data.effects && data.effects.length) {
+            parts.push(formatEffectsCode(data.effects));
         }
 
         if (data.tameable) {
             parts.push(`tameable: true`);
             const tamedParts = [];
             const t = data.tamed;
-            if (t.guardAnimal) tamedParts.push('guardAnimal: true');
-            if (t.guardRadius) tamedParts.push(`guardRadius: ${t.guardRadius}`);
-            if (t.guardDamage) tamedParts.push(`guardDamage: ${t.guardDamage}`);
-            if (t.packAnimal) tamedParts.push('packAnimal: true');
-            if (t.expeditionSpeedBonus) tamedParts.push(`expeditionSpeedBonus: ${t.expeditionSpeedBonus}`);
-            if (t.happinessAura) tamedParts.push('happinessAura: true');
-            if (t.auraRadius) tamedParts.push(`auraRadius: ${t.auraRadius}`);
-            if (t.auraMoodBonus) tamedParts.push(`auraMoodBonus: ${t.auraMoodBonus}`);
-            if (t.produces) tamedParts.push(`produces: '${t.produces}'`);
-            if (t.produceRate) tamedParts.push(`produceRate: ${t.produceRate}`);
-            if (t.produceAmount) tamedParts.push(`produceAmount: ${t.produceAmount}`);
             tamedParts.push(`foodToTame: ${t.foodToTame}`);
             if (t.dangerousTame) {
-                tamedParts.push('dangerousTame: true');
+                tamedParts.push(`dangerousTame: true`);
                 tamedParts.push(`baseTameChance: ${t.baseTameChance}`);
                 tamedParts.push(`retaliationDamage: ${t.retaliationDamage}`);
             }
+            if (t.roles && t.roles.length) {
+                tamedParts.push(`roles: ${formatRolesCode(t.roles, '        ')}`);
+            }
             if (t.effects && t.effects.length) {
-                tamedParts.push(`effects: ${formatEffectsCode(t.effects)}`);
+                tamedParts.push(formatEffectsCode(t.effects, '        '));
             }
             parts.push(`tamed: {\n        ${tamedParts.join(',\n        ')},\n    }`);
         }
@@ -705,10 +709,8 @@ class EntityEditor {
     _exportAll() {
         const saved = this._getSaved();
         if (!saved.length) return;
-        let output = '// === Add to ANIMALS in config.js ===\n';
-        saved.forEach(item => {
-            output += this._formatOutput(item) + '\n\n';
-        });
+        let output = '// === Add to ENTITIES in config.js ===\n';
+        saved.forEach(item => { output += this._formatOutput(item) + '\n\n'; });
         output = output.trimEnd();
 
         const modal = document.createElement('div');
@@ -735,57 +737,45 @@ class EntityEditor {
 
     _populateForm(data) {
         document.getElementById('en-key').value = data.key || '';
+        document.getElementById('en-name').value = data.name || '';
+        document.getElementById('en-category').value = data.category || 'animal';
         document.getElementById('en-char').value = data.char || '';
         document.getElementById('en-color').value = data.color || '#bb8855';
         document.getElementById('en-hp').value = data.hp || 40;
         document.getElementById('en-speed').value = data.speed || 0.5;
+        document.getElementById('en-damage').value = data.damage || 0;
         document.getElementById('en-hostile').checked = !!data.hostile;
+        document.getElementById('en-aggroRange').value = data.aggroRange || 6;
+        document.getElementById('en-spawnWeight').value = data.spawnWeight || 0;
+        document.getElementById('en-spawnCondition').value = data.spawnCondition || '';
+        document.getElementById('en-meatYield').value = data.meatYield || 0;
+        document.getElementById('en-hideYield').value = data.hideYield || 0;
+        document.getElementById('en-fleeRange').value = data.fleeRange || 0;
+        document.getElementById('en-ranged').checked = !!data.ranged;
+        document.getElementById('en-projectileChar').value = data.projectileChar || '-';
+        document.getElementById('en-projectileColor').value = data.projectileColor || '#ffaa33';
+        document.getElementById('en-summonDuration').value = data.summonDuration || 80;
+        document.getElementById('en-craftTicks').value = data.craftTicks || 80;
+        document.getElementById('en-cost').value = JSON.stringify(data.cost || {});
+        document.getElementById('en-loot').value = JSON.stringify(data.loot || []);
 
-        if (data.hostile) {
-            document.getElementById('en-h-meatYield').value = data.meatYield || 0;
-            document.getElementById('en-h-hideYield').value = data.hideYield || 0;
-            document.getElementById('en-h-damage').value = data.damage || 8;
-            document.getElementById('en-h-aggroRange').value = data.aggroRange || 6;
-            document.getElementById('en-h-spawnWeight').value = data.spawnWeight || 0;
-            document.getElementById('en-h-spawnCondition').value = data.spawnCondition || '';
-        } else {
-            document.getElementById('en-p-meatYield').value = data.meatYield || 0;
-            document.getElementById('en-p-hideYield').value = data.hideYield || 0;
-            document.getElementById('en-p-fleeRange').value = data.fleeRange || 0;
-            document.getElementById('en-p-spawnWeight').value = data.spawnWeight || 0;
-        }
+        this._rolePicker.setCategory(data.category || 'animal');
+        this._rolePicker.setRoles(data.roles || []);
+        this._effectPicker.setEffects(data.effects || []);
 
         document.getElementById('en-tameable').checked = !!data.tameable;
         if (data.tamed) {
-            let role = 'guard';
-            if (data.tamed.packAnimal) role = 'pack';
-            else if (data.tamed.produces) role = 'production';
-            else if (data.tamed.happinessAura) role = 'happiness';
-            document.getElementById('en-tame-role').value = role;
             document.getElementById('en-tame-foodToTame').value = data.tamed.foodToTame || 4;
-
-            if (role === 'guard') {
-                document.getElementById('en-tame-guardRadius').value = data.tamed.guardRadius || 8;
-                document.getElementById('en-tame-guardDamage').value = data.tamed.guardDamage || 8;
-                document.getElementById('en-tame-dangerousTame').checked = !!data.tamed.dangerousTame;
-                if (data.tamed.dangerousTame) {
-                    document.getElementById('en-tame-baseTameChance').value = data.tamed.baseTameChance || 0.4;
-                    document.getElementById('en-tame-retaliationDamage').value = data.tamed.retaliationDamage || 12;
-                }
-            } else if (role === 'production') {
-                document.getElementById('en-tame-produces').value = data.tamed.produces || '';
-                document.getElementById('en-tame-produceRate').value = data.tamed.produceRate || 80;
-                document.getElementById('en-tame-produceAmount').value = data.tamed.produceAmount || 1;
-            } else if (role === 'pack') {
-                document.getElementById('en-tame-expeditionSpeedBonus').value = data.tamed.expeditionSpeedBonus || 0.25;
-            } else if (role === 'happiness') {
-                document.getElementById('en-tame-auraRadius').value = data.tamed.auraRadius || 5;
-                document.getElementById('en-tame-auraMoodBonus').value = data.tamed.auraMoodBonus || 5;
+            document.getElementById('en-tame-dangerousTame').checked = !!data.tamed.dangerousTame;
+            if (data.tamed.dangerousTame) {
+                document.getElementById('en-tame-baseTameChance').value = data.tamed.baseTameChance || 0.4;
+                document.getElementById('en-tame-retaliationDamage').value = data.tamed.retaliationDamage || 12;
             }
-
-            this._effectPicker.setEffects(data.tamed.effects || this._legacyToEffects(data.tamed));
+            this._tamedRolePicker.setRoles(data.tamed.roles || this._legacyToRoles(data.tamed));
+            this._tamedEffectPicker.setEffects(data.tamed.effects || this._legacyToEffects(data.tamed));
         } else {
-            this._effectPicker.clear();
+            this._tamedRolePicker.clear();
+            this._tamedEffectPicker.clear();
         }
 
         this._updateConditionals();
@@ -793,10 +783,10 @@ class EntityEditor {
     }
 
     _loadFromConfig(key) {
-        const def = ANIMALS[key];
+        const def = ENTITIES[key];
         if (!def) return;
         const data = { key, ...def };
-        if (def.tamed) { data.tameable = true; }
+        if (def.tamed) data.tameable = true;
         this._populateForm(data);
         this.activeDraftKey = null;
         this._renderDraftList();
@@ -804,15 +794,18 @@ class EntityEditor {
         this._pushUndoState();
     }
 
+    _legacyToRoles(tamed) {
+        const roles = [];
+        if (tamed.guardAnimal) roles.push({ type: 'guard', guardRadius: tamed.guardRadius || 8, guardDamage: tamed.guardDamage || 8 });
+        if (tamed.produces) roles.push({ type: 'production', produces: tamed.produces, produceRate: tamed.produceRate || 80, produceAmount: tamed.produceAmount || 1 });
+        if (tamed.packAnimal) roles.push({ type: 'pack', expeditionSpeedBonus: tamed.expeditionSpeedBonus || 0.25 });
+        return roles;
+    }
+
     _legacyToEffects(tamed) {
         const effects = [];
         if (tamed.happinessAura) {
-            effects.push({
-                type: 'mood_aura',
-                radius: tamed.auraRadius || 5,
-                moodBonus: tamed.auraMoodBonus || 5,
-                context: 'aura'
-            });
+            effects.push({ type: 'mood_aura', radius: tamed.auraRadius || 5, moodBonus: tamed.auraMoodBonus || 5, context: 'aura' });
         }
         return effects;
     }
@@ -837,21 +830,33 @@ class EntityEditor {
             if (el.type === 'checkbox') snap[id] = el.checked;
             else snap[id] = el.value;
         });
+        snap._roles = this._rolePicker.getRoles();
         snap._effects = this._effectPicker.getEffects();
+        snap._tamedRoles = this._tamedRolePicker.getRoles();
+        snap._tamedEffects = this._tamedEffectPicker.getEffects();
         return JSON.stringify(snap);
     }
 
     _restoreFormSnapshot(json) {
         const snap = JSON.parse(json);
+        const roles = snap._roles || [];
         const effects = snap._effects || [];
+        const tamedRoles = snap._tamedRoles || [];
+        const tamedEffects = snap._tamedEffects || [];
+        delete snap._roles;
         delete snap._effects;
+        delete snap._tamedRoles;
+        delete snap._tamedEffects;
         for (const [id, val] of Object.entries(snap)) {
             const el = document.getElementById(id);
             if (!el) continue;
             if (el.type === 'checkbox') el.checked = val;
             else el.value = val;
         }
+        this._rolePicker.setRoles(roles);
         this._effectPicker.setEffects(effects);
+        this._tamedRolePicker.setRoles(tamedRoles);
+        this._tamedEffectPicker.setEffects(tamedEffects);
         this._updateConditionals();
         this._updatePreview();
     }
@@ -885,11 +890,8 @@ class EntityEditor {
     _validateForm() {
         const key = document.getElementById('en-key');
         const char = document.getElementById('en-char');
-        let valid = true;
         key.closest('.fe-field').classList.toggle('fe-error', !key.value.trim());
         char.closest('.fe-field').classList.toggle('fe-error', !char.value.trim());
-        if (!key.value.trim() || !char.value.trim()) valid = false;
-        return valid;
     }
 
     _getSaved() {
