@@ -44,7 +44,7 @@ export class Minimap {
     }
 
     render() {
-        const { map, colonists, wildlife, raiders, tamedAnimals, camera, weather } = this.game;
+        const { map, colonists, entities, raiders, camera, weather } = this.game;
         const ctx = this.ctx;
         const w = CONFIG.MAP_WIDTH * SCALE_X;
         const h = CONFIG.MAP_HEIGHT * SCALE_Y;
@@ -74,16 +74,17 @@ export class Minimap {
             if (c.hp <= 0) continue;
             this.drawDot(data, c.x, c.y, [255, 255, 0]);
         }
-        for (const a of wildlife) {
-            if (a.hp <= 0) continue;
-            this.drawDot(data, a.x, a.y, a.hostile ? [180, 50, 50] : [150, 120, 80]);
+        for (const e of entities) {
+            if (e.hp <= 0) continue;
+            if (e.tamed) {
+                this.drawDot(data, e.x, e.y, [100, 200, 100]);
+            } else if (e.category === 'animal') {
+                this.drawDot(data, e.x, e.y, e.hostile ? [180, 50, 50] : [150, 120, 80]);
+            }
         }
         for (const r of raiders) {
             if (r.hp <= 0) continue;
             this.drawDot(data, r.x, r.y, [255, 50, 50]);
-        }
-        for (const a of tamedAnimals) {
-            this.drawDot(data, a.x, a.y, [100, 200, 100]);
         }
 
         ctx.putImageData(imageData, 0, 0);

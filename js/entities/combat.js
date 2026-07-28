@@ -1,14 +1,10 @@
-import { CONFIG, RAID_CONFIG, RAID_TYPES, WEAPONS, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG } from '../core/config.js';
-
-const RAIDER_WEAPONS = ['wooden_club', 'etched_axe', 'runic_blade'];
+import { CONFIG, RAID_CONFIG, RAID_TYPES, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { findPathForEnemies, manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
 import { createRaidEntity } from './entity-factory.js';
 import { updateEntityRoles } from './roles.js';
-
-let nextRaiderId = 1;
 
 export class CombatSystem {
     constructor() {
@@ -44,9 +40,10 @@ export class CombatSystem {
         const raidTypeKeys = Object.keys(RAID_TYPES);
         const raidType = raidTypeKeys.length > 0 ? RAID_TYPES[raidTypeKeys[Math.floor(Math.random() * raidTypeKeys.length)]] : null;
 
+        const raidLevel = Math.floor(timeFactor * 10) + 1;
+        let spawned = 0;
+
         if (raidType) {
-            const raidLevel = Math.floor(timeFactor * 10) + 1;
-            let spawned = 0;
             for (const entry of raidType.composition) {
                 if (entry.minRaidLevel && raidLevel < entry.minRaidLevel) continue;
                 const [minCount, maxCount] = entry.count;
@@ -60,16 +57,13 @@ export class CombatSystem {
                     }
                 }
             }
-            if (spawned === 0) {
-                for (let i = 0; i < numRaiders; i++) {
-                    const pos = getEdgePosition(edge, i);
-                    game.raiders.push(createRaider(pos.x, pos.y));
-                }
-            }
-        } else {
+        }
+
+        if (spawned === 0) {
             for (let i = 0; i < numRaiders; i++) {
                 const pos = getEdgePosition(edge, i);
-                game.raiders.push(createRaider(pos.x, pos.y));
+                const entity = createRaidEntity('raider_brute', pos.x, pos.y, raidLevel, { hpMult: 0.1, damageMult: 0.05 });
+                if (entity) game.raiders.push(entity);
             }
         }
 
@@ -157,27 +151,6 @@ export class CombatSystem {
     }
 }
 
-function createRaider(x, y) {
-    const weaponKey = RAIDER_WEAPONS[Math.floor(Math.random() * RAIDER_WEAPONS.length)];
-    const weapon = WEAPONS[weaponKey];
-    return {
-        id: nextRaiderId++,
-        x, y,
-        hp: RAID_CONFIG.raiderHp,
-        maxHp: RAID_CONFIG.raiderHp,
-        damage: RAID_CONFIG.raiderDamage + weapon.damage,
-        speed: RAID_CONFIG.raiderSpeed,
-        moveCooldown: 0,
-        hostile: true,
-        fleeing: false,
-        path: [],
-        pathAge: 0,
-        weapon: { name: weapon.name, damage: weapon.damage },
-        char: 'R',
-        color: '#ff3333',
-    };
-}
-
 function updateRaider(raider, game) {
     raider.moveCooldown -= raider.speed;
     if (raider.moveCooldown > 0) return;
@@ -207,14 +180,6 @@ function updateRaider(raider, game) {
         return;
     }
 
-    if (raider.path && raider.path.length > 0) {
-        const next = raider.path[0];
-        if (isBreakableByEnemies(game.map, next.x, next.y)) {
-            attackStructure(game, next.x, next.y, raider.damage);
-            return;
-        }
-    }
-
     raider.pathAge = (raider.pathAge || 0) + 1;
     if (!raider.path || raider.path.length === 0 || raider.pathAge > PATHFINDING_CONFIG.raiderRepathInterval) {
         raider.path = findPathForEnemies(game.map, raider.x, raider.y, nearest.x, nearest.y) || [];
@@ -223,11 +188,13 @@ function updateRaider(raider, game) {
 
     if (raider.path.length > 0) {
         const next = raider.path[0];
+        if (isBreakableByEnemies(game.map, next.x, next.y)) {
+            attackStructure(game, next.x, next.y, raider.damage);
+            return;
+        }
         if (isPassableForEnemies(game.map, next.x, next.y)) {
             moveEntity(raider, next.x, next.y, dur);
             raider.path.shift();
-        } else if (isBreakableByEnemies(game.map, next.x, next.y)) {
-            // Will break next tick
         } else {
             raider.path = [];
         }
@@ -291,7 +258,7 @@ function moveToEdge(raider, game, dur) {
     }
 }
 
-function attackStructure(game, x, y, damage) {
+export function attackStructure(game, x, y, damage) {
     const tile = game.map[y][x];
     if (!tile.structure) return;
 
@@ -309,6 +276,10 @@ function attackStructure(game, x, y, damage) {
         tile.passable = true;
         if (game.mapIndex) game.mapIndex.removeStructure(x, y, oldStructure);
         game.roomsDirty = true;
+        if (game.waves && game.waves.enemies) {
+            for (const enemy of game.waves.enemies) { enemy.path = null; }
+            game.waves.invalidatePathPreview();
+        }
     }
 }
 

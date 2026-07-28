@@ -1,12 +1,12 @@
-import { CONFIG, WAVE_CONFIG, WAVE_TYPES, BUILDINGS, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, WAVE_CONFIG, WAVE_TYPES, COMBAT_VISUALS } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
 import { createWaveEntity } from './entity-factory.js';
 import { updateEntityRoles } from './roles.js';
+import { attackStructure } from './combat.js';
 
-let nextWaveEnemyId = 10000;
 
 export class WaveSystem {
     constructor() {
@@ -124,32 +124,16 @@ export class WaveSystem {
         const waveTypeKeys = Object.keys(WAVE_TYPES);
         const waveType = waveTypeKeys.length > 0 ? WAVE_TYPES[waveTypeKeys[0]] : null;
 
+        let entityType = null;
         if (waveType) {
-            const entityType = pickFromComposition(waveType.composition, this.currentWave);
-            if (entityType) {
-                const entity = createWaveEntity(entityType, portal.x, portal.y, this.currentWave);
-                if (entity) {
-                    this.enemies.push(entity);
-                    this.enemiesSpawned++;
-                    return;
-                }
-            }
+            entityType = pickFromComposition(waveType.composition, this.currentWave);
         }
 
-        const hp = WAVE_CONFIG.baseHp + WAVE_CONFIG.hpPerWave * (this.currentWave - 1);
-        const damage = WAVE_CONFIG.baseDamage + WAVE_CONFIG.damagePerWave * (this.currentWave - 1);
-
-        this.enemies.push({
-            id: nextWaveEnemyId++,
-            x: portal.x, y: portal.y,
-            hp, maxHp: hp,
-            damage,
-            speed: WAVE_CONFIG.enemySpeed,
-            moveCooldown: 0,
-            char: WAVE_CONFIG.enemyChar,
-            color: WAVE_CONFIG.enemyColor,
-        });
-        this.enemiesSpawned++;
+        const entity = createWaveEntity(entityType || 'void_walker', portal.x, portal.y, this.currentWave);
+        if (entity) {
+            this.enemies.push(entity);
+            this.enemiesSpawned++;
+        }
     }
 
     updateEnemy(enemy, game) {
@@ -400,30 +384,6 @@ function findEnemyPath(map, startX, startY, endX, endY) {
     return null;
 }
 
-function attackStructure(game, x, y, damage) {
-    const tile = game.map[y][x];
-    if (!tile.structure) return;
-
-    if (tile.structureHp === undefined) {
-        tile.structureHp = BUILDINGS[tile.structure]?.hp || 50;
-    }
-
-    tile.structureHp -= damage;
-    game.combatEffects.push({ x, y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.structureDamageColor, ttl: COMBAT_VISUALS.hitTtl });
-
-    if (tile.structureHp <= 0) {
-        const oldStructure = tile.structure;
-        tile.structure = null;
-        tile.structureHp = undefined;
-        tile.passable = true;
-        if (game.mapIndex) game.mapIndex.removeStructure(x, y, oldStructure);
-        game.roomsDirty = true;
-        for (const enemy of game.waves.enemies) {
-            enemy.path = null;
-        }
-        game.waves.invalidatePathPreview();
-    }
-}
 
 function getWaveSpawnPosition(side, nexus) {
     const { near, offsetRange } = WAVE_CONFIG.spawnDistance;

@@ -1,5 +1,4 @@
 import { CONFIG, ENTITIES } from './config.js';
-import { syncColonistIdCounter } from '../entities/colonist.js';
 import { syncEntityIdCounter } from '../entities/entity-factory.js';
 import { initEntityRoles } from '../entities/roles.js';
 
@@ -190,8 +189,7 @@ export function loadGame(game) {
         game.taskQueue.syncIdCounter();
         game.eventLog.entries = data.eventLog || [];
 
-        syncColonistIdCounter(game.colonists);
-        syncEntityIdCounter(game.entities);
+        syncEntityIdCounter([...game.colonists, ...game.entities, ...game.raiders]);
 
         for (const entity of game.entities) {
             if (!entity.roles || entity.roles.length === 0) {

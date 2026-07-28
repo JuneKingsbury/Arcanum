@@ -3,6 +3,10 @@ import { initEntityRoles } from './roles.js';
 
 let nextEntityId = 1;
 
+export function getNextId() {
+    return nextEntityId++;
+}
+
 export function syncEntityIdCounter(entities) {
     const maxId = entities.reduce((max, e) => Math.max(max, e.id || 0), 0);
     if (maxId >= nextEntityId) nextEntityId = maxId + 1;
