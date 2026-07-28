@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, REALMS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS } from '../core/config.js';
+import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, RESEARCH, RESEARCH_TABS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, REALMS, ITEM_CHARS, EXPEDITION_DIFFICULTY, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -1044,9 +1044,12 @@ export class UI {
     showAnimalInfo(animal) {
         this._switchToInfoTab();
         this._viewingColonistId = null;
+        const def = ANIMALS[animal.type];
         let html = `<div class="info-header">${animal.type}</div>`;
         html += `<div class="info-row">HP: ${animal.hp}/${animal.maxHp}</div>`;
         html += `<div class="info-row">${animal.hostile ? 'Hostile' : 'Passive'}</div>`;
+        if (def?.meatYield) html += `<div class="info-row">Meat yield: ${def.meatYield}</div>`;
+        if (def?.hideYield) html += `<div class="info-row">Hide yield: ${def.hideYield}</div>`;
         html += `<div class="info-actions">`;
         if (!animal.hostile) {
             html += `<button onclick="window.game.huntAnimal(${animal.id})">Hunt</button>`;
@@ -1075,7 +1078,16 @@ export class UI {
             html += `<div class="info-row" style="color:#999">Floor: ${tile.floor.replace(/_/g,' ')}</div>`;
         }
         if (tile.resource) html += `<div class="info-row">Resource: ${tile.resource.type} (${tile.resource.amount})</div>`;
-        if (tile.zone) html += `<div class="info-row">Zone: ${tile.zone.crop} (${tile.zone.state})</div>`;
+        if (tile.zone) {
+            html += `<div class="info-row">Zone: ${tile.zone.crop} (${tile.zone.state})</div>`;
+            if (tile.zone.state === 'growing') {
+                const cropDef = CROPS[tile.zone.crop];
+                if (cropDef) {
+                    const pct = Math.min(100, Math.round((tile.zone.growth / cropDef.growthTicks) * 100));
+                    html += `<div class="info-row" style="color:#88cc44">Growth: ${pct}%</div>`;
+                }
+            }
+        }
         if (tile.roomId !== null) html += `<div class="info-row">Room #${tile.roomId}</div>`;
         if (tile.onFire) html += `<div class="info-row fire">ON FIRE!</div>`;
 
@@ -1145,6 +1157,7 @@ export class UI {
             html += `<div class="info-header" style="color:${color};">${a.type}${a.hostile ? ' (hostile)' : ''}${def?.tameable ? ' (tameable)' : ''}</div>`;
             html += `<div class="info-row">HP: ${a.hp}/${a.maxHp}</div>`;
             if (def?.meatYield) html += `<div class="info-row">Meat yield: ${def.meatYield}</div>`;
+            if (def?.hideYield) html += `<div class="info-row">Hide yield: ${def.hideYield}</div>`;
             if (a.hostile && def?.damage) html += `<div class="info-row">Damage: ${def.damage}</div>`;
             if (def?.tameable) {
                 const tamedDef = TAMED_ANIMALS[a.type];
@@ -1203,7 +1216,16 @@ export class UI {
             html += this.getStructureDescription(tile.structure);
         }
         if (tile.floor) html += `<div class="info-row" style="color:#999">Floor: ${tile.floor.replace(/_/g,' ')}</div>`;
-        if (tile.zone) html += `<div class="info-row">Zone: ${tile.zone.crop} (${tile.zone.state})</div>`;
+        if (tile.zone) {
+            html += `<div class="info-row">Zone: ${tile.zone.crop} (${tile.zone.state})</div>`;
+            if (tile.zone.state === 'growing') {
+                const cropDef = CROPS[tile.zone.crop];
+                if (cropDef) {
+                    const pct = Math.min(100, Math.round((tile.zone.growth / cropDef.growthTicks) * 100));
+                    html += `<div class="info-row" style="color:#88cc44">Growth: ${pct}%</div>`;
+                }
+            }
+        }
         if (tile.resource) html += `<div class="info-row">Resource: ${tile.resource.type} (${tile.resource.amount})</div>`;
         html += `<div class="info-row">Terrain: ${tile.terrain}</div>`;
         if (tile.roomId !== null) html += `<div class="info-row">Room #${tile.roomId}</div>`;
