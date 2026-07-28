@@ -75,7 +75,7 @@ export function createColonist(x, y, skillBias, existingNames = []) {
     return {
         id, name, x, y, skills, magicSkills, magicBias, traits,
         nameColor: COLONIST_CONFIG.nameColors[(id - 1) % COLONIST_CONFIG.nameColors.length],
-        priorities: { ...Object.fromEntries(Object.keys(SKILLS).map(k => [k, 3])), hauling: 4 },
+        priorities: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 3])),
         needs: { hunger: COLONIST_CONFIG.initialHunger[0] + Math.random() * (COLONIST_CONFIG.initialHunger[1] - COLONIST_CONFIG.initialHunger[0]), rest: COLONIST_CONFIG.initialRest[0] + Math.random() * (COLONIST_CONFIG.initialRest[1] - COLONIST_CONFIG.initialRest[0]) },
         mood: COLONIST_CONFIG.initialMood,
         thoughts: [],

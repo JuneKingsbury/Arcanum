@@ -1345,7 +1345,7 @@ export class UI {
     }
 
     updatePriorityPanel() {
-        const skills = [...Object.keys(SKILLS), 'hauling'];
+        const skills = Object.keys(SKILLS);
         let html = '<table><tr><th>Colonist</th>';
         skills.forEach(s => { html += `<th>${s.substring(0, 5)}</th>`; });
         html += '</tr>';

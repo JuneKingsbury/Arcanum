@@ -13,7 +13,6 @@ const ENTITY_SPECIALS = [
     { key: 'farmer_golem', char: 'G', color: '#55aa33', desc: 'Farmer Golem' },
     { key: 'miner_golem', char: 'G', color: '#888888', desc: 'Miner Golem' },
     { key: 'combat_golem', char: 'G', color: '#cc4444', desc: 'Combat Golem' },
-    { key: 'hauler_golem', char: 'G', color: '#bbaa55', desc: 'Hauler Golem' },
     { key: 'raider', char: 'R', color: '#ff3333', desc: 'Enemy raider' },
     { key: 'wave_enemy', char: 'E', color: '#ff2222', desc: 'Void nexus wave enemy' },
 ];

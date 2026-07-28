@@ -1120,7 +1120,6 @@ export const GOLEM_TYPES = {
     farmer_golem:  { name: 'Farmer Golem', char: 'G', color: '#55aa33', hp: 150, speed: 0.3, specialty: 'farming', skillLevel: 6, cost: { stone: 10, runite: 3, void_essence: 2 }, craftTicks: 80 },
     miner_golem:   { name: 'Miner Golem', char: 'G', color: '#888888', hp: 180, speed: 0.25, specialty: 'building', skillLevel: 6, cost: { stone: 12, runite: 4, void_essence: 2 }, craftTicks: 90 },
     combat_golem:  { name: 'Combat Golem', char: 'G', color: '#cc4444', hp: 250, speed: 0.35, specialty: 'combat', damage: 20, cost: { stone: 15, runite: 5, void_essence: 4 }, craftTicks: 110 },
-    hauler_golem:  { name: 'Hauler Golem', char: 'G', color: '#bbaa55', hp: 120, speed: 0.5, specialty: 'hauling', skillLevel: 8, cost: { stone: 8, runite: 2, void_essence: 1 }, craftTicks: 65 },
 };
 
 // Raid system tuning. Used by combat.js. Raiders spawn at map edges and attack colonists.
