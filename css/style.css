@@ -2697,6 +2697,54 @@ body {
     display: block;
 }
 
+.form-editor .fe-effect-row {
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+    background: #12122a;
+}
+
+.form-editor .fe-effect-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.form-editor .fe-effect-header select {
+    font-size: 11px;
+    padding: 2px 4px;
+}
+
+.form-editor .fe-effect-header button {
+    font-size: 10px;
+    padding: 1px 5px;
+    min-width: 20px;
+    line-height: 1.2;
+}
+
+.form-editor .fe-effect-params .fe-row {
+    margin-bottom: 4px;
+}
+
+.form-editor .fe-effect-add {
+    width: 100%;
+    padding: 6px;
+    font-size: 11px;
+    margin-top: 4px;
+    background: #1a1a3a;
+    border: 1px dashed #446;
+    color: #8af;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.form-editor .fe-effect-add:hover {
+    background: #222244;
+    border-color: #66a;
+}
+
 .form-editor .fe-export-modal {
     position: fixed;
     inset: 0;

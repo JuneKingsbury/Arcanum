@@ -1,4 +1,5 @@
 import { WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS } from '../core/config.js';
+import { EffectPicker, formatEffectsCode, STAT_KEYS } from './effect-picker.js';
 
 const STORAGE_KEY = 'convocation_equipment_drafts';
 
@@ -9,69 +10,6 @@ const CATEGORIES = {
     tool: { label: 'Tool', config: 'TOOLS' },
     artifact: { label: 'Artifact', config: 'ARTIFACTS' },
 };
-
-const STAT_FIELDS = {
-    weapon: [
-        { key: 'damage', label: 'Damage', type: 'number', required: true },
-        { key: 'spellDamageBonus', label: 'Spell Damage Bonus', type: 'number', step: 0.05 },
-        { key: 'miningSpeed', label: 'Mining Speed', type: 'number', step: 0.05 },
-        { key: 'choppingSpeed', label: 'Chopping Speed', type: 'number', step: 0.05 },
-    ],
-    armor: [
-        { key: 'damageReduction', label: 'Damage Reduction (0-1)', type: 'number', step: 0.01, required: true },
-        { key: 'spellDamageBonus', label: 'Spell Damage Bonus', type: 'number', step: 0.05 },
-        { key: 'coldResistance', label: 'Cold Resistance', type: 'number', step: 0.05 },
-        { key: 'moveSpeedBonus', label: 'Move Speed Bonus', type: 'number', step: 0.05 },
-    ],
-    helmet: [
-        { key: 'damageReduction', label: 'Damage Reduction (0-1)', type: 'number', step: 0.01, required: true },
-        { key: 'spellDamageBonus', label: 'Spell Damage Bonus', type: 'number', step: 0.05 },
-        { key: 'coldResistance', label: 'Cold Resistance', type: 'number', step: 0.05 },
-    ],
-    tool: [
-        { key: 'miningSpeed', label: 'Mining Speed', type: 'number', step: 0.05 },
-        { key: 'choppingSpeed', label: 'Chopping Speed', type: 'number', step: 0.05 },
-        { key: 'farmingSpeed', label: 'Farming Speed', type: 'number', step: 0.05 },
-        { key: 'craftingSpeed', label: 'Crafting Speed', type: 'number', step: 0.05 },
-    ],
-};
-
-const ARTIFACT_EQUIPPED_STATS = [
-    { key: 'moveSpeedBonus', label: 'Move Speed Bonus', step: 0.05 },
-    { key: 'workSpeedBonus', label: 'Work Speed Bonus', step: 0.05 },
-    { key: 'damageReduction', label: 'Damage Reduction', step: 0.05 },
-    { key: 'spellDamageBonus', label: 'Spell Damage Bonus', step: 0.05 },
-];
-
-const ARTIFACT_PEDESTAL_FIELDS = [
-    { key: 'radius', label: 'Radius (number or "global")', type: 'text' },
-    { key: 'manaCost', label: 'Mana Cost', type: 'number' },
-    { key: 'blightImmunity', label: 'Blight Immunity', type: 'checkbox' },
-    { key: 'workSpeedBonus', label: 'Work Speed Bonus', type: 'number', step: 0.05 },
-    { key: 'wandererChanceMult', label: 'Wanderer Chance Mult', type: 'number', step: 0.1 },
-    { key: 'cookingBonusFood', label: 'Cooking Bonus Food', type: 'number' },
-    { key: 'lightRadius', label: 'Light Radius', type: 'number' },
-    { key: 'damageBonusMult', label: 'Damage Bonus Mult', type: 'number', step: 0.05 },
-    { key: 'tradeMarkupMult', label: 'Trade Markup Mult', type: 'number', step: 0.05 },
-    { key: 'skillGrowthBonus', label: 'Skill Growth Bonus', type: 'number', step: 0.05 },
-];
-
-const ARTIFACT_EXPEDITION_FIELDS = [
-    { key: 'lootMult', label: 'Loot Mult', type: 'number', step: 0.1 },
-    { key: 'trapDamageMult', label: 'Trap Damage Mult', type: 'number', step: 0.1 },
-    { key: 'rareEncounterMult', label: 'Rare Encounter Mult', type: 'number', step: 0.1 },
-    { key: 'durationMult', label: 'Duration Mult', type: 'number', step: 0.05 },
-    { key: 'partyDamageMult', label: 'Party Damage Mult', type: 'number', step: 0.05 },
-    { key: 'targetPriority', label: 'Target Priority', type: 'number' },
-    { key: 'damageReduction', label: 'Damage Reduction', type: 'number', step: 0.05 },
-    { key: 'autoReviveHp', label: 'Auto-Revive HP (fraction)', type: 'number', step: 0.1 },
-];
-
-const ARTIFACT_COMBAT_FIELDS = [
-    { key: 'targetPriority', label: 'Target Priority', type: 'number' },
-    { key: 'damageReduction', label: 'Damage Reduction', type: 'number', step: 0.05 },
-    { key: 'autoReviveHp', label: 'Auto-Revive HP (fraction)', type: 'number', step: 0.1 },
-];
 
 const CONFIG_EQUIPMENT = {
     weapon: WEAPONS,
@@ -128,10 +66,6 @@ class EquipmentEditor {
         toolbar.className = 'fe-toolbar';
         toolbar.innerHTML = `
             <button id="eq-back">← Back</button>
-            <span class="fe-sep"></span>
-            ${Object.entries(CATEGORIES).map(([k, v]) =>
-                `<button class="eq-cat-tab" data-cat="${k}">${v.label}</button>`
-            ).join('')}
             <span class="fe-sep"></span>
             <select id="eq-load-config"><option value="">Load from Config...</option></select>
             <select id="eq-load-select"><option value="">Load draft...</option></select>
@@ -190,6 +124,12 @@ class EquipmentEditor {
                 </div>
             </div>
             <div class="fe-row">
+                <div class="fe-field">
+                    <label>Category</label>
+                    <select id="eq-category">
+                        ${Object.entries(CATEGORIES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}
+                    </select>
+                </div>
                 <div class="fe-field" style="flex:0 0 60px;">
                     <label>Char</label>
                     <input type="text" id="eq-char" maxlength="2" placeholder="/">
@@ -200,42 +140,8 @@ class EquipmentEditor {
                 </div>
             </div>
 
-            <div class="fe-section-title">Stats</div>
-            <div id="eq-stats-section"></div>
-
-            <div id="eq-artifact-section" class="fe-conditional">
-                <div class="fe-section-title">Equipped Stats (top-level)</div>
-                <div class="fe-row" id="eq-artifact-equipped"></div>
-
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="eq-art-consumable">
-                    <label for="eq-art-consumable">Consumable (single-use)</label>
-                </div>
-
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="eq-art-pedestal-toggle">
-                    <label for="eq-art-pedestal-toggle">Has Pedestal Effect</label>
-                </div>
-                <div id="eq-art-pedestal" class="fe-conditional"></div>
-
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="eq-art-expedition-toggle">
-                    <label for="eq-art-expedition-toggle">Has Expedition Effect</label>
-                </div>
-                <div id="eq-art-expedition" class="fe-conditional"></div>
-
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="eq-art-combat-toggle">
-                    <label for="eq-art-combat-toggle">Has Combat Effect</label>
-                </div>
-                <div id="eq-art-combat" class="fe-conditional"></div>
-
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="eq-art-durability-toggle">
-                    <label for="eq-art-durability-toggle">Has Durability</label>
-                </div>
-                <div id="eq-art-durability" class="fe-conditional"></div>
-            </div>
+            <div class="fe-section-title">Effects</div>
+            <div id="eq-effects-container"></div>
 
             <div style="margin-top:16px;">
                 <button id="eq-add-batch" class="fe-add-btn" style="padding:6px 16px;font-size:12px;">+ Add to Batch</button>
@@ -245,64 +151,10 @@ class EquipmentEditor {
             <div id="eq-batch-list"></div>
         `;
 
-        this._buildArtifactSubSections();
-        this._buildStatsSection();
-    }
-
-    _buildStatsSection() {
-        const section = document.getElementById('eq-stats-section');
-        const fields = STAT_FIELDS[this.category];
-        if (!fields) {
-            section.innerHTML = '';
-            return;
-        }
-        section.innerHTML = fields.map(f => `
-            <div class="fe-field">
-                <label>${f.label}${f.required ? ' *' : ''}</label>
-                <input type="number" id="eq-stat-${f.key}" step="${f.step || 1}" placeholder="0">
-            </div>
-        `).join('');
-    }
-
-    _buildArtifactSubSections() {
-        const equipped = document.getElementById('eq-artifact-equipped');
-        equipped.innerHTML = ARTIFACT_EQUIPPED_STATS.map(f => `
-            <div class="fe-field">
-                <label>${f.label}</label>
-                <input type="number" id="eq-arteq-${f.key}" step="${f.step}" placeholder="0">
-            </div>
-        `).join('');
-
-        document.getElementById('eq-art-pedestal').innerHTML = this._buildSubFields(ARTIFACT_PEDESTAL_FIELDS, 'ped');
-        document.getElementById('eq-art-expedition').innerHTML = this._buildSubFields(ARTIFACT_EXPEDITION_FIELDS, 'exp');
-        document.getElementById('eq-art-combat').innerHTML = this._buildSubFields(ARTIFACT_COMBAT_FIELDS, 'com');
-        document.getElementById('eq-art-durability').innerHTML = `
-            <div class="fe-row">
-                <div class="fe-field">
-                    <label>Max Durability</label>
-                    <input type="number" id="eq-dur-max" placeholder="1" min="1">
-                </div>
-                <div class="fe-field fe-checkbox-row" style="align-self:flex-end;margin-bottom:10px;">
-                    <input type="checkbox" id="eq-dur-breakOnUse">
-                    <label for="eq-dur-breakOnUse">Break on Use</label>
-                </div>
-            </div>
-        `;
-    }
-
-    _buildSubFields(fields, prefix) {
-        return `<div class="fe-row" style="flex-wrap:wrap;">` + fields.map(f => {
-            if (f.type === 'checkbox') {
-                return `<div class="fe-field fe-checkbox-row" style="flex:0 0 50%;">
-                    <input type="checkbox" id="eq-${prefix}-${f.key}">
-                    <label for="eq-${prefix}-${f.key}">${f.label}</label>
-                </div>`;
-            }
-            return `<div class="fe-field" style="flex:0 0 calc(50% - 6px);">
-                <label>${f.label}</label>
-                <input type="${f.type || 'number'}" id="eq-${prefix}-${f.key}" step="${f.step || 1}" placeholder="0">
-            </div>`;
-        }).join('') + `</div>`;
+        this._effectPicker = new EffectPicker(document.getElementById('eq-effects-container'), {
+            allowedContexts: ['passive', 'aura', 'buff', 'on_hit'],
+            onChange: () => this._schedulePreview(),
+        });
     }
 
     _bindEvents() {
@@ -324,18 +176,12 @@ class EquipmentEditor {
 
         document.getElementById('eq-char').addEventListener('input', () => this._updateCharPreview());
         document.getElementById('eq-color').addEventListener('input', () => this._updateCharPreview());
+        document.getElementById('eq-category').addEventListener('change', (e) => this._switchCategory(e.target.value));
 
         this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
         });
 
-        this.container.querySelectorAll('.eq-cat-tab').forEach(btn => {
-            btn.addEventListener('click', () => this._switchCategory(btn.dataset.cat));
-        });
-
-        ['eq-art-pedestal-toggle', 'eq-art-expedition-toggle', 'eq-art-combat-toggle', 'eq-art-durability-toggle'].forEach(id => {
-            document.getElementById(id).addEventListener('change', () => this._updateConditionals());
-        });
 
         this.container.addEventListener('input', () => this._schedulePreview());
         this.container.addEventListener('change', () => this._schedulePreview());
@@ -358,33 +204,10 @@ class EquipmentEditor {
 
     _switchCategory(cat) {
         this.category = cat;
-        this.container.querySelectorAll('.eq-cat-tab').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.cat === cat);
-        });
-
-        const statsSection = document.getElementById('eq-stats-section');
-        const artifactSection = document.getElementById('eq-artifact-section');
-
-        if (cat === 'artifact') {
-            statsSection.style.display = 'none';
-            artifactSection.classList.add('visible');
-        } else {
-            statsSection.style.display = '';
-            artifactSection.classList.remove('visible');
-            this._buildStatsSection();
-        }
+        const dropdown = document.getElementById('eq-category');
+        if (dropdown) dropdown.value = cat;
         this._refreshConfigDropdown();
-        this._updateConditionals();
         this._schedulePreview();
-    }
-
-    _updateConditionals() {
-        const toggles = ['pedestal', 'expedition', 'combat', 'durability'];
-        toggles.forEach(t => {
-            const checked = document.getElementById(`eq-art-${t}-toggle`).checked;
-            const panel = document.getElementById(`eq-art-${t}`);
-            panel.classList.toggle('visible', checked);
-        });
     }
 
     _schedulePreview() {
@@ -441,43 +264,8 @@ class EquipmentEditor {
             if (state.form && state.form.key) {
                 document.getElementById('eq-key').value = state.form.key;
                 document.getElementById('eq-name').value = state.form.name || '';
-                if (state.category === 'artifact') {
-                    ARTIFACT_EQUIPPED_STATS.forEach(f => {
-                        document.getElementById(`eq-arteq-${f.key}`).value = state.form[f.key] || '';
-                    });
-                    document.getElementById('eq-art-consumable').checked = !!state.form.consumable;
-                    if (state.form.pedestal) {
-                        document.getElementById('eq-art-pedestal-toggle').checked = true;
-                        ARTIFACT_PEDESTAL_FIELDS.forEach(f => {
-                            const el = document.getElementById(`eq-ped-${f.key}`);
-                            if (f.type === 'checkbox') el.checked = !!state.form.pedestal[f.key];
-                            else el.value = state.form.pedestal[f.key] || '';
-                        });
-                    }
-                    if (state.form.expedition) {
-                        document.getElementById('eq-art-expedition-toggle').checked = true;
-                        ARTIFACT_EXPEDITION_FIELDS.forEach(f => {
-                            document.getElementById(`eq-exp-${f.key}`).value = state.form.expedition[f.key] || '';
-                        });
-                    }
-                    if (state.form.combat) {
-                        document.getElementById('eq-art-combat-toggle').checked = true;
-                        ARTIFACT_COMBAT_FIELDS.forEach(f => {
-                            document.getElementById(`eq-com-${f.key}`).value = state.form.combat[f.key] || '';
-                        });
-                    }
-                    if (state.form.durability) {
-                        document.getElementById('eq-art-durability-toggle').checked = true;
-                        document.getElementById('eq-dur-max').value = state.form.durability.max || '';
-                        document.getElementById('eq-dur-breakOnUse').checked = !!state.form.durability.breakOnUse;
-                    }
-                    this._updateConditionals();
-                } else {
-                    const fields = STAT_FIELDS[state.category];
-                    if (fields) fields.forEach(f => {
-                        const el = document.getElementById(`eq-stat-${f.key}`);
-                        if (el) el.value = state.form[f.key] || '';
-                    });
+                if (state.form.effects && this._effectPicker) {
+                    this._effectPicker.setEffects(state.form.effects);
                 }
             }
         } catch {}
@@ -489,112 +277,19 @@ class EquipmentEditor {
         if (!key && !name) return null;
 
         const item = { key, name, category: this.category };
-
-        if (this.category === 'artifact') {
-            ARTIFACT_EQUIPPED_STATS.forEach(f => {
-                const val = parseFloat(document.getElementById(`eq-arteq-${f.key}`).value);
-                if (val) item[f.key] = val;
-            });
-
-            if (document.getElementById('eq-art-consumable').checked) {
-                item.consumable = true;
-            }
-
-            if (document.getElementById('eq-art-pedestal-toggle').checked) {
-                const ped = {};
-                ARTIFACT_PEDESTAL_FIELDS.forEach(f => {
-                    const el = document.getElementById(`eq-ped-${f.key}`);
-                    if (f.type === 'checkbox') {
-                        if (el.checked) ped[f.key] = true;
-                    } else if (f.type === 'text') {
-                        const v = el.value.trim();
-                        if (v) ped[f.key] = v === 'global' ? 'global' : (parseFloat(v) || v);
-                    } else {
-                        const v = parseFloat(el.value);
-                        if (v) ped[f.key] = v;
-                    }
-                });
-                if (Object.keys(ped).length) item.pedestal = ped;
-            }
-
-            if (document.getElementById('eq-art-expedition-toggle').checked) {
-                const exp = {};
-                ARTIFACT_EXPEDITION_FIELDS.forEach(f => {
-                    const v = parseFloat(document.getElementById(`eq-exp-${f.key}`).value);
-                    if (v) exp[f.key] = v;
-                });
-                if (Object.keys(exp).length) item.expedition = exp;
-            }
-
-            if (document.getElementById('eq-art-combat-toggle').checked) {
-                const com = {};
-                ARTIFACT_COMBAT_FIELDS.forEach(f => {
-                    const v = parseFloat(document.getElementById(`eq-com-${f.key}`).value);
-                    if (v) com[f.key] = v;
-                });
-                if (Object.keys(com).length) item.combat = com;
-            }
-
-            if (document.getElementById('eq-art-durability-toggle').checked) {
-                const dur = {};
-                const max = parseInt(document.getElementById('eq-dur-max').value);
-                if (max) dur.max = max;
-                if (document.getElementById('eq-dur-breakOnUse').checked) dur.breakOnUse = true;
-                if (Object.keys(dur).length) item.durability = dur;
-            }
-        } else {
-            const fields = STAT_FIELDS[this.category];
-            if (fields) {
-                fields.forEach(f => {
-                    const val = parseFloat(document.getElementById(`eq-stat-${f.key}`).value);
-                    if (val) item[f.key] = val;
-                });
-            }
-        }
-
+        item.effects = this._effectPicker ? this._effectPicker.getEffects() : [];
         return item;
     }
 
     _formatItem(item) {
         if (!item || !item.key) return '';
-        const parts = [`name: '${item.name || item.key}'`];
-
-        if (item.category === 'artifact') {
-            ARTIFACT_EQUIPPED_STATS.forEach(f => {
-                if (item[f.key]) parts.push(`${f.key}: ${item[f.key]}`);
-            });
-            if (item.consumable) parts.push('consumable: true');
-            if (item.pedestal) parts.push(`pedestal: ${this._formatObj(item.pedestal)}`);
-            if (item.expedition) parts.push(`expedition: ${this._formatObj(item.expedition)}`);
-            if (item.combat) parts.push(`combat: ${this._formatObj(item.combat)}`);
-            if (item.durability) parts.push(`durability: ${this._formatObj(item.durability)}`);
-        } else {
-            const fields = STAT_FIELDS[item.category];
-            if (fields) {
-                fields.forEach(f => {
-                    if (item[f.key]) parts.push(`${f.key}: ${item[f.key]}`);
-                });
-            }
-        }
-
-        const inner = parts.join(', ');
-        if (inner.length < 70 && !item.pedestal && !item.expedition && !item.combat && !item.durability) {
-            return `${item.key}: { ${inner} },`;
-        }
-
         let out = `${item.key}: {\n`;
-        out += parts.map(p => `    ${p},`).join('\n');
-        out += `\n},`;
+        out += `    name: '${item.name || item.key}',\n`;
+        if (item.effects && item.effects.length) {
+            out += formatEffectsCode(item.effects) + ',\n';
+        }
+        out += `},`;
         return out;
-    }
-
-    _formatObj(obj) {
-        const entries = Object.entries(obj).map(([k, v]) => {
-            if (typeof v === 'string') return `${k}: '${v}'`;
-            if (typeof v === 'boolean') return `${k}: ${v}`;
-            return `${k}: ${v}`;
-        });
-        return `{ ${entries.join(', ')} }`;
     }
 
     _addToBatch() {
@@ -604,20 +299,6 @@ class EquipmentEditor {
             return;
         }
         if (!data.name) data.name = data.key;
-
-        if (data.category !== 'artifact') {
-            const fields = STAT_FIELDS[data.category];
-            const hasRequired = fields.filter(f => f.required).every(f => data[f.key]);
-            const hasAnyStat = fields.some(f => data[f.key]);
-            if (data.category === 'tool' && !hasAnyStat) {
-                this._validateForm();
-                return;
-            }
-            if (data.category !== 'tool' && !hasRequired) {
-                this._validateForm();
-                return;
-            }
-        }
 
         const existing = this.batchItems.findIndex(i => i.key === data.key);
         if (existing >= 0) {
@@ -636,11 +317,7 @@ class EquipmentEditor {
         document.getElementById('eq-name').value = '';
         document.getElementById('eq-char').value = '';
         document.getElementById('eq-color').value = '#cccccc';
-        this.container.querySelectorAll('#eq-stats-section input').forEach(el => el.value = '');
-        this.container.querySelectorAll('#eq-artifact-section input[type="number"]').forEach(el => el.value = '');
-        this.container.querySelectorAll('#eq-artifact-section input[type="text"]').forEach(el => el.value = '');
-        this.container.querySelectorAll('#eq-artifact-section input[type="checkbox"]').forEach(el => el.checked = false);
-        this._updateConditionals();
+        if (this._effectPicker) this._effectPicker.clear();
     }
 
     _editBatchItem(index) {
@@ -650,48 +327,7 @@ class EquipmentEditor {
         this._switchCategory(item.category);
         document.getElementById('eq-key').value = item.key;
         document.getElementById('eq-name').value = item.name;
-
-        if (item.category === 'artifact') {
-            ARTIFACT_EQUIPPED_STATS.forEach(f => {
-                document.getElementById(`eq-arteq-${f.key}`).value = item[f.key] || '';
-            });
-            document.getElementById('eq-art-consumable').checked = !!item.consumable;
-
-            if (item.pedestal) {
-                document.getElementById('eq-art-pedestal-toggle').checked = true;
-                ARTIFACT_PEDESTAL_FIELDS.forEach(f => {
-                    const el = document.getElementById(`eq-ped-${f.key}`);
-                    if (f.type === 'checkbox') el.checked = !!item.pedestal[f.key];
-                    else el.value = item.pedestal[f.key] || '';
-                });
-            }
-            if (item.expedition) {
-                document.getElementById('eq-art-expedition-toggle').checked = true;
-                ARTIFACT_EXPEDITION_FIELDS.forEach(f => {
-                    document.getElementById(`eq-exp-${f.key}`).value = item.expedition[f.key] || '';
-                });
-            }
-            if (item.combat) {
-                document.getElementById('eq-art-combat-toggle').checked = true;
-                ARTIFACT_COMBAT_FIELDS.forEach(f => {
-                    document.getElementById(`eq-com-${f.key}`).value = item.combat[f.key] || '';
-                });
-            }
-            if (item.durability) {
-                document.getElementById('eq-art-durability-toggle').checked = true;
-                document.getElementById('eq-dur-max').value = item.durability.max || '';
-                document.getElementById('eq-dur-breakOnUse').checked = !!item.durability.breakOnUse;
-            }
-            this._updateConditionals();
-        } else {
-            const fields = STAT_FIELDS[item.category];
-            if (fields) {
-                fields.forEach(f => {
-                    const el = document.getElementById(`eq-stat-${f.key}`);
-                    if (el) el.value = item[f.key] || '';
-                });
-            }
-        }
+        if (this._effectPicker) this._effectPicker.setEffects(item.effects || []);
 
         this.batchItems.splice(index, 1);
         this._renderBatchList();
@@ -711,15 +347,15 @@ class EquipmentEditor {
             return;
         }
         let html = `<table class="fe-batch-table"><thead><tr>
-            <th>Category</th><th>Key</th><th>Name</th><th>Primary Stat</th><th>Actions</th>
+            <th>Category</th><th>Key</th><th>Name</th><th>Effects</th><th>Actions</th>
         </tr></thead><tbody>`;
         this.batchItems.forEach((item, i) => {
-            const primary = this._getPrimaryStat(item);
+            const effectSummary = (item.effects || []).map(e => e.type).join(', ') || '-';
             html += `<tr>
                 <td>${CATEGORIES[item.category].label}</td>
                 <td>${item.key}</td>
                 <td>${item.name}</td>
-                <td>${primary}</td>
+                <td>${effectSummary}</td>
                 <td>
                     <button data-edit="${i}">Edit</button>
                     <button data-remove="${i}">✕</button>
@@ -737,24 +373,6 @@ class EquipmentEditor {
         });
     }
 
-    _getPrimaryStat(item) {
-        if (item.category === 'weapon') return item.damage ? `${item.damage} dmg` : '-';
-        if (item.category === 'armor' || item.category === 'helmet') return item.damageReduction ? `${Math.round(item.damageReduction * 100)}% DR` : '-';
-        if (item.category === 'tool') {
-            const stats = ['miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed'];
-            const active = stats.filter(s => item[s]).map(s => `${s.replace('Speed', '')} ${item[s]}x`);
-            return active.join(', ') || '-';
-        }
-        if (item.category === 'artifact') {
-            const parts = [];
-            if (item.pedestal) parts.push('pedestal');
-            if (item.expedition) parts.push('expedition');
-            if (item.combat) parts.push('combat');
-            if (item.consumable) parts.push('consumable');
-            return parts.join(', ') || 'equipped';
-        }
-        return '-';
-    }
 
     _formatBatchExport() {
         const grouped = {};
@@ -821,14 +439,7 @@ class EquipmentEditor {
     _buildReference() {
         const container = document.getElementById('eq-reference');
         const categories = [
-            { title: 'Weapon Stats', ids: STAT_FIELDS.weapon.map(f => f.key) },
-            { title: 'Armor Stats', ids: STAT_FIELDS.armor.map(f => f.key) },
-            { title: 'Helmet Stats', ids: STAT_FIELDS.helmet.map(f => f.key) },
-            { title: 'Tool Stats', ids: STAT_FIELDS.tool.map(f => f.key) },
-            { title: 'Artifact Equipped Stats', ids: ARTIFACT_EQUIPPED_STATS.map(f => f.key) },
-            { title: 'Artifact Pedestal Effects', ids: ARTIFACT_PEDESTAL_FIELDS.map(f => f.key) },
-            { title: 'Artifact Expedition Effects', ids: ARTIFACT_EXPEDITION_FIELDS.map(f => f.key) },
-            { title: 'Artifact Combat Effects', ids: ARTIFACT_COMBAT_FIELDS.map(f => f.key) },
+            { title: 'Available Stats', ids: STAT_KEYS.map(s => s.value) },
         ];
 
         let html = `<input type="text" class="fe-ref-search" placeholder="Search stats..." id="eq-ref-search">`;
@@ -962,46 +573,34 @@ class EquipmentEditor {
         document.getElementById('eq-key').value = key;
         document.getElementById('eq-name').value = def.name || key;
 
-        if (this.category === 'artifact') {
-            ARTIFACT_EQUIPPED_STATS.forEach(f => {
-                if (def[f.key]) document.getElementById(`eq-arteq-${f.key}`).value = def[f.key];
-            });
-            if (def.consumable) document.getElementById('eq-art-consumable').checked = true;
-            if (def.pedestal) {
-                document.getElementById('eq-art-pedestal-toggle').checked = true;
-                ARTIFACT_PEDESTAL_FIELDS.forEach(f => {
-                    const el = document.getElementById(`eq-ped-${f.key}`);
-                    if (f.type === 'checkbox') el.checked = !!def.pedestal[f.key];
-                    else if (def.pedestal[f.key] !== undefined) el.value = def.pedestal[f.key];
-                });
-            }
-            if (def.expedition) {
-                document.getElementById('eq-art-expedition-toggle').checked = true;
-                ARTIFACT_EXPEDITION_FIELDS.forEach(f => {
-                    if (def.expedition[f.key] !== undefined) document.getElementById(`eq-exp-${f.key}`).value = def.expedition[f.key];
-                });
-            }
-            if (def.combat) {
-                document.getElementById('eq-art-combat-toggle').checked = true;
-                ARTIFACT_COMBAT_FIELDS.forEach(f => {
-                    if (def.combat[f.key] !== undefined) document.getElementById(`eq-com-${f.key}`).value = def.combat[f.key];
-                });
-            }
-            if (def.durability) {
-                document.getElementById('eq-art-durability-toggle').checked = true;
-                if (def.durability.max) document.getElementById('eq-dur-max').value = def.durability.max;
-                if (def.durability.breakOnUse) document.getElementById('eq-dur-breakOnUse').checked = true;
-            }
-            this._updateConditionals();
+        if (def.effects) {
+            this._effectPicker.setEffects(def.effects);
         } else {
-            const fields = STAT_FIELDS[this.category];
-            if (fields) fields.forEach(f => {
-                const el = document.getElementById(`eq-stat-${f.key}`);
-                if (el && def[f.key]) el.value = def[f.key];
-            });
+            this._effectPicker.setEffects(this._legacyToEffects(def));
         }
         this._schedulePreview();
         this._pushUndoState();
+    }
+
+    _legacyToEffects(def) {
+        const effects = [];
+        const statKeys = STAT_KEYS.map(s => s.value);
+        for (const key of statKeys) {
+            if (def[key] !== undefined && def[key] !== 0) {
+                effects.push({ type: 'stat_bonus', stat: key, value: def[key], context: 'passive' });
+            }
+        }
+        if (def.pedestal) {
+            for (const [k, v] of Object.entries(def.pedestal)) {
+                if (k === 'radius' || k === 'manaCost') continue;
+                if (typeof v === 'boolean') continue;
+                effects.push({
+                    type: 'stat_bonus', stat: k, value: v,
+                    context: 'aura', radius: def.pedestal.radius === 'global' ? 99 : (def.pedestal.radius || 8),
+                });
+            }
+        }
+        return effects;
     }
 
     _duplicateDraft() {
@@ -1018,18 +617,6 @@ class EquipmentEditor {
         const nameField = document.getElementById('eq-name');
         keyField.closest('.fe-field').classList.toggle('fe-error', !keyField.value.trim());
         nameField.closest('.fe-field').classList.toggle('fe-error', !nameField.value.trim());
-
-        if (this.category !== 'artifact') {
-            const fields = STAT_FIELDS[this.category];
-            if (fields) {
-                fields.forEach(f => {
-                    const el = document.getElementById(`eq-stat-${f.key}`);
-                    if (el && f.required) {
-                        el.closest('.fe-field').classList.toggle('fe-error', !parseFloat(el.value));
-                    }
-                });
-            }
-        }
     }
 
     _getFormSnapshot() {
@@ -1041,18 +628,21 @@ class EquipmentEditor {
             if (el.type === 'checkbox') snap[id] = el.checked;
             else snap[id] = el.value;
         });
+        snap._effects = this._effectPicker ? this._effectPicker.getEffects() : [];
         return JSON.stringify(snap);
     }
 
     _restoreFormSnapshot(json) {
         const snap = JSON.parse(json);
+        const effects = snap._effects || [];
+        delete snap._effects;
         for (const [id, val] of Object.entries(snap)) {
             const el = document.getElementById(id);
             if (!el) continue;
             if (el.type === 'checkbox') el.checked = val;
             else el.value = val;
         }
-        this._updateConditionals();
+        if (this._effectPicker) this._effectPicker.setEffects(effects);
         this._updatePreview();
     }
 

@@ -1,4 +1,5 @@
 import { SPELLS, SPELL_TOMES, RESEARCH, CONFIG, SUMMON_TYPES } from '../core/config.js';
+import { EffectPicker, formatEffectsCode } from './effect-picker.js';
 
 const STORAGE_KEY = 'convocation_spell_drafts';
 
@@ -9,18 +10,6 @@ const TRIGGERS = [
     { value: 'lowHealth', label: 'Low Health' },
     { value: 'hasTask', label: 'Has Task' },
     { value: 'always', label: 'Always' },
-];
-const EFFECTS = [
-    { value: 'ranged_damage', label: 'Ranged Damage' },
-    { value: 'ranged_damage_aoe', label: 'Ranged Damage (AoE)' },
-    { value: 'heal', label: 'Heal' },
-    { value: 'buff_speed', label: 'Buff Speed' },
-    { value: 'buff_defense', label: 'Buff Defense' },
-    { value: 'teleport', label: 'Teleport' },
-    { value: 'summon', label: 'Summon' },
-    { value: 'boost_crops', label: 'Boost Crops' },
-    { value: 'terraform', label: 'Terraform' },
-    { value: 'divination_modifier', label: 'Divination Modifier' },
 ];
 
 const REFERENCE_DATA = [
@@ -50,7 +39,7 @@ class SpellEditor {
         this._buildDOM();
         this._bindEvents();
         this._autoRestore();
-        this._updateConditionals();
+        this._updateCastTypeVisibility();
         this._schedulePreview();
         this._pushUndoState();
     }
@@ -169,154 +158,8 @@ class SpellEditor {
                 </div>
             </div>
 
-            <div class="fe-section-title">Effect</div>
-            <div class="fe-field">
-                <label>Effect Type</label>
-                <select id="sp-effect">
-                    ${EFFECTS.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
-                </select>
-            </div>
-
-            <div id="sp-effect-damage" class="fe-conditional visible">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Damage</label>
-                        <input type="number" id="sp-damage" value="10" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Range</label>
-                        <input type="number" id="sp-range" value="5" min="1">
-                    </div>
-                </div>
-                <div class="fe-row">
-                    <div class="fe-field" style="flex:0 0 60px;">
-                        <label>Proj Char</label>
-                        <input type="text" id="sp-projChar" maxlength="2" value="*">
-                    </div>
-                    <div class="fe-field" style="flex:0 0 60px;">
-                        <label>Proj Color</label>
-                        <input type="color" id="sp-projColor" value="#ffaa33">
-                    </div>
-                    <div class="fe-field">
-                        <label>Radius (AoE only)</label>
-                        <input type="number" id="sp-radius" value="2" min="1">
-                    </div>
-                </div>
-            </div>
-
-            <div id="sp-effect-heal" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Heal Amount</label>
-                        <input type="number" id="sp-healAmount" value="15" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>HP Threshold (0-1)</label>
-                        <input type="number" id="sp-hpThreshold" value="0.5" min="0" max="1" step="0.05">
-                    </div>
-                </div>
-                <div class="fe-checkbox-row">
-                    <input type="checkbox" id="sp-targetSelf" checked>
-                    <label for="sp-targetSelf">Target Self</label>
-                </div>
-            </div>
-
-            <div id="sp-effect-buff-speed" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Move Speed Bonus</label>
-                        <input type="number" id="sp-moveSpeedBonus" value="0.4" step="0.1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Work Speed Bonus</label>
-                        <input type="number" id="sp-workSpeedBonus" value="1.2" step="0.1">
-                    </div>
-                </div>
-                <div class="fe-field">
-                    <label>Duration (ticks)</label>
-                    <input type="number" id="sp-buffDuration" value="60" min="1">
-                </div>
-            </div>
-
-            <div id="sp-effect-buff-defense" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Damage Reduction (0-1)</label>
-                        <input type="number" id="sp-damageReduction" value="0.3" min="0" max="1" step="0.05">
-                    </div>
-                    <div class="fe-field">
-                        <label>Duration (ticks)</label>
-                        <input type="number" id="sp-defDuration" value="60" min="1">
-                    </div>
-                </div>
-            </div>
-
-            <div id="sp-effect-teleport" class="fe-conditional">
-                <div class="fe-field">
-                    <label>Range</label>
-                    <input type="number" id="sp-teleRange" value="20" min="1">
-                </div>
-            </div>
-
-            <div id="sp-effect-summon" class="fe-conditional">
-                <div class="fe-field">
-                    <label>Summon Type</label>
-                    <select id="sp-summonType">
-                        ${Object.keys(SUMMON_TYPES).map(k => `<option value="${k}">${k}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-
-            <div id="sp-effect-crops" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Range</label>
-                        <input type="number" id="sp-cropRange" value="5" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Radius</label>
-                        <input type="number" id="sp-cropRadius" value="2" min="1">
-                    </div>
-                </div>
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Growth Mult</label>
-                        <input type="number" id="sp-growthMult" value="1.5" step="0.1" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Duration (ticks)</label>
-                        <input type="number" id="sp-cropDuration" value="100" min="1">
-                    </div>
-                </div>
-            </div>
-
-            <div id="sp-effect-terraform" class="fe-conditional">
-                <div class="fe-row">
-                    <div class="fe-field">
-                        <label>Range</label>
-                        <input type="number" id="sp-terraRange" value="8" min="1">
-                    </div>
-                    <div class="fe-field">
-                        <label>Radius</label>
-                        <input type="number" id="sp-terraRadius" value="3" min="1">
-                    </div>
-                </div>
-                <div class="fe-field">
-                    <label>Target Terrain</label>
-                    <input type="text" id="sp-targetTerrain" placeholder="grass">
-                </div>
-            </div>
-
-            <div id="sp-effect-divination" class="fe-conditional">
-                <div class="fe-field">
-                    <label>Modifiers (JSON)</label>
-                    <input type="text" id="sp-modifiers" placeholder='{"raidDelay": 200}'>
-                </div>
-                <div class="fe-field">
-                    <label>Duration (ticks)</label>
-                    <input type="number" id="sp-divDuration" value="300" min="1">
-                </div>
-            </div>
+            <div class="fe-section-title">Effects</div>
+            <div id="sp-effects-container"></div>
 
             <div class="fe-section-title">Tome Recipe</div>
             <div class="fe-row">
@@ -366,10 +209,7 @@ class SpellEditor {
             e.target.value = '';
         });
 
-        document.getElementById('sp-effect').addEventListener('change', () => this._updateConditionals());
-        document.getElementById('sp-castType').addEventListener('change', () => this._updateConditionals());
-        document.getElementById('sp-projChar').addEventListener('input', () => this._updateCharPreview());
-        document.getElementById('sp-projColor').addEventListener('input', () => this._updateCharPreview());
+        document.getElementById('sp-castType').addEventListener('change', () => this._updateCastTypeVisibility());
 
         this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
@@ -377,6 +217,11 @@ class SpellEditor {
 
         this.container.addEventListener('input', () => this._schedulePreview());
         this.container.addEventListener('change', () => this._schedulePreview());
+
+        this._effectPicker = new EffectPicker(document.getElementById('sp-effects-container'), {
+            allowedContexts: ['on_cast', 'buff', 'aura'],
+            onChange: () => this._schedulePreview(),
+        });
 
         window.addEventListener('keydown', (e) => {
             if (this.container.style.display === 'none') return;
@@ -441,26 +286,16 @@ class SpellEditor {
         });
     }
 
-    _updateConditionals() {
-        const effect = document.getElementById('sp-effect').value;
+    _updateCastTypeVisibility() {
         const castType = document.getElementById('sp-castType').value;
-
         document.getElementById('sp-trigger').closest('.fe-field').style.display = castType === 'auto' ? '' : 'none';
-
-        document.getElementById('sp-effect-damage').classList.toggle('visible', effect === 'ranged_damage' || effect === 'ranged_damage_aoe');
-        document.getElementById('sp-effect-heal').classList.toggle('visible', effect === 'heal');
-        document.getElementById('sp-effect-buff-speed').classList.toggle('visible', effect === 'buff_speed');
-        document.getElementById('sp-effect-buff-defense').classList.toggle('visible', effect === 'buff_defense');
-        document.getElementById('sp-effect-teleport').classList.toggle('visible', effect === 'teleport');
-        document.getElementById('sp-effect-summon').classList.toggle('visible', effect === 'summon');
-        document.getElementById('sp-effect-crops').classList.toggle('visible', effect === 'boost_crops');
-        document.getElementById('sp-effect-terraform').classList.toggle('visible', effect === 'terraform');
-        document.getElementById('sp-effect-divination').classList.toggle('visible', effect === 'divination_modifier');
     }
 
     _updateCharPreview() {
-        const char = document.getElementById('sp-projChar').value || '*';
-        const color = document.getElementById('sp-projColor').value;
+        const effects = this._effectPicker ? this._effectPicker.getEffects() : [];
+        const dmg = effects.find(e => e.type === 'damage');
+        const char = dmg?.projectileChar || '*';
+        const color = dmg?.projectileColor || '#ffaa33';
         const preview = document.getElementById('sp-char-preview');
         if (preview) {
             preview.textContent = char;
@@ -505,54 +340,13 @@ class SpellEditor {
             manaCost: parseInt(document.getElementById('sp-manaCost').value) || 8,
             cooldown: parseInt(document.getElementById('sp-cooldown').value) || 60,
             castType: document.getElementById('sp-castType').value,
-            effect: document.getElementById('sp-effect').value,
         };
 
         if (data.castType === 'auto') {
             data.trigger = document.getElementById('sp-trigger').value;
         }
 
-        const effect = data.effect;
-        if (effect === 'ranged_damage' || effect === 'ranged_damage_aoe') {
-            data.damage = parseInt(document.getElementById('sp-damage').value) || 10;
-            data.range = parseInt(document.getElementById('sp-range').value) || 5;
-            data.projectileChar = document.getElementById('sp-projChar').value || '*';
-            data.projectileColor = document.getElementById('sp-projColor').value;
-            if (effect === 'ranged_damage_aoe') {
-                data.radius = parseInt(document.getElementById('sp-radius').value) || 2;
-            }
-        } else if (effect === 'heal') {
-            data.healAmount = parseInt(document.getElementById('sp-healAmount').value) || 15;
-            const threshold = parseFloat(document.getElementById('sp-hpThreshold').value);
-            if (threshold && threshold < 1) data.hpThreshold = threshold;
-            if (document.getElementById('sp-targetSelf').checked) data.targetSelf = true;
-        } else if (effect === 'buff_speed') {
-            data.moveSpeedBonus = parseFloat(document.getElementById('sp-moveSpeedBonus').value) || 0;
-            data.workSpeedBonus = parseFloat(document.getElementById('sp-workSpeedBonus').value) || 1;
-            data.duration = parseInt(document.getElementById('sp-buffDuration').value) || 60;
-        } else if (effect === 'buff_defense') {
-            data.damageReduction = parseFloat(document.getElementById('sp-damageReduction').value) || 0.3;
-            data.duration = parseInt(document.getElementById('sp-defDuration').value) || 60;
-        } else if (effect === 'teleport') {
-            data.range = parseInt(document.getElementById('sp-teleRange').value) || 20;
-        } else if (effect === 'summon') {
-            data.summonType = document.getElementById('sp-summonType').value;
-        } else if (effect === 'boost_crops') {
-            data.range = parseInt(document.getElementById('sp-cropRange').value) || 5;
-            data.radius = parseInt(document.getElementById('sp-cropRadius').value) || 2;
-            data.growthMult = parseFloat(document.getElementById('sp-growthMult').value) || 1.5;
-            data.duration = parseInt(document.getElementById('sp-cropDuration').value) || 100;
-        } else if (effect === 'terraform') {
-            data.range = parseInt(document.getElementById('sp-terraRange').value) || 8;
-            data.radius = parseInt(document.getElementById('sp-terraRadius').value) || 3;
-            data.targetTerrain = document.getElementById('sp-targetTerrain').value.trim() || 'grass';
-        } else if (effect === 'divination_modifier') {
-            try {
-                const mods = document.getElementById('sp-modifiers').value.trim();
-                if (mods) data.modifiers = JSON.parse(mods);
-            } catch {}
-            data.duration = parseInt(document.getElementById('sp-divDuration').value) || 300;
-        }
+        data.effects = this._effectPicker ? this._effectPicker.getEffects() : [];
 
         data.tome = {
             learningWork: parseInt(document.getElementById('sp-learningWork').value) || 60,
@@ -586,25 +380,9 @@ class SpellEditor {
         out += `    cooldown: ${data.cooldown},\n`;
         out += `    castType: '${data.castType}',\n`;
         if (data.trigger) out += `    trigger: '${data.trigger}',\n`;
-        out += `    effect: '${data.effect}',\n`;
-
-        if (data.damage) out += `    damage: ${data.damage},\n`;
-        if (data.range) out += `    range: ${data.range},\n`;
-        if (data.radius) out += `    radius: ${data.radius},\n`;
-        if (data.projectileColor) out += `    projectileColor: '${data.projectileColor}',\n`;
-        if (data.projectileChar) out += `    projectileChar: '${data.projectileChar}',\n`;
-        if (data.healAmount) out += `    healAmount: ${data.healAmount},\n`;
-        if (data.hpThreshold) out += `    hpThreshold: ${data.hpThreshold},\n`;
-        if (data.targetSelf) out += `    targetSelf: true,\n`;
-        if (data.moveSpeedBonus !== undefined && data.effect === 'buff_speed') out += `    moveSpeedBonus: ${data.moveSpeedBonus},\n`;
-        if (data.workSpeedBonus !== undefined && data.effect === 'buff_speed') out += `    workSpeedBonus: ${data.workSpeedBonus},\n`;
-        if (data.damageReduction && data.effect === 'buff_defense') out += `    damageReduction: ${data.damageReduction},\n`;
-        if (data.duration) out += `    duration: ${data.duration},\n`;
-        if (data.summonType) out += `    summonType: '${data.summonType}',\n`;
-        if (data.growthMult) out += `    growthMult: ${data.growthMult},\n`;
-        if (data.targetTerrain) out += `    targetTerrain: '${data.targetTerrain}',\n`;
-        if (data.modifiers) out += `    modifiers: ${JSON.stringify(data.modifiers)},\n`;
-
+        if (data.effects && data.effects.length) {
+            out += formatEffectsCode(data.effects) + ',\n';
+        }
         out += `},\n\n`;
 
         const tomeKey = `tome_${data.key}`;
@@ -646,37 +424,13 @@ class SpellEditor {
         document.getElementById('sp-cooldown').value = '60';
         document.getElementById('sp-castType').value = 'auto';
         document.getElementById('sp-trigger').value = 'inCombat';
-        document.getElementById('sp-effect').value = 'ranged_damage';
-        document.getElementById('sp-damage').value = '10';
-        document.getElementById('sp-range').value = '5';
-        document.getElementById('sp-projChar').value = '*';
-        document.getElementById('sp-projColor').value = '#ffaa33';
-        document.getElementById('sp-radius').value = '2';
-        document.getElementById('sp-healAmount').value = '15';
-        document.getElementById('sp-hpThreshold').value = '0.5';
-        document.getElementById('sp-targetSelf').checked = true;
-        document.getElementById('sp-moveSpeedBonus').value = '0.4';
-        document.getElementById('sp-workSpeedBonus').value = '1.2';
-        document.getElementById('sp-buffDuration').value = '60';
-        document.getElementById('sp-damageReduction').value = '0.3';
-        document.getElementById('sp-defDuration').value = '60';
-        document.getElementById('sp-teleRange').value = '20';
-        document.getElementById('sp-summonType').value = Object.keys(SUMMON_TYPES)[0] || '';
-        document.getElementById('sp-cropRange').value = '5';
-        document.getElementById('sp-cropRadius').value = '2';
-        document.getElementById('sp-growthMult').value = '1.5';
-        document.getElementById('sp-cropDuration').value = '100';
-        document.getElementById('sp-terraRange').value = '8';
-        document.getElementById('sp-terraRadius').value = '3';
-        document.getElementById('sp-targetTerrain').value = 'grass';
-        document.getElementById('sp-modifiers').value = '';
-        document.getElementById('sp-divDuration').value = '300';
         document.getElementById('sp-learningWork').value = '60';
         document.getElementById('sp-tomeMinLevel').value = '0';
         document.getElementById('sp-craftCost').value = '';
         document.getElementById('sp-craftTicks').value = '30';
         document.getElementById('sp-research').value = 'arcane_studies';
-        this._updateConditionals();
+        if (this._effectPicker) this._effectPicker.clear();
+        this._updateCastTypeVisibility();
     }
 
     _renderBatchList() {
@@ -686,14 +440,15 @@ class SpellEditor {
             return;
         }
         let html = `<table class="fe-batch-table"><thead><tr>
-            <th>School</th><th>Key</th><th>Name</th><th>Effect</th><th>Actions</th>
+            <th>School</th><th>Key</th><th>Name</th><th>Effects</th><th>Actions</th>
         </tr></thead><tbody>`;
         this.batchItems.forEach((item, i) => {
+            const effectSummary = (item.effects || []).map(e => e.type).join(', ') || '-';
             html += `<tr>
                 <td>${item.school}</td>
                 <td>${item.key}</td>
                 <td>${item.name}</td>
-                <td>${item.effect}</td>
+                <td>${effectSummary}</td>
                 <td>
                     <button data-edit="${i}">Edit</button>
                     <button data-remove="${i}">✕</button>
@@ -735,36 +490,12 @@ class SpellEditor {
         document.getElementById('sp-cooldown').value = data.cooldown || 60;
         document.getElementById('sp-castType').value = data.castType || 'auto';
         document.getElementById('sp-trigger').value = data.trigger || 'inCombat';
-        document.getElementById('sp-effect').value = data.effect || 'ranged_damage';
 
-        if (data.damage) document.getElementById('sp-damage').value = data.damage;
-        if (data.range) document.getElementById('sp-range').value = data.range;
-        if (data.projectileChar) document.getElementById('sp-projChar').value = data.projectileChar;
-        if (data.projectileColor) document.getElementById('sp-projColor').value = data.projectileColor;
-        if (data.radius) document.getElementById('sp-radius').value = data.radius;
-        if (data.healAmount) document.getElementById('sp-healAmount').value = data.healAmount;
-        if (data.hpThreshold) document.getElementById('sp-hpThreshold').value = data.hpThreshold;
-        document.getElementById('sp-targetSelf').checked = !!data.targetSelf;
-        if (data.moveSpeedBonus !== undefined) document.getElementById('sp-moveSpeedBonus').value = data.moveSpeedBonus;
-        if (data.workSpeedBonus !== undefined) document.getElementById('sp-workSpeedBonus').value = data.workSpeedBonus;
-        if (data.effect === 'buff_speed' && data.duration) document.getElementById('sp-buffDuration').value = data.duration;
-        if (data.damageReduction) document.getElementById('sp-damageReduction').value = data.damageReduction;
-        if (data.effect === 'buff_defense' && data.duration) document.getElementById('sp-defDuration').value = data.duration;
-        if (data.effect === 'teleport' && data.range) document.getElementById('sp-teleRange').value = data.range;
-        if (data.summonType) document.getElementById('sp-summonType').value = data.summonType;
-        if (data.effect === 'boost_crops') {
-            if (data.range) document.getElementById('sp-cropRange').value = data.range;
-            if (data.radius) document.getElementById('sp-cropRadius').value = data.radius;
-            if (data.growthMult) document.getElementById('sp-growthMult').value = data.growthMult;
-            if (data.duration) document.getElementById('sp-cropDuration').value = data.duration;
+        if (data.effects) {
+            this._effectPicker.setEffects(data.effects);
+        } else if (data.effect) {
+            this._effectPicker.setEffects(this._legacyToEffects(data));
         }
-        if (data.effect === 'terraform') {
-            if (data.range) document.getElementById('sp-terraRange').value = data.range;
-            if (data.radius) document.getElementById('sp-terraRadius').value = data.radius;
-            if (data.targetTerrain) document.getElementById('sp-targetTerrain').value = data.targetTerrain;
-        }
-        if (data.modifiers) document.getElementById('sp-modifiers').value = JSON.stringify(data.modifiers);
-        if (data.effect === 'divination_modifier' && data.duration) document.getElementById('sp-divDuration').value = data.duration;
 
         if (data.tome) {
             document.getElementById('sp-learningWork').value = data.tome.learningWork || 60;
@@ -776,8 +507,60 @@ class SpellEditor {
             document.getElementById('sp-research').value = data.tome.research || 'arcane_studies';
         }
 
-        this._updateConditionals();
+        this._updateCastTypeVisibility();
         this._schedulePreview();
+    }
+
+    _legacyToEffects(data) {
+        const effect = { type: data.effect, context: 'on_cast' };
+        switch (data.effect) {
+            case 'ranged_damage':
+            case 'ranged_damage_aoe':
+                effect.type = 'damage';
+                effect.value = data.damage || 10;
+                effect.range = data.range || 5;
+                if (data.radius) effect.radius = data.radius;
+                if (data.projectileChar) effect.projectileChar = data.projectileChar;
+                if (data.projectileColor) effect.projectileColor = data.projectileColor;
+                break;
+            case 'heal':
+                effect.value = data.healAmount || 15;
+                if (data.hpThreshold) effect.hpThreshold = data.hpThreshold;
+                if (data.targetSelf) effect.targetSelf = true;
+                break;
+            case 'buff_speed':
+                effect.moveSpeedBonus = data.moveSpeedBonus || 0;
+                effect.workSpeedBonus = data.workSpeedBonus || 0;
+                effect.duration = data.duration || 60;
+                break;
+            case 'buff_defense':
+                effect.damageReduction = data.damageReduction || 0.3;
+                effect.duration = data.duration || 60;
+                break;
+            case 'teleport':
+                effect.range = data.range || 20;
+                break;
+            case 'summon':
+                effect.summonType = data.summonType || 'familiar';
+                break;
+            case 'boost_crops':
+                effect.range = data.range || 5;
+                effect.radius = data.radius || 2;
+                effect.growthMult = data.growthMult || 1.5;
+                effect.duration = data.duration || 100;
+                break;
+            case 'terraform':
+                effect.range = data.range || 8;
+                effect.radius = data.radius || 3;
+                effect.targetTerrain = data.targetTerrain || 'grass';
+                break;
+            case 'divination_modifier':
+                effect.type = 'divination';
+                effect.modifiers = data.modifiers || {};
+                effect.duration = data.duration || 300;
+                break;
+        }
+        return [effect];
     }
 
     _loadFromConfig(key) {
@@ -887,18 +670,22 @@ class SpellEditor {
             if (el.type === 'checkbox') snap[id] = el.checked;
             else snap[id] = el.value;
         });
+        snap._effects = this._effectPicker ? this._effectPicker.getEffects() : [];
         return JSON.stringify(snap);
     }
 
     _restoreFormSnapshot(json) {
         const snap = JSON.parse(json);
+        const effects = snap._effects || [];
+        delete snap._effects;
         for (const [id, val] of Object.entries(snap)) {
             const el = document.getElementById(id);
             if (!el) continue;
             if (el.type === 'checkbox') el.checked = val;
             else el.value = val;
         }
-        this._updateConditionals();
+        if (this._effectPicker) this._effectPicker.setEffects(effects);
+        this._updateCastTypeVisibility();
         this._updatePreview();
     }
 

@@ -1,4 +1,5 @@
 import { ANIMALS, SPELLS, RESEARCH, CONFIG, SUMMON_TYPES, GOLEM_TYPES } from '../core/config.js';
+import { EffectPicker, formatEffectsCode } from './effect-picker.js';
 
 const STORAGE_KEY = 'convocation_entity_drafts';
 
@@ -288,6 +289,9 @@ class EntityEditor {
                         </div>
                     </div>
                 </div>
+
+                <div class="fe-section-title" style="margin-top:12px;">Effects (on tamed creature)</div>
+                <div id="en-tame-effects"></div>
             </div>
 
             <div class="fe-section-title">Saved Drafts</div>
@@ -313,6 +317,11 @@ class EntityEditor {
 
         document.getElementById('en-char').addEventListener('input', () => this._updateCharPreview());
         document.getElementById('en-color').addEventListener('input', () => this._updateCharPreview());
+
+        this._effectPicker = new EffectPicker(document.getElementById('en-tame-effects'), {
+            allowedContexts: ['passive', 'aura'],
+            onChange: () => this._schedulePreview(),
+        });
 
         this.container.querySelectorAll('.fe-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
@@ -509,6 +518,7 @@ class EntityEditor {
         document.getElementById('en-tame-expeditionSpeedBonus').value = '0.25';
         document.getElementById('en-tame-auraRadius').value = '5';
         document.getElementById('en-tame-auraMoodBonus').value = '5';
+        this._effectPicker.clear();
         this._updateConditionals();
     }
 
@@ -627,6 +637,9 @@ class EntityEditor {
                 tamed.auraMoodBonus = parseInt(document.getElementById('en-tame-auraMoodBonus').value) || 5;
             }
 
+            const effects = this._effectPicker.getEffects();
+            if (effects.length) tamed.effects = effects;
+
             data.tamed = tamed;
         }
 
@@ -674,6 +687,9 @@ class EntityEditor {
                 tamedParts.push('dangerousTame: true');
                 tamedParts.push(`baseTameChance: ${t.baseTameChance}`);
                 tamedParts.push(`retaliationDamage: ${t.retaliationDamage}`);
+            }
+            if (t.effects && t.effects.length) {
+                tamedParts.push(`effects: ${formatEffectsCode(t.effects)}`);
             }
             parts.push(`tamed: {\n        ${tamedParts.join(',\n        ')},\n    }`);
         }
@@ -766,6 +782,10 @@ class EntityEditor {
                 document.getElementById('en-tame-auraRadius').value = data.tamed.auraRadius || 5;
                 document.getElementById('en-tame-auraMoodBonus').value = data.tamed.auraMoodBonus || 5;
             }
+
+            this._effectPicker.setEffects(data.tamed.effects || this._legacyToEffects(data.tamed));
+        } else {
+            this._effectPicker.clear();
         }
 
         this._updateConditionals();
@@ -782,6 +802,19 @@ class EntityEditor {
         this._renderDraftList();
         this._schedulePreview();
         this._pushUndoState();
+    }
+
+    _legacyToEffects(tamed) {
+        const effects = [];
+        if (tamed.happinessAura) {
+            effects.push({
+                type: 'mood_aura',
+                radius: tamed.auraRadius || 5,
+                moodBonus: tamed.auraMoodBonus || 5,
+                context: 'aura'
+            });
+        }
+        return effects;
     }
 
     _duplicateDraft() {
@@ -804,17 +837,21 @@ class EntityEditor {
             if (el.type === 'checkbox') snap[id] = el.checked;
             else snap[id] = el.value;
         });
+        snap._effects = this._effectPicker.getEffects();
         return JSON.stringify(snap);
     }
 
     _restoreFormSnapshot(json) {
         const snap = JSON.parse(json);
+        const effects = snap._effects || [];
+        delete snap._effects;
         for (const [id, val] of Object.entries(snap)) {
             const el = document.getElementById(id);
             if (!el) continue;
             if (el.type === 'checkbox') el.checked = val;
             else el.value = val;
         }
+        this._effectPicker.setEffects(effects);
         this._updateConditionals();
         this._updatePreview();
     }
