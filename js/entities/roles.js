@@ -362,7 +362,7 @@ function getHostiles(game, entity) {
     if (game.waves && game.waves.enemies) {
         for (const e of game.waves.enemies) { if (e.hp > 0) hostiles.push(e); }
     }
-    for (const w of game.wildlife) { if (w.hostile && w.hp > 0) hostiles.push(w); }
+    for (const w of game.entities) { if (w.category === 'animal' && !w.tamed && w.hostile && w.hp > 0) hostiles.push(w); }
     return hostiles;
 }
 

@@ -44,7 +44,9 @@ export function createEntity(type, x, y, options = {}) {
     if (def.loot) entity.loot = def.loot;
 
     if (options.ownerId !== undefined) entity.ownerId = options.ownerId;
-    if (def.summonDuration || options.duration) {
+    if (options.expiresAt !== undefined) {
+        entity.expiresAt = options.expiresAt;
+    } else if (def.summonDuration || options.duration) {
         entity.expiresAt = (options.currentTick || 0) + (options.duration || def.summonDuration);
     }
 
@@ -99,6 +101,7 @@ export function createTamedEntity(type, x, y) {
         roles: (tamed.roles || []).map(r => ({ ...r })),
         effects: (tamed.effects || []).map(e => ({ ...e })),
         roleState: {},
+        produceCooldown: ((tamed.roles || []).find(r => r.type === 'production') || {}).produceRate || 0,
         penX: x,
         penY: y,
     };

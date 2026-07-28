@@ -1,6 +1,6 @@
 import { CONFIG, EVENTS, CARAVAN_TRADES, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, FIRE_CONFIG } from '../core/config.js';
 import { createColonist, addThought } from '../entities/colonist.js';
-import { createAnimal } from '../entities/wildlife.js';
+import { createWildAnimal } from '../entities/entity-factory.js';
 import { getPedestalEffect } from './artifacts.js';
 
 export class EventSystem {
@@ -100,7 +100,7 @@ export class EventSystem {
             const count = randRange(entry.count);
             for (let i = 0; i < count; i++) {
                 const edge = getRandomEdge();
-                game.wildlife.push(createAnimal(entry.type, edge.x, edge.y));
+                game.entities.push(createWildAnimal(entry.type, edge.x, edge.y));
             }
             totalCount += count;
         }

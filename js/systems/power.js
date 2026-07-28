@@ -131,8 +131,8 @@ export class PowerSystem {
                     }
                 }
                 if (!target) {
-                    for (const w of game.wildlife) {
-                        if (w.hp <= 0 || !w.hostile) continue;
+                    for (const w of game.entities) {
+                        if (w.category !== 'animal' || w.tamed || w.hp <= 0 || !w.hostile) continue;
                         const d = manhattanDist(t.x, t.y, w.x, w.y);
                         if (d <= range && d < bestDist) {
                             bestDist = d;

@@ -1,4 +1,4 @@
-import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, TAMED_ANIMALS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
 let nextExpeditionId = 1;
@@ -52,11 +52,11 @@ export class ExplorationSystem {
 
         const packAnimals = [];
         for (const id of cappedPacks) {
-            const a = game.tamedAnimals.find(ta => ta.id === id);
+            const a = game.entities.find(e => e.id === id && e.tamed);
             if (!a || a.hp <= 0) continue;
-            const def = TAMED_ANIMALS[a.type];
-            if (def && def.packAnimal) {
-                packAnimals.push({ id: a.id, type: a.type, speedBonus: def.expeditionSpeedBonus || 0 });
+            const packRole = a.roles && a.roles.find(r => r.type === 'pack');
+            if (packRole) {
+                packAnimals.push({ id: a.id, type: a.type, speedBonus: packRole.expeditionSpeedBonus || 0.25 });
                 a.onExpedition = true;
             }
         }
@@ -662,7 +662,7 @@ export class ExplorationSystem {
 
         if (exp.packAnimals) {
             for (const pa of exp.packAnimals) {
-                const animal = game.tamedAnimals.find(a => a.id === pa.id);
+                const animal = game.entities.find(a => a.id === pa.id);
                 if (animal) animal.onExpedition = false;
             }
         }

@@ -2,43 +2,29 @@ import { CONFIG, SUMMON_TYPES } from '../core/config.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { isPassable } from '../world/map.js';
 import { moveEntity } from '../systems/movement-lerp.js';
+import { createEntity } from './entity-factory.js';
 
-let nextSummonId = 1;
-
-export function syncSummonIdCounter(summons) {
-    const maxId = summons.reduce((max, s) => Math.max(max, s.id || 0), 0);
-    if (maxId >= nextSummonId) nextSummonId = maxId + 1;
-}
-
-export function createSummon(summonType, x, y, ownerId, game) {
+export function spawnSummon(summonType, x, y, ownerId, game) {
     const def = SUMMON_TYPES[summonType];
-    const summon = {
-        id: nextSummonId++,
-        type: summonType,
-        x, y,
-        hp: def.hp,
-        maxHp: def.hp,
-        damage: def.damage,
-        speed: def.speed,
-        char: def.char,
-        color: def.color,
+    if (!def) return null;
+    const summon = createEntity(summonType, x, y, {
         ownerId,
         expiresAt: game.tick + def.duration,
-        moveCooldown: 0,
-        guardState: 'patrolling',
-    };
+    });
+    if (!summon) return null;
+    summon.guardState = 'patrolling';
     emitSparkles(game, x, y, def.color);
+    game.entities.push(summon);
     return summon;
 }
 
 export function updateSummons(game) {
-    if (!game.summons || game.summons.length === 0) return;
-
-    for (let i = game.summons.length - 1; i >= 0; i--) {
-        const summon = game.summons[i];
+    for (let i = game.entities.length - 1; i >= 0; i--) {
+        const summon = game.entities[i];
+        if (summon.category !== 'summon') continue;
         if (game.tick >= summon.expiresAt || summon.hp <= 0) {
             emitSparkles(game, summon.x, summon.y, summon.color);
-            game.summons.splice(i, 1);
+            game.entities.splice(i, 1);
             continue;
         }
         updateSummonAI(summon, game);
@@ -47,6 +33,7 @@ export function updateSummons(game) {
 
 function updateSummonAI(summon, game) {
     const def = SUMMON_TYPES[summon.type];
+    if (!def) return;
 
     summon.moveCooldown -= summon.speed;
     if (summon.moveCooldown > 0) return;
@@ -57,7 +44,7 @@ function updateSummonAI(summon, game) {
     const hostiles = [
         ...game.raiders.filter(r => r.hp > 0),
         ...(game.waves && game.waves.enemies ? game.waves.enemies.filter(e => e.hp > 0) : []),
-        ...game.wildlife.filter(w => w.hostile && w.hp > 0),
+        ...game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile && w.hp > 0),
     ];
 
     if (summon.hp < def.hp * 0.2) {

@@ -1,15 +1,14 @@
-import { CONFIG, SKILLS, MAGIC_SKILLS, MANA_CONFIG, COLONIST_CONFIG, EXPEDITION_DIFFICULTY } from './config.js';
+import { CONFIG } from './config.js';
 import { syncColonistIdCounter } from '../entities/colonist.js';
-import { syncAnimalIdCounter } from '../entities/wildlife.js';
-import { syncTamedIdCounter } from '../entities/taming.js';
-import { syncSummonIdCounter } from '../entities/summons.js';
+import { syncEntityIdCounter } from '../entities/entity-factory.js';
 
 const SAVE_KEY = 'colony_save';
+const SAVE_VERSION = 3;
 
 export function saveGame(game) {
     const layout = captureLayout();
     const data = {
-        version: 2,
+        version: SAVE_VERSION,
         tick: game.tick,
         timeOfDay: game.timeOfDay,
         speed: game.speed,
@@ -19,10 +18,8 @@ export function saveGame(game) {
 
         map: serializeMap(game.map),
         colonists: game.colonists,
-        wildlife: game.wildlife,
+        entities: game.entities,
         raiders: game.raiders,
-        tamedAnimals: game.tamedAnimals,
-        summons: game.summons || [],
 
         resources: {
             stockpile: game.resources.stockpile,
@@ -104,168 +101,108 @@ export function saveGame(game) {
 }
 
 export function loadGame(game) {
-    const json = localStorage.getItem(SAVE_KEY);
-    if (!json) return false;
+    try {
+        const json = localStorage.getItem(SAVE_KEY);
+        if (!json) return false;
 
-    const data = JSON.parse(json);
+        const data = JSON.parse(json);
 
-    CONFIG.PEACEFUL_MODE = data.peaceful;
-    game.tick = data.tick;
-    game.timeOfDay = data.timeOfDay;
-    game.speed = data.speed;
-    game.settings = { ...game.settings, ...data.settings };
-
-    deserializeMap(game.map, data.map);
-
-    game.colonists = data.colonists;
-    for (const c of game.colonists) {
-        if (!c.nameColor) c.nameColor = '#ffff00';
-        for (const [key, def] of Object.entries(SKILLS)) {
-            if (c.skills && c.skills[key] === undefined) {
-                const [min, max] = def.baseLevel;
-                c.skills[key] = min + Math.floor(Math.random() * (max - min + 1));
-            }
-            if (c.priorities && c.priorities[key] === undefined) c.priorities[key] = 3;
+        if (!data.version || data.version < SAVE_VERSION) {
+            console.warn(`Incompatible save version ${data.version}, expected ${SAVE_VERSION}. Starting fresh.`);
+            localStorage.removeItem(SAVE_KEY);
+            return false;
         }
-        if (!c.magicSkills) {
-            c.magicSkills = {};
-            for (const [key, def] of Object.entries(MAGIC_SKILLS)) {
-                const [min, max] = def.baseLevel;
-                c.magicSkills[key] = min + Math.floor(Math.random() * (max - min + 1));
-            }
-            if (Math.random() < COLONIST_CONFIG.magicBiasChance) {
-                const magicKeys = Object.keys(MAGIC_SKILLS);
-                c.magicBias = magicKeys[Math.floor(Math.random() * magicKeys.length)];
-                c.magicSkills[c.magicBias] = Math.min(10, c.magicSkills[c.magicBias] + (MAGIC_SKILLS[c.magicBias].biasBonus || 2));
-            }
-        } else {
-            for (const [key, def] of Object.entries(MAGIC_SKILLS)) {
-                if (c.magicSkills[key] === undefined) {
-                    const [min, max] = def.baseLevel;
-                    c.magicSkills[key] = min + Math.floor(Math.random() * (max - min + 1));
-                }
-            }
+
+        CONFIG.PEACEFUL_MODE = data.peaceful;
+        game.tick = data.tick;
+        game.timeOfDay = data.timeOfDay;
+        game.speed = data.speed;
+        game.settings = { ...game.settings, ...data.settings };
+
+        deserializeMap(game.map, data.map);
+
+        game.colonists = data.colonists;
+        game.rebuildColonistIndex();
+        game.entities = data.entities || [];
+        game.raiders = data.raiders || [];
+
+        game.resources.stockpile = data.resources.stockpile;
+        game.resources.weapons = data.resources.weapons;
+        game.resources.armors = data.resources.armors || [];
+        game.resources.helmets = data.resources.helmets || [];
+        game.resources.tools = data.resources.tools || [];
+        game.resources.artifacts = data.resources.artifacts || [];
+        game.resources.potions = data.resources.potions || [];
+        game.resources.tomes = data.resources.tomes || [];
+        game.resources.consumables = data.resources.consumables || [];
+        game.resources._decayAccumulators = data.resources._decayAccumulators || {};
+        game.resources.reservedFoodstuffs = data.resources.reservedFoodstuffs || {};
+
+        game.weather.season = data.weather.season;
+        game.weather.seasonIndex = data.weather.seasonIndex;
+        game.weather.seasonTick = data.weather.seasonTick;
+        game.weather.temperature = data.weather.temperature;
+        game.weather.currentWeather = data.weather.currentWeather;
+        game.weather.weatherTimer = data.weather.weatherTimer;
+        game.weather.year = data.weather.year;
+
+        game.combat.nextRaidTick = data.combat.nextRaidTick;
+        game.combat.raidActive = data.combat.raidActive;
+        game.combat.raidStartTick = data.combat.raidStartTick;
+        game.divinationModifiers = data.divinationModifiers || [];
+
+        game.events.cooldowns = data.events.cooldowns;
+
+        if (data.waves) {
+            game.waves.highestWaveCompleted = data.waves.highestWaveCompleted || 0;
+            game.waves.active = data.waves.active || false;
+            game.waves.currentWave = data.waves.currentWave || 0;
+            game.waves.nexusPosition = data.waves.nexusPosition || null;
+            game.waves.nexusHp = data.waves.nexusHp || 0;
+            game.waves.nexusMaxHp = data.waves.nexusMaxHp || 0;
+            game.waves.enemies = data.waves.enemies || [];
+            game.waves.enemiesSpawned = data.waves.enemiesSpawned || 0;
+            game.waves.enemiesToSpawn = data.waves.enemiesToSpawn || 0;
+            game.waves.spawnTimer = data.waves.spawnTimer || 0;
+            game.waves.portals = data.waves.portals || [];
         }
-        if (c.mana === undefined || c.maxMana === undefined) {
-            const combinedLevel = Object.values(c.magicSkills).reduce((sum, lvl) => sum + lvl, 0);
-            c.maxMana = MANA_CONFIG.baseMana + combinedLevel * MANA_CONFIG.manaPerMagicLevel;
-            c.mana = c.maxMana;
+
+        game.research.completed = new Set(data.research.completed);
+        game.research.activeResearch = data.research.activeResearch || null;
+        game.research.progress = data.research.progress || {};
+
+        if (data.exploration) {
+            game.exploration.expeditions = data.exploration.expeditions || [];
+            game.exploration.completedExpeditions = data.exploration.completedExpeditions || [];
+            game.exploration.completedRealms = new Set(data.exploration.completedRealms || []);
         }
-        if (!c.knownSpells) c.knownSpells = [];
-        if (!c.disabledSpells) c.disabledSpells = [];
-        if (c.equippedTome === undefined) c.equippedTome = null;
-        if (!c.tomeProgress || typeof c.tomeProgress === 'number') c.tomeProgress = {};
-        if (c.helmet === undefined) c.helmet = null;
-        if (c.armor && c.armor.key === 'iron_helm') { c.armor.key = 'iron_brigandine'; c.armor.name = 'Iron Brigandine'; }
-    }
-    game.rebuildColonistIndex();
-    game.wildlife = data.wildlife;
-    game.raiders = data.raiders;
-    game.tamedAnimals = data.tamedAnimals || [];
-    game.summons = data.summons || [];
 
-    game.resources.stockpile = data.resources.stockpile;
-    game.resources.weapons = data.resources.weapons;
-    game.resources.armors = data.resources.armors || [];
-    for (const a of game.resources.armors) {
-        if (a.key === 'iron_helm') { a.key = 'iron_brigandine'; a.name = 'Iron Brigandine'; }
-    }
-    game.resources.helmets = data.resources.helmets || [];
-    game.resources.tools = data.resources.tools || [];
-    game.resources.artifacts = data.resources.artifacts || [];
-    game.resources.potions = data.resources.potions || [];
-    game.resources.tomes = data.resources.tomes || [];
-    game.resources.consumables = data.resources.consumables || [];
-    game.resources._decayAccumulators = data.resources._decayAccumulators || {};
-    game.resources.reservedFoodstuffs = data.resources.reservedFoodstuffs || {};
+        game.manaCrystalBonus = data.manaCrystalBonus || 0;
+        game.discoveredLoot = new Set(data.discoveredLoot || []);
 
-    game.weather.season = data.weather.season;
-    game.weather.seasonIndex = data.weather.seasonIndex;
-    game.weather.seasonTick = data.weather.seasonTick;
-    game.weather.temperature = data.weather.temperature;
-    game.weather.currentWeather = data.weather.currentWeather;
-    game.weather.weatherTimer = data.weather.weatherTimer;
-    game.weather.year = data.weather.year;
-
-    game.combat.nextRaidTick = data.combat.nextRaidTick;
-    game.combat.raidActive = data.combat.raidActive;
-    game.combat.raidStartTick = data.combat.raidStartTick;
-    game.divinationModifiers = data.divinationModifiers || [];
-
-    game.events.cooldowns = data.events.cooldowns;
-
-    if (data.waves) {
-        game.waves.highestWaveCompleted = data.waves.highestWaveCompleted || 0;
-        game.waves.active = data.waves.active || false;
-        game.waves.currentWave = data.waves.currentWave || 0;
-        game.waves.nexusPosition = data.waves.nexusPosition || null;
-        game.waves.nexusHp = data.waves.nexusHp || 0;
-        game.waves.nexusMaxHp = data.waves.nexusMaxHp || 0;
-        game.waves.enemies = data.waves.enemies || [];
-        game.waves.enemiesSpawned = data.waves.enemiesSpawned || 0;
-        game.waves.enemiesToSpawn = data.waves.enemiesToSpawn || 0;
-        game.waves.spawnTimer = data.waves.spawnTimer || 0;
-        game.waves.portals = data.waves.portals || [];
-    }
-
-    game.research.completed = new Set(data.research.completed);
-    game.research.activeResearch = data.research.activeResearch || null;
-    game.research.progress = data.research.progress || {};
-
-    if (data.exploration) {
-        game.exploration.expeditions = data.exploration.expeditions || [];
-        game.exploration.completedExpeditions = data.exploration.completedExpeditions || [];
-        game.exploration.completedRealms = new Set(data.exploration.completedRealms || data.exploration.completedDimensions || []);
-        for (const exp of [...game.exploration.expeditions, ...game.exploration.completedExpeditions]) {
-            if (exp.dimension && !exp.realm) { exp.realm = exp.dimension; exp.realmName = exp.dimensionName; }
-            if (exp.log && exp.log.length > 0 && typeof exp.log[0] === 'string') {
-                exp.log = exp.log.map(text => ({ tick: 0, text, type: 'info' }));
-            }
-            if (!exp.combat) exp.combat = null;
-            if (!exp.lastMicroEventTick) exp.lastMicroEventTick = 0;
-            if (!exp.diffSettings) exp.diffSettings = EXPEDITION_DIFFICULTY[exp.difficulty || 1];
-            if (exp.partySnapshot) {
-                for (const p of exp.partySnapshot) {
-                    if (!p.knownSpells) p.knownSpells = [];
-                    if (p.mana === undefined) p.mana = 0;
-                    if (p.maxMana === undefined) p.maxMana = 0;
-                    if (!p.spellCooldowns) p.spellCooldowns = {};
-                    if (p.spellDamageBonus === undefined) p.spellDamageBonus = 0;
-                    if (p.shieldActive === undefined) p.shieldActive = false;
-                    if (p.shieldReduction === undefined) p.shieldReduction = 0;
-                }
-            }
-        }
-    }
-
-    game.manaCrystalBonus = data.manaCrystalBonus || 0;
-    game.discoveredLoot = new Set(data.discoveredLoot || []);
-
-    if (data.story) {
-        if (Array.isArray(data.story.unlocked)) {
-            game.story.unlocked = new Map(data.story.unlocked.map(k => [k, { year: 1, season: 'spring' }]));
-        } else {
+        if (data.story) {
             game.story.unlocked = new Map(Object.entries(data.story.unlocked || {}));
+            game.story.viewed = new Set(data.story.viewed || []);
         }
-        game.story.viewed = new Set(data.story.viewed || []);
+
+        game.taskQueue.tasks = data.tasks || [];
+        game.taskQueue.syncIdCounter();
+        game.eventLog.entries = data.eventLog || [];
+
+        syncColonistIdCounter(game.colonists);
+        syncEntityIdCounter(game.entities);
+
+        game.roomsDirty = true;
+
+        if (data.layout) {
+            restoreLayout(data.layout);
+        }
+
+        return true;
+    } catch (e) {
+        console.error('Failed to load save:', e);
+        return false;
     }
-
-    game.taskQueue.tasks = data.tasks;
-    game.taskQueue.syncIdCounter();
-    game.eventLog.entries = data.eventLog || [];
-
-    syncColonistIdCounter(game.colonists);
-    syncAnimalIdCounter(game.wildlife);
-    syncTamedIdCounter(game.tamedAnimals);
-    syncSummonIdCounter(game.summons);
-
-    game.roomsDirty = true;
-
-    if (data.layout) {
-        restoreLayout(data.layout);
-    }
-
-    return true;
 }
 
 export function hasSave() {
@@ -295,7 +232,7 @@ export function importSave(file) {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!data.version || !data.map || !data.colonists) {
+                if (!data.version || data.version < SAVE_VERSION || !data.map || !data.colonists) {
                     resolve(false);
                     return;
                 }
@@ -342,7 +279,7 @@ function deserializeMap(map, data) {
             const tile = map[y][x];
             tile.terrain = t.t;
             tile.passable = t.p === 1;
-            tile.structure = t.s === 'storage_chest' ? 'food_chest' : (t.s || null);
+            tile.structure = t.s || null;
             tile.floor = t.fl || null;
             tile.structureHp = t.shp !== undefined ? t.shp : undefined;
             tile.resource = t.r || null;

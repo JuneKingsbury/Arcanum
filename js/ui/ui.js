@@ -1825,7 +1825,7 @@ export class UI {
         const potions = this.game.resources.potions;
         const tomes = this.game.resources.tomes;
         const consumables = this.game.resources.consumables;
-        const tamed = this.game.tamedAnimals;
+        const tamed = this.game.entities.filter(e => e.tamed);
 
         const helmets = this.game.resources.helmets;
         const equipCount = weapons.length + armors.length + helmets.length + tools.length + artifacts.length;
@@ -2396,9 +2396,10 @@ export class UI {
             const defStr = def > 0 ? ` Def:${def}%` : '';
             html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}" data-max="5"> ${c.name} <span style="color:#888;font-size:0.85em;">HP:${c.hp}/${c.maxHp} Dmg:${dmg}${defStr}${priorityStr}</span></label></div>`;
         }
-        const packAnimals = (this.game.tamedAnimals || []).filter(a => {
+        const packAnimals = this.game.entities.filter(a => {
+            if (!a.tamed || a.hp <= 0 || a.onExpedition) return false;
             const def = TAMED_ANIMALS[a.type];
-            return def && def.packAnimal && a.hp > 0 && !a.onExpedition;
+            return def && def.packAnimal;
         });
         if (packAnimals.length > 0) {
             html += `<div class="info-row" style="color:#bbaa44;margin-top:6px;"><b>Pack Animals (max 2):</b></div>`;

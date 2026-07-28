@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, TAMED_ANIMALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG } from './config.js';
 import { generateMap } from '../world/map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
@@ -11,14 +11,15 @@ import { detectRooms } from '../world/rooms.js';
 import { updateFarming } from '../systems/farming.js';
 import { queueCraftingOrder, updateAutoCook, updateAutoCraft } from '../systems/crafting.js';
 import { Weather } from '../world/weather.js';
-import { updateWildlife, designateHunt, createAnimal } from '../entities/wildlife.js';
+import { updateWildlife, designateHunt } from '../entities/wildlife.js';
 import { CombatSystem } from '../entities/combat.js';
 import { EventSystem, updateFires } from '../systems/events.js';
 import { UI } from '../ui/ui.js';
 import { Minimap } from '../ui/minimap.js';
 import { ResearchSystem, updateResearch } from '../systems/research.js';
 import { updateTamedAnimals, designateTame } from '../entities/taming.js';
-import { updateSummons, syncSummonIdCounter } from '../entities/summons.js';
+import { updateSummons } from '../entities/summons.js';
+import { syncEntityIdCounter, createWildAnimal } from '../entities/entity-factory.js';
 import { PowerSystem } from '../systems/power.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { ExplorationSystem } from '../systems/exploration.js';
@@ -81,10 +82,8 @@ class Game {
 
         this.colonists = [];
         this._colonistById = new Map();
-        this.wildlife = [];
+        this.entities = [];
         this.raiders = [];
-        this.tamedAnimals = [];
-        this.summons = [];
         this.combatEffects = [];
         this.divinationModifiers = [];
         this.activeComplexStructures = [];
@@ -152,6 +151,7 @@ class Game {
         for (const c of this.colonists) this._colonistById.set(c.id, c);
     }
 
+
     spawnStartingColonists() {
         const cx = Math.floor(CONFIG.MAP_WIDTH / 2);
         const cy = Math.floor(CONFIG.MAP_HEIGHT / 2);
@@ -171,7 +171,7 @@ class Game {
             const y = Math.floor(Math.random() * CONFIG.MAP_HEIGHT);
             const tile = this.map[y][x];
             if (tile.terrain === 'water' || tile.terrain === 'rock' || tile.terrain === 'tall_rock' || tile.resource) continue;
-            this.wildlife.push(createAnimal(type, x, y));
+            this.entities.push(createWildAnimal(type, x, y));
         }
     }
 
@@ -250,9 +250,8 @@ class Game {
         this.tick++;
         this.timeOfDay = this.tick % CONFIG.TICKS_PER_DAY;
 
-        // Rebuild spatial hashes for this tick
         const hostileEntities = [];
-        for (const w of this.wildlife) { if (w.hostile && w.hp > 0) hostileEntities.push(w); }
+        for (const e of this.entities) { if (e.hostile && e.hp > 0 && !e.tamed) hostileEntities.push(e); }
         for (const r of this.raiders) { if (r.hp > 0) hostileEntities.push(r); }
         if (this.waves) { for (const e of this.waves.enemies) { if (e.hp > 0) hostileEntities.push(e); } }
         this.spatial.hostiles.rebuild(hostileEntities);
@@ -741,7 +740,7 @@ class Game {
         CONFIG.PEACEFUL_MODE = !CONFIG.PEACEFUL_MODE;
         if (CONFIG.PEACEFUL_MODE) {
             this.raiders = [];
-            this.wildlife = this.wildlife.filter(a => !a.hostile);
+            this.entities = this.entities.filter(e => !(e.category === 'animal' && !e.tamed && e.hostile));
         }
     }
 
@@ -781,15 +780,16 @@ class Game {
             const weaponInfo = c.weapon ? ` (${c.weapon.name})` : ' (unarmed)';
             html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}"> ${c.name}${weaponInfo} HP:${c.hp}/${c.maxHp}</label></div>`;
         }
-        const packAnimals = (this.tamedAnimals || []).filter(a => {
-            const def = TAMED_ANIMALS[a.type];
-            return def && def.packAnimal && a.hp > 0 && !a.onExpedition;
+        const packAnimals = this.entities.filter(a => {
+            return a.tamed && a.hp > 0 && !a.onExpedition &&
+                a.roles && a.roles.some(r => r.type === 'pack');
         });
         if (packAnimals.length > 0) {
             html += `<div class="info-row" style="color:#bbaa44;margin-top:6px;"><b>Pack Animals:</b></div>`;
             for (const a of packAnimals) {
-                const def = TAMED_ANIMALS[a.type];
-                html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}"> ${a.type} (+${Math.round(def.expeditionSpeedBonus * 100)}% speed)</label></div>`;
+                const packRole = a.roles.find(r => r.type === 'pack');
+                const speedBonus = packRole ? packRole.expeditionSpeedBonus || 0.25 : 0.25;
+                html += `<div class="info-row"><label><input type="checkbox" class="exp-pack-check" value="${a.id}"> ${a.type} (+${Math.round(speedBonus * 100)}% speed)</label></div>`;
             }
         }
         html += `<div class="info-actions"><button onclick="window.game.launchExpedition('${realmKey}')" style="background:#1a4466;color:#88ddff;">Launch</button></div>`;

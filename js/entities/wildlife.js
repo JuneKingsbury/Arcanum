@@ -3,44 +3,23 @@ import { isPassableForAnimals } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
 import { moveEntity } from '../systems/movement-lerp.js';
-
-let nextAnimalId = 1;
-
-export function syncAnimalIdCounter(animals) {
-    const maxId = animals.reduce((max, a) => Math.max(max, a.id || 0), 0);
-    if (maxId >= nextAnimalId) nextAnimalId = maxId + 1;
-}
-
-export function createAnimal(type, x, y) {
-    const def = ANIMALS[type];
-    return {
-        id: nextAnimalId++,
-        type,
-        x, y,
-        hp: def.hp,
-        maxHp: def.hp,
-        hostile: def.hostile,
-        speed: def.speed,
-        moveCooldown: 0,
-        fleeing: false,
-        fleeTarget: null,
-        char: def.char,
-        color: def.color,
-    };
-}
+import { createWildAnimal } from './entity-factory.js';
 
 export function updateWildlife(game) {
     maybeSpawnAnimal(game);
     syncAnimalTasks(game);
 
-    for (let i = game.wildlife.length - 1; i >= 0; i--) {
-        const animal = game.wildlife[i];
+    for (let i = game.entities.length - 1; i >= 0; i--) {
+        const animal = game.entities[i];
+        if (animal.category !== 'animal' || animal.tamed) continue;
         if (animal.hp <= 0) {
             const def = ANIMALS[animal.type];
-            const yield_ = { meat: def.meatYield };
-            if (def.hideYield) yield_.hides = def.hideYield;
-            game.resources.add(yield_);
-            game.wildlife.splice(i, 1);
+            if (def) {
+                const yield_ = { meat: def.meatYield };
+                if (def.hideYield) yield_.hides = def.hideYield;
+                game.resources.add(yield_);
+            }
+            game.entities.splice(i, 1);
             continue;
         }
         updateAnimal(animal, game);
@@ -50,15 +29,16 @@ export function updateWildlife(game) {
 function maybeSpawnAnimal(game) {
     const spawnRate = SEASON_EFFECTS[game.weather.season].animalSpawnRate;
     if (Math.random() > spawnRate) return;
-    if (game.wildlife.length >= WILDLIFE_CONFIG.maxCount) return;
+    const wildCount = game.entities.filter(e => e.category === 'animal' && !e.tamed).length;
+    if (wildCount >= WILDLIFE_CONFIG.maxCount) return;
 
     const edge = getRandomEdge();
     const type = pickAnimalType(game);
     if (!type) return;
     if (ANIMALS[type].hostile && CONFIG.PEACEFUL_MODE) return;
 
-    const animal = createAnimal(type, edge.x, edge.y);
-    game.wildlife.push(animal);
+    const animal = createWildAnimal(type, edge.x, edge.y);
+    game.entities.push(animal);
 }
 
 const _spawnTable = (() => {
@@ -118,7 +98,7 @@ function updateAnimal(animal, game) {
 function syncAnimalTasks(game) {
     for (const task of game.taskQueue.getAll()) {
         if (task.type !== 'hunt' && task.type !== 'tame') continue;
-        const animal = game.wildlife.find(a => a.id === task.targetAnimalId);
+        const animal = game.entities.find(a => a.id === task.targetAnimalId && a.category === 'animal');
         if (!animal || animal.hp <= 0) {
             game.taskQueue.remove(task.id);
         } else if (task.x !== animal.x || task.y !== animal.y) {
@@ -219,7 +199,7 @@ function randomMove(animal, map, dur) {
 }
 
 export function designateHunt(game, animalId) {
-    const animal = game.wildlife.find(a => a.id === animalId);
+    const animal = game.entities.find(a => a.id === animalId && a.category === 'animal' && !a.tamed);
     if (!animal) return false;
 
     game.taskQueue.add({

@@ -274,7 +274,7 @@ export class Renderer {
 
         this.ctx.imageSmoothingEnabled = !this.skinManager.isActive;
 
-        const { map, camera, colonists, wildlife, raiders, tamedAnimals, cursor } = game;
+        const { map, camera, colonists, entities, raiders, cursor } = game;
         const ctx = this.ctx;
         const cw = this.charWidth;
         const ch = this.charHeight;
@@ -309,22 +309,12 @@ export class Renderer {
         entityMap.clear();
         const movingEntities = this._movingEntities;
         movingEntities.length = 0;
-        for (const a of wildlife) {
-            if (a.hp <= 0) continue;
-            if (isEntityMoving(a)) {
-                movingEntities.push({ entity: a, char: a.char, color: a.color, type: a.type });
+        for (const e of entities) {
+            if (e.hp <= 0) continue;
+            if (isEntityMoving(e)) {
+                movingEntities.push({ entity: e, char: e.char, color: e.color, type: e.type });
             } else {
-                entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
-            }
-        }
-        if (tamedAnimals) {
-            for (const a of tamedAnimals) {
-                if (a.hp <= 0) continue;
-                if (isEntityMoving(a)) {
-                    movingEntities.push({ entity: a, char: a.char, color: a.color, type: a.type });
-                } else {
-                    entityMap.set(a.y * CONFIG.MAP_WIDTH + a.x, { char: a.char, color: a.color, type: a.type });
-                }
+                entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: e.type });
             }
         }
         if (game.waves) {
@@ -334,16 +324,6 @@ export class Renderer {
                     movingEntities.push({ entity: e, char: e.char, color: e.color, type: 'wave_enemy' });
                 } else {
                     entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy' });
-                }
-            }
-        }
-        if (game.summons) {
-            for (const s of game.summons) {
-                if (s.hp <= 0) continue;
-                if (isEntityMoving(s)) {
-                    movingEntities.push({ entity: s, char: s.char, color: s.color, type: s.type });
-                } else {
-                    entityMap.set(s.y * CONFIG.MAP_WIDTH + s.x, { char: s.char, color: s.color, type: s.type });
                 }
             }
         }

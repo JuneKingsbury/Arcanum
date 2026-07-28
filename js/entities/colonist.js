@@ -4,7 +4,7 @@ import { isPassable, getMoveCost } from '../world/map.js';
 import { moveEntity, computeMoveDuration } from '../systems/movement-lerp.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
-import { createSummon } from './summons.js';
+import { spawnSummon } from './summons.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 
 function applyQuality(item, colonist, ...statKeys) {
@@ -562,7 +562,7 @@ function applySpellEffect(colonist, spell, game) {
             let aoeDmg = spell.damage;
             const aoeSpellBonus = getEquipmentSpellBonus(colonist);
             if (aoeSpellBonus) aoeDmg = Math.floor(aoeDmg * (1 + aoeSpellBonus));
-            const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.wildlife.filter(w => w.hostile)];
+            const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile)];
             for (const h of allHostiles) {
                 if (h.hp <= 0) continue;
                 if (manhattanDist(target.x, target.y, h.x, h.y) <= spell.radius) {
@@ -604,10 +604,9 @@ function applySpellEffect(colonist, spell, game) {
         case 'summon': {
             const summonDef = SUMMON_TYPES[spell.summonType];
             if (!summonDef) break;
-            if (!game.summons) game.summons = [];
             const sx = colonist.x + (Math.random() > 0.5 ? 1 : -1);
             const sy = colonist.y + (Math.random() > 0.5 ? 1 : -1);
-            game.summons.push(createSummon(spell.summonType, sx, sy, colonist.id, game));
+            spawnSummon(spell.summonType, sx, sy, colonist.id, game);
             break;
         }
         case 'divination_modifier': {
@@ -1006,7 +1005,7 @@ function completeTask(colonist, task, game) {
         }
         case 'hunt': {
             if (task.targetAnimalId) {
-                const animal = game.wildlife.find(a => a.id === task.targetAnimalId);
+                const animal = game.entities.find(a => a.id === task.targetAnimalId && a.category === 'animal' && !a.tamed);
                 if (animal && animal.hp > 0) {
                     let huntDmg = colonist.weapon ? colonist.weapon.damage : 5;
                     for (const item of getEquippedItems(colonist)) {
@@ -1046,7 +1045,7 @@ function completeTask(colonist, task, game) {
         }
         case 'tame': {
             if (task.targetAnimalId) {
-                const wildAnimal = game.wildlife.find(a => a.id === task.targetAnimalId);
+                const wildAnimal = game.entities.find(a => a.id === task.targetAnimalId && a.category === 'animal' && !a.tamed);
                 const tamedDef = wildAnimal ? TAMED_ANIMALS[wildAnimal.type] : null;
                 if (tamedDef && tamedDef.dangerousTame) {
                     const result = attemptDangerousTame(game, colonist, task.targetAnimalId);
@@ -1309,7 +1308,8 @@ function findNearestHostile(colonist, game) {
     let nearest = null;
     let minDist = Infinity;
     const waveEnemies = game.waves ? game.waves.enemies : [];
-    for (const entity of [...game.wildlife, ...game.raiders, ...waveEnemies]) {
+    const hostileWild = game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile);
+    for (const entity of [...hostileWild, ...game.raiders, ...waveEnemies]) {
         if (entity.hp <= 0) continue;
         if (!entity.hostile && !waveEnemies.includes(entity)) continue;
         const dist = manhattanDist(colonist.x, colonist.y, entity.x, entity.y);

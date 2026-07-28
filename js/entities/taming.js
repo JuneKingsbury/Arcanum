@@ -3,36 +3,16 @@ import { colonistTakeDamage, addThought } from './colonist.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { isPassable } from '../world/map.js';
 import { moveEntity } from '../systems/movement-lerp.js';
-
-let nextTamedId = 1;
-
-export function syncTamedIdCounter(animals) {
-    const maxId = animals.reduce((max, a) => Math.max(max, a.id || 0), 0);
-    if (maxId >= nextTamedId) nextTamedId = maxId + 1;
-}
-
-export function createTamedAnimal(type, x, y) {
-    const def = TAMED_ANIMALS[type];
-    return {
-        id: nextTamedId++,
-        type,
-        x, y,
-        hp: def.hp,
-        maxHp: def.hp,
-        char: def.char,
-        color: def.color,
-        produceCooldown: def.produceRate || 0,
-        penX: x,
-        penY: y,
-    };
-}
+import { createTamedEntity } from './entity-factory.js';
 
 export function updateTamedAnimals(game) {
     if (!game.research.isResearched('beast_binding')) return;
 
-    for (const animal of game.tamedAnimals) {
+    const tamedAnimals = game.entities.filter(e => e.tamed);
+    for (const animal of tamedAnimals) {
         if (animal.onExpedition) continue;
         const def = TAMED_ANIMALS[animal.type];
+        if (!def) continue;
         if (def.produces) {
             animal.produceCooldown--;
             if (animal.produceCooldown <= 0) {
@@ -102,7 +82,7 @@ function wanderInPen(animal, pen, map, dur) {
 export function designateTame(game, wildAnimalId) {
     if (!game.research.isResearched('beast_binding')) return false;
 
-    const wildAnimal = game.wildlife.find(a => a.id === wildAnimalId);
+    const wildAnimal = game.entities.find(a => a.id === wildAnimalId && a.category === 'animal' && !a.tamed);
     if (!wildAnimal || wildAnimal.hp <= 0) return false;
 
     const animalDef = ANIMALS[wildAnimal.type];
@@ -132,8 +112,10 @@ export function designateTame(game, wildAnimalId) {
 }
 
 export function completeTame(game, wildAnimalId) {
-    const wildAnimal = game.wildlife.find(a => a.id === wildAnimalId);
-    if (!wildAnimal || wildAnimal.hp <= 0) return false;
+    const wildIdx = game.entities.findIndex(a => a.id === wildAnimalId && a.category === 'animal' && !a.tamed);
+    if (wildIdx === -1) return false;
+    const wildAnimal = game.entities[wildIdx];
+    if (wildAnimal.hp <= 0) return false;
 
     const tamedDef = TAMED_ANIMALS[wildAnimal.type];
     let spawnX = wildAnimal.x, spawnY = wildAnimal.y;
@@ -145,9 +127,9 @@ export function completeTame(game, wildAnimalId) {
         spawnY = pen.y;
     }
 
-    game.wildlife = game.wildlife.filter(a => a.id !== wildAnimalId);
-    const tamed = createTamedAnimal(wildAnimal.type, spawnX, spawnY);
-    game.tamedAnimals.push(tamed);
+    game.entities.splice(wildIdx, 1);
+    const tamed = createTamedEntity(wildAnimal.type, spawnX, spawnY);
+    game.entities.push(tamed);
     game.notifications.push({ text: `Tamed a ${wildAnimal.type}!`, tick: game.tick, type: 'success' });
     game.eventLog.add(game, `Tamed a ${wildAnimal.type}`, 'success', { type: 'position', x: spawnX, y: spawnY });
     game.story.checkMilestone('first_animal_tamed', game);
@@ -163,7 +145,7 @@ export function getTameChance(colonist, animalType) {
 }
 
 export function attemptDangerousTame(game, colonist, wildAnimalId) {
-    const wildAnimal = game.wildlife.find(a => a.id === wildAnimalId);
+    const wildAnimal = game.entities.find(a => a.id === wildAnimalId && a.category === 'animal' && !a.tamed);
     if (!wildAnimal || wildAnimal.hp <= 0) return 'fail';
 
     const tamedDef = TAMED_ANIMALS[wildAnimal.type];
@@ -189,7 +171,7 @@ function updateGuardWolf(animal, def, game) {
     const hostiles = [
         ...game.raiders.filter(r => r.hp > 0),
         ...(game.waves && game.waves.enemies ? game.waves.enemies.filter(e => e.hp > 0) : []),
-        ...game.wildlife.filter(w => w.hostile && w.hp > 0),
+        ...game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile && w.hp > 0),
     ];
 
     const dur = CONFIG.TICK_RATE / game.speed;

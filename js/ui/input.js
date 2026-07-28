@@ -646,11 +646,11 @@ export class InputHandler {
         const inRect = (e) => e.hp > 0 && e.x >= minX && e.x <= maxX && e.y >= minY && e.y <= maxY;
 
         const colonists = this.game.colonists.filter(inRect);
-        const animals = this.game.wildlife.filter(inRect);
-        const tamed = (this.game.tamedAnimals || []).filter(inRect);
+        const animals = this.game.entities.filter(e => inRect(e) && e.category === 'animal' && !e.tamed);
+        const tamed = this.game.entities.filter(e => inRect(e) && e.tamed);
+        const summons = this.game.entities.filter(e => inRect(e) && e.category === 'summon');
         const raiders = this.game.raiders.filter(inRect);
         const waveEnemies = this.game.waves ? this.game.waves.enemies.filter(inRect) : [];
-        const summons = (this.game.summons || []).filter(inRect);
 
         if (colonists.length === 0 && animals.length === 0 && tamed.length === 0 && raiders.length === 0 && waveEnemies.length === 0 && summons.length === 0) return;
 
@@ -675,11 +675,12 @@ export class InputHandler {
 
     selectAt(pos) {
         const colonistsHere = this.game.colonists.filter(c => c.x === pos.x && c.y === pos.y && c.hp > 0);
-        const animalsHere = this.game.wildlife.filter(a => a.x === pos.x && a.y === pos.y && a.hp > 0);
-        const tamedHere = (this.game.tamedAnimals || []).filter(a => a.x === pos.x && a.y === pos.y && a.hp > 0);
-        const raidersHere = this.game.raiders.filter(r => r.x === pos.x && r.y === pos.y && r.hp > 0);
-        const waveEnemiesHere = this.game.waves ? this.game.waves.enemies.filter(e => e.x === pos.x && e.y === pos.y && e.hp > 0) : [];
-        const summonsHere = (this.game.summons || []).filter(s => s.x === pos.x && s.y === pos.y && s.hp > 0);
+        const atPos = (e) => e.x === pos.x && e.y === pos.y && e.hp > 0;
+        const animalsHere = this.game.entities.filter(e => atPos(e) && e.category === 'animal' && !e.tamed);
+        const tamedHere = this.game.entities.filter(e => atPos(e) && e.tamed);
+        const summonsHere = this.game.entities.filter(e => atPos(e) && e.category === 'summon');
+        const raidersHere = this.game.raiders.filter(atPos);
+        const waveEnemiesHere = this.game.waves ? this.game.waves.enemies.filter(atPos) : [];
         const tile = this.game.map[pos.y][pos.x];
 
         if (colonistsHere.length > 0) {
