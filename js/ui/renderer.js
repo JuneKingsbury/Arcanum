@@ -819,9 +819,7 @@ export class Renderer {
             }
         }
 
-        if (game.settings.showOverlays) {
-            this.overlayRenderer.render(game, cw, ch, game.camera);
-        }
+        this.overlayRenderer.render(game, cw, ch, game.camera);
     }
 
     renderFps(fps) {

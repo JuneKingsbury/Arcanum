@@ -9,6 +9,8 @@ import { getRoleInfoHtml, getEffectInfoHtml } from '../entities/roles.js';
 import { installArcanePanel } from './ui-arcane.js';
 import { installResearchPanel } from './ui-research.js';
 
+const WEATHER_ICONS = { clear: '☀', rain: '☔', thunderstorm: '⛈', snow: '❄', blizzard: '❅', heatwave: '♨' };
+
 export class UI {
     constructor(game) {
         this.game = game;
@@ -310,7 +312,7 @@ export class UI {
             (manaStr ? `<span class="res" style="color:${power.hasPower() ? '#aa44ff' : '#ff6666'}">${manaStr}</span>` : '') +
             `<span class="sep">|</span>` +
             `<span class="info">${season}</span>` +
-            `<span class="info status-extra">${weather} ${temp}°</span>` +
+            `<span class="info status-extra">${this._getWeatherIcon()} ${weather} ${temp}°</span>` +
             `<span class="info">${timeStr}</span>` +
             `<span class="sep status-extra">|</span>` +
             `<span class="info status-extra">Pop:${alive}/${cap}</span>` +
@@ -325,6 +327,32 @@ export class UI {
         }
         const speedEl = document.getElementById('status-speed');
         if (speedEl && speedEl.textContent !== speed) speedEl.textContent = speed;
+    }
+
+    _getWeatherIcon() {
+        const weatherType = this.game.weather.currentWeather;
+        const sm = this.game.renderer.skinManager;
+        if (sm.isActive) {
+            const sprite = sm.getSprite('icons', weatherType);
+            if (sprite) {
+                if (!this._weatherIconCache) this._weatherIconCache = new Map();
+                if (this._weatherIconCacheSkin !== sm.activeSkin) {
+                    this._weatherIconCache.clear();
+                    this._weatherIconCacheSkin = sm.activeSkin;
+                }
+                let url = this._weatherIconCache.get(weatherType);
+                if (!url) {
+                    const c = document.createElement('canvas');
+                    c.width = sprite.width || sprite.naturalWidth || 16;
+                    c.height = sprite.height || sprite.naturalHeight || 16;
+                    c.getContext('2d').drawImage(sprite, 0, 0);
+                    url = c.toDataURL('image/png');
+                    this._weatherIconCache.set(weatherType, url);
+                }
+                return `<img src="${url}" style="width:12px;height:12px;vertical-align:middle;margin-right:2px">`;
+            }
+        }
+        return WEATHER_ICONS[weatherType] || '';
     }
 
     updateModeDisplay(input) {
@@ -1807,7 +1835,11 @@ export class UI {
 
         html += `<div class="settings-section"><div class="settings-section-title">Accessibility</div>`;
         html += this._settingsCheck('set-darken-pause', s.darkenOnPause, 'window.game.settings.darkenOnPause=this.checked;if(window.game.paused)document.getElementById("game").classList.toggle("paused",this.checked)', 'Darken screen when paused');
-        html += this._settingsCheck('set-always-toolbar', s.alwaysShowToolbar, 'window.game.settings.alwaysShowToolbar=this.checked;document.getElementById("touch-toolbar").style.display=this.checked?"flex":""', 'Always show mobile toolbar (button bar)');
+        html += `<div class="settings-row"><label for="set-toolbar-mode">Button bar:</label><select id="set-toolbar-mode" onchange="window.game.settings.toolbarMode=this.value;const tb=document.getElementById('touch-toolbar');if(this.value==='always')tb.style.display='flex';else if(this.value==='never')tb.style.display='none';else tb.style.display='';" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
+        for (const [val, label] of [['auto','Auto'],['always','Always'],['never','Never']]) {
+            html += `<option value="${val}"${(s.toolbarMode || 'auto') === val ? ' selected' : ''}>${label}</option>`;
+        }
+        html += `</select></div>`;
         html += this._settingsCheck('set-large-clicks', s.largeClickTargets, 'window.game.settings.largeClickTargets=this.checked;document.getElementById("game-container").classList.toggle("large-targets",this.checked)', 'Larger click targets (buttons & checkboxes)');
         html += this._settingsCheck('set-pause-focus', s.pauseOnFocusLoss, 'window.game.settings.pauseOnFocusLoss=this.checked', 'Pause when window loses focus');
         html += `<div class="settings-row"><label for="set-colorblind">Colorblind mode:</label><select id="set-colorblind" onchange="window.game.settings.colorblindMode=this.value;document.getElementById('game-container').setAttribute('data-colorblind',this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
@@ -1820,24 +1852,26 @@ export class UI {
             html += `<option value="${val}"${s.notificationDuration === parseInt(val) ? ' selected' : ''}>${label}</option>`;
         }
         html += `</select></div>`;
+        html += `<div class="settings-row"><label for="set-layout-mode">Layout mode:</label><select id="set-layout-mode" onchange="window.game.setLayoutMode(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
+        for (const [val, label] of [['auto','Auto (detect screen size)'],['separate','Separate'],['tabbed','Tabbed']]) {
+            html += `<option value="${val}"${s.layoutMode === val ? ' selected' : ''}>${label}</option>`;
+        }
+        html += `</select></div>`;
         html += `</div>`;
 
-        html += `<div class="settings-section"><div class="settings-section-title">Visual Effects</div>`;
-        html += this._settingsCheck('set-overlays', s.showOverlays, 'window.game.settings.showOverlays=this.checked', 'Master toggle: all combat/overlay effects');
+        html += `<div class="settings-section"><div class="settings-section-title">Effects & Performance</div>`;
+        html += this._settingsCheck('set-overlays', s.showOverlays, 'window.game.ui._toggleAllEffects(this.checked)', 'Master toggle: all combat/overlay effects');
+        html += this._settingsCheck('set-night', s.showNightLighting, 'window.game.settings.showNightLighting=this.checked', 'Show night lighting/darkness (High Performance Impact)');
+        html += this._settingsCheck('set-weather', s.showWeatherParticles, 'window.game.settings.showWeatherParticles=this.checked', 'Show weather particles');
         html += this._settingsCheck('set-damage-flash', s.showDamageFlash, 'window.game.settings.showDamageFlash=this.checked', 'Damage flash on hit');
         html += this._settingsCheck('set-screen-shake', s.enableScreenShake, 'window.game.settings.enableScreenShake=this.checked', 'Enable screen shake');
         html += this._settingsCheck('set-combat-particles', s.showCombatParticles, 'window.game.settings.showCombatParticles=this.checked', 'Combat/action particles (sparks, skulls)');
         html += this._settingsCheck('set-projectiles', s.showProjectiles, 'window.game.settings.showProjectiles=this.checked', 'Projectile trails (arrows, bolts)');
         html += this._settingsCheck('set-progress-bars', s.showProgressBars, 'window.game.settings.showProgressBars=this.checked', 'Progress & health bars');
         html += this._settingsCheck('set-portal-path', s.showPortalPath, 'window.game.settings.showPortalPath=this.checked', 'Portal path highlighting');
-        html += `</div>`;
-
-        html += `<div class="settings-section"><div class="settings-section-title">Performance</div>`;
-        html += this._settingsCheck('set-night', s.showNightLighting, 'window.game.settings.showNightLighting=this.checked', 'Show night lighting/darkness');
-        html += this._settingsCheck('set-weather', s.showWeatherParticles, 'window.game.settings.showWeatherParticles=this.checked', 'Show weather particles (future feature)');
         html += this._settingsCheck('set-minimap', s.showMinimap, 'window.game.settings.showMinimap=this.checked;document.getElementById("minimap-container").style.display=this.checked?"":"none"', 'Show minimap');
+        html += this._settingsCheck('set-dither', RENDER_CONFIG.terrainDithering, 'window.RENDER_CONFIG.terrainDithering=this.checked', 'Terrain dithering (sprite mode only) (High Performance Impact)');
         html += this._settingsCheck('set-fps', s.showFps, 'window.game.settings.showFps=this.checked', 'Show FPS counter (top-right of game grid)');
-        html += this._settingsCheck('set-dither', RENDER_CONFIG.terrainDithering, 'window.RENDER_CONFIG.terrainDithering=this.checked', 'Terrain dithering (sprite mode only)');
         html += `</div>`;
 
         html += `<div class="settings-section">`;
@@ -1917,7 +1951,29 @@ export class UI {
     }
 
     _settingsCheck(id, checked, onchange, label) {
-        return `<div class="settings-row"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''} onchange="${onchange}"><label for="${id}">${label}</label></div>`;
+        const safeHandler = onchange.replace(/"/g, '&quot;');
+        return `<div class="settings-row"><input type="checkbox" id="${id}" ${checked ? 'checked' : ''} onchange="${safeHandler}"><label for="${id}">${label}</label></div>`;
+    }
+
+    _toggleAllEffects(on) {
+        const s = this.game.settings;
+        s.showOverlays = on;
+        s.showNightLighting = on;
+        s.showWeatherParticles = on;
+        s.showDamageFlash = on;
+        s.enableScreenShake = on;
+        s.showCombatParticles = on;
+        s.showProjectiles = on;
+        s.showProgressBars = on;
+        s.showPortalPath = on;
+        s.showMinimap = on;
+        window.RENDER_CONFIG.terrainDithering = on;
+        document.getElementById('minimap-container').style.display = on ? '' : 'none';
+        const ids = ['set-night','set-weather','set-damage-flash','set-screen-shake','set-combat-particles','set-projectiles','set-progress-bars','set-portal-path','set-minimap','set-dither'];
+        for (const id of ids) {
+            const el = document.getElementById(id);
+            if (el) el.checked = on;
+        }
     }
 
     updateTileTooltip(x, y, e) {

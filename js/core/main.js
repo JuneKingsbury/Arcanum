@@ -59,7 +59,7 @@ class Game {
             activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
             demoMode: false,
             darkenOnPause: true,
-            alwaysShowToolbar: false,
+            toolbarMode: 'auto',
             largeClickTargets: false,
             pauseOnFocusLoss: true,
             enableScreenShake: true,
@@ -71,6 +71,7 @@ class Game {
             showProgressBars: true,
             showPortalPath: true,
             craftTargets: {},
+            layoutMode: 'auto',
         };
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
@@ -222,6 +223,33 @@ class Game {
         this.settings.activeSkin = skinName;
         localStorage.setItem('convocation_skin', skinName);
         this.renderer._ditherCache.clear();
+    }
+
+    setLayoutMode(mode) {
+        if (mode === 'mobile') mode = 'tabbed';
+        else if (mode === 'desktop') mode = 'separate';
+        this.settings.layoutMode = mode;
+        const body = document.body;
+        body.classList.remove('force-tabbed', 'force-separate');
+        if (mode === 'tabbed') body.classList.add('force-tabbed');
+        else if (mode === 'separate') body.classList.add('force-separate');
+
+        const shouldTab = mode === 'tabbed' || (mode === 'auto' && window.innerWidth <= 768);
+        const footer = document.getElementById('game-footer');
+        const isTabbed = footer && footer.classList.contains('tabbed');
+        if (shouldTab && !isTabbed) setFooterMode(true);
+        else if (!shouldTab && isTabbed) setFooterMode(false);
+
+        const toolbar = document.getElementById('touch-toolbar');
+        if (toolbar) {
+            const tm = this.settings.toolbarMode || 'auto';
+            if (tm === 'always') toolbar.style.display = 'flex';
+            else if (tm === 'never') toolbar.style.display = 'none';
+            else toolbar.style.display = '';
+        }
+
+        currentZoomFont = null;
+        requestAnimationFrame(() => fitGameFont());
     }
 
     gameLoop(timestamp) {
@@ -1138,6 +1166,9 @@ class Game {
         if (loadGame(this)) {
             this.notifications.push({ text: 'Game loaded!', tick: this.tick, type: 'success' });
             this.ui.updateModeDisplay(this.input);
+            if (this.settings.layoutMode && this.settings.layoutMode !== 'auto') {
+                this.setLayoutMode(this.settings.layoutMode);
+            }
         }
     }
 
@@ -1355,7 +1386,8 @@ function fitGameFont() {
     const availHeight = gameArea.clientHeight - 4;
 
     if (currentZoomFont === null) {
-        const isSmall = window.innerWidth <= 768;
+        const layoutMode = window.game?.settings?.layoutMode || 'auto';
+        const isSmall = layoutMode === 'tabbed' || (layoutMode === 'auto' && window.innerWidth <= 768);
         currentZoomFont = isSmall ? 8 : 14;
     }
 
@@ -1711,11 +1743,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-fps').checked = false;
         document.getElementById('start-dither').checked = true;
         document.getElementById('start-darken-pause').checked = true;
-        document.getElementById('start-always-toolbar').checked = false;
+        document.getElementById('start-toolbar-mode').value = 'auto';
         document.getElementById('start-large-clicks').checked = false;
         document.getElementById('start-pause-focus').checked = true;
         document.getElementById('start-colorblind').value = 'none';
         document.getElementById('start-notif-dur').value = '100';
+        document.getElementById('start-layout-mode').value = 'auto';
     });
 
     // Shared transition from start screen into active game
@@ -1730,9 +1763,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fitGameFont();
             const game = new Game();
             setup(game);
-            if (game.settings.alwaysShowToolbar) {
-                document.getElementById('touch-toolbar').style.display = 'flex';
-            }
+            const tm = game.settings.toolbarMode || (game.settings.alwaysShowToolbar ? 'always' : 'auto');
+            game.settings.toolbarMode = tm;
+            const toolbar = document.getElementById('touch-toolbar');
+            if (tm === 'always') toolbar.style.display = 'flex';
+            else if (tm === 'never') toolbar.style.display = 'none';
             if (game.settings.largeClickTargets) {
                 document.getElementById('game-container').classList.add('large-targets');
             }
@@ -1768,11 +1803,12 @@ document.addEventListener('DOMContentLoaded', () => {
             activeSkin: document.getElementById('start-skin').value || 'ascii',
             demoMode: document.getElementById('start-demo-mode').checked,
             darkenOnPause: document.getElementById('start-darken-pause').checked,
-            alwaysShowToolbar: document.getElementById('start-always-toolbar').checked,
+            toolbarMode: document.getElementById('start-toolbar-mode').value,
             largeClickTargets: document.getElementById('start-large-clicks').checked,
             pauseOnFocusLoss: document.getElementById('start-pause-focus').checked,
             colorblindMode: document.getElementById('start-colorblind').value,
             notificationDuration: parseInt(document.getElementById('start-notif-dur').value) || 100,
+            layoutMode: document.getElementById('start-layout-mode').value,
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
@@ -1781,6 +1817,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.assign(game.settings, startSettings);
             if (startSettings.colorblindMode !== 'none') {
                 document.getElementById('game-container').setAttribute('data-colorblind', startSettings.colorblindMode);
+            }
+            if (startSettings.layoutMode !== 'auto') {
+                game.setLayoutMode(startSettings.layoutMode);
             }
         });
     });
@@ -1851,6 +1890,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fitGameFont();
         const footer = document.getElementById('game-footer');
         if (!footer) return;
+        const layoutMode = window.game?.settings?.layoutMode || 'auto';
+        if (layoutMode !== 'auto') return;
         const isTabbed = footer.classList.contains('tabbed');
         const shouldTab = window.innerWidth <= 768;
         if (shouldTab && !isTabbed) setFooterMode(true);

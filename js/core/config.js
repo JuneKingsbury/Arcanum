@@ -2361,6 +2361,7 @@ export const RENDER_CONFIG = {
     healthBarGreenThreshold: 0.5,    // above this % HP → green bar
     healthBarYellowThreshold: 0.25,  // above this % HP → yellow bar (below → red)
     healthBarColors: { green: '#00ff00', yellow: '#ffaa00', red: '#ff3333' },
+    buildGridColor: 'rgba(255, 255, 255, 0.12)',
 };
 
 // Visual effects for combat, portals, and turret shots. Used by renderer, colonist, combat, waves, power.

@@ -107,27 +107,31 @@
                 </div>
             </div>
             <div class="settings-section">
-                <div class="settings-section-title">Visual Effects</div>
-                <div class="settings-row"><input type="checkbox" id="start-overlays" checked><label for="start-overlays">Master toggle: all combat/overlay effects</label></div>
+                <div class="settings-section-title">Effects & Performance</div>
+                <div class="settings-row"><input type="checkbox" id="start-overlays" checked onchange="document.querySelectorAll('#start-night,#start-weather,#start-damage-flash,#start-screen-shake,#start-combat-particles,#start-projectiles,#start-progress-bars,#start-portal-path,#start-minimap,#start-dither').forEach(el=>el.checked=this.checked)"><label for="start-overlays">Master toggle: all combat/overlay effects</label></div>
+                <div class="settings-row"><input type="checkbox" id="start-night" checked><label for="start-night">Show night lighting/darkness (High Performance Impact)</label></div>
+                <div class="settings-row"><input type="checkbox" id="start-weather" checked><label for="start-weather">Show weather particles</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-damage-flash" checked><label for="start-damage-flash">Damage flash on hit</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-screen-shake" checked><label for="start-screen-shake">Enable screen shake</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-combat-particles" checked><label for="start-combat-particles">Combat/action particles (sparks, skulls)</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-projectiles" checked><label for="start-projectiles">Projectile trails (arrows, bolts)</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-progress-bars" checked><label for="start-progress-bars">Progress & health bars</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-portal-path" checked><label for="start-portal-path">Portal path highlighting</label></div>
-            </div>
-            <div class="settings-section">
-                <div class="settings-section-title">Performance</div>
-                <div class="settings-row"><input type="checkbox" id="start-night" checked><label for="start-night">Show night lighting/darkness</label></div>
-                <div class="settings-row"><input type="checkbox" id="start-weather" checked><label for="start-weather">Show weather particles (future feature)</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-minimap" checked><label for="start-minimap">Show minimap</label></div>
+                <div class="settings-row"><input type="checkbox" id="start-dither" checked><label for="start-dither">Terrain dithering (sprite mode only) (High Performance Impact)</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-fps"><label for="start-fps">Show FPS counter (top-right of game grid)</label></div>
-                <div class="settings-row"><input type="checkbox" id="start-dither" checked><label for="start-dither">Terrain dithering (sprite mode only)</label></div>
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">Accessibility</div>
                 <div class="settings-row"><input type="checkbox" id="start-darken-pause" checked><label for="start-darken-pause">Darken screen when paused</label></div>
-                <div class="settings-row"><input type="checkbox" id="start-always-toolbar"><label for="start-always-toolbar">Always show mobile toolbar (button bar)</label></div>
+                <div class="settings-row">
+                    <label for="start-toolbar-mode">Button bar:</label>
+                    <select id="start-toolbar-mode" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">
+                        <option value="auto" selected>Auto</option>
+                        <option value="always">Always</option>
+                        <option value="never">Never</option>
+                    </select>
+                </div>
                 <div class="settings-row"><input type="checkbox" id="start-large-clicks"><label for="start-large-clicks">Larger click targets (buttons & checkboxes)</label></div>
                 <div class="settings-row"><input type="checkbox" id="start-pause-focus" checked><label for="start-pause-focus">Pause when window loses focus</label></div>
                 <div class="settings-row">
@@ -146,6 +150,14 @@
                         <option value="100" selected>Normal (100 ticks)</option>
                         <option value="200">Long (200 ticks)</option>
                         <option value="500">Persistent (500 ticks)</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label for="start-layout-mode">Layout mode:</label>
+                    <select id="start-layout-mode" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">
+                        <option value="auto" selected>Auto (detect screen size)</option>
+                        <option value="separate">Separate</option>
+                        <option value="tabbed">Tabbed</option>
                     </select>
                 </div>
             </div>

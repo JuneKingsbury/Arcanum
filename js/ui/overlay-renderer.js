@@ -10,6 +10,8 @@ export class OverlayRenderer {
         this.canvas.style.pointerEvents = 'none';
         container.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d', { alpha: true });
+        this._weatherParticles = [];
+        this._lastWeatherTime = 0;
     }
 
     resize(width, height) {
@@ -25,6 +27,20 @@ export class OverlayRenderer {
         const ch = charHeight;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        if (game.input && game.input.mode === 'build') {
+            this._renderBuildGrid(ctx, cw, ch, this.canvas.width, this.canvas.height);
+        }
+
+        if (game.settings.showWeatherParticles && game.weather) {
+            const now = performance.now();
+            const dt = this._lastWeatherTime ? Math.min((now - this._lastWeatherTime) / 1000, 0.1) : 0.016;
+            this._lastWeatherTime = now;
+            this._updateWeatherParticles(game.weather.currentWeather, this.canvas.width, this.canvas.height, dt);
+            this._renderWeatherParticles(ctx);
+        } else if (this._weatherParticles.length > 0) {
+            this._weatherParticles.length = 0;
+        }
+
         if (game.radiusHighlight && game.selectedColonist) {
             const c = game.selectedColonist;
             if (c.artifact && !c.artifactBroken && c.artifact.pedestal?.radius && c.artifact.pedestal.radius !== 'global') {
@@ -36,7 +52,7 @@ export class OverlayRenderer {
             this._renderRadiusHighlight(ctx, game.radiusHighlight, cw, ch, camera);
         }
 
-        if (!game.overlays || game.overlays.length === 0) return;
+        if (!game.settings.showOverlays || !game.overlays || game.overlays.length === 0) return;
 
         const s = game.settings;
         for (const overlay of game.overlays) {
@@ -58,6 +74,102 @@ export class OverlayRenderer {
                     break;
             }
         }
+    }
+
+    _renderBuildGrid(ctx, cw, ch, canvasWidth, canvasHeight) {
+        ctx.save();
+        ctx.strokeStyle = RENDER_CONFIG.buildGridColor;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let x = 0; x <= canvasWidth; x += cw) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvasHeight);
+        }
+        for (let y = 0; y <= canvasHeight; y += ch) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvasWidth, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    _updateWeatherParticles(weatherType, canvasWidth, canvasHeight, dt) {
+        const targetCount = this._getParticleTarget(weatherType);
+
+        while (this._weatherParticles.length < targetCount) {
+            this._weatherParticles.push(this._spawnWeatherParticle(weatherType, canvasWidth, canvasHeight, true));
+        }
+        if (this._weatherParticles.length > targetCount) {
+            this._weatherParticles.length = targetCount;
+        }
+
+        for (let i = this._weatherParticles.length - 1; i >= 0; i--) {
+            const p = this._weatherParticles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            if (p.y > canvasHeight || p.x > canvasWidth || p.x < -20) {
+                this._weatherParticles[i] = this._spawnWeatherParticle(weatherType, canvasWidth, canvasHeight, false);
+            }
+        }
+    }
+
+    _getParticleTarget(weatherType) {
+        switch (weatherType) {
+            case 'rain': return 120;
+            case 'thunderstorm': return 180;
+            case 'snow': return 60;
+            case 'blizzard': return 100;
+            default: return 0;
+        }
+    }
+
+    _spawnWeatherParticle(weatherType, canvasWidth, canvasHeight, randomY) {
+        const x = Math.random() * (canvasWidth + 40) - 20;
+        const y = randomY ? Math.random() * canvasHeight : -(Math.random() * 20);
+
+        switch (weatherType) {
+            case 'rain':
+            case 'thunderstorm':
+                return { x, y, vx: 30, vy: 250 + Math.random() * 100, type: 'rain' };
+            case 'snow':
+                return { x, y, vx: 5 + Math.random() * 10, vy: 30 + Math.random() * 20, size: 1.5 + Math.random() * 1.5, type: 'snow' };
+            case 'blizzard':
+                return { x, y, vx: 40 + Math.random() * 30, vy: 50 + Math.random() * 30, size: 2 + Math.random() * 2, type: 'snow' };
+            default:
+                return { x, y, vx: 0, vy: 0, size: 0, type: 'none' };
+        }
+    }
+
+    _renderWeatherParticles(ctx) {
+        if (this._weatherParticles.length === 0) return;
+        ctx.save();
+        let hasRain = false;
+        let hasSnow = false;
+        for (const p of this._weatherParticles) {
+            if (p.type === 'rain') hasRain = true;
+            else if (p.type === 'snow') hasSnow = true;
+        }
+        if (hasRain) {
+            ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (const p of this._weatherParticles) {
+                if (p.type !== 'rain') continue;
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + 2, p.y + 8);
+            }
+            ctx.stroke();
+        }
+        if (hasSnow) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            for (const p of this._weatherParticles) {
+                if (p.type !== 'snow') continue;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
     }
 
     _renderProgressBar(ctx, overlay, cw, ch, camera) {
@@ -94,8 +206,6 @@ export class OverlayRenderer {
         ctx.restore();
     }
 
-    // Renders a 2px-tall HP bar above the entity tile. Color auto-selects based
-    // on HP percentage: green (>50%), yellow (25-50%), red (<25%).
     _renderHealthBar(ctx, overlay, cw, ch, camera) {
         const sx = (overlay.x - camera.x) * cw;
         const sy = (overlay.y - camera.y) * ch;
@@ -141,12 +251,9 @@ export class OverlayRenderer {
         ctx.restore();
     }
 
-    // Renders a Manhattan-distance radius highlight (filled area + border outline).
-    // Used when selecting pedestals, turrets, or heaters to visualize their effect range.
     _renderRadiusHighlight(ctx, highlight, cw, ch, camera) {
         const { x, y, radius, color } = highlight;
         ctx.save();
-        // Fill all tiles within Manhattan distance
         ctx.fillStyle = color;
         for (let dy = -radius; dy <= radius; dy++) {
             for (let dx = -radius; dx <= radius; dx++) {
@@ -157,9 +264,6 @@ export class OverlayRenderer {
                 ctx.fillRect(sx, sy, cw, ch);
             }
         }
-        // Draw border segments only on edges where the adjacent cell in that direction
-        // falls outside the radius — this produces a clean diamond-shaped outline.
-        // Appending 'cc' (80% alpha) to the hex color gives a semi-transparent border.
         const borderColor = color.slice(0, 7) + 'cc';
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 1.5;
