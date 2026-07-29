@@ -34,6 +34,7 @@ import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
 import { StorySystem } from '../systems/story.js';
+import { SoundManager } from './sound.js';
 
 class Game {
     constructor() {
@@ -72,6 +73,8 @@ class Game {
             showPortalPath: true,
             craftTargets: {},
             layoutMode: 'auto',
+            musicVolume: 70,
+            sfxVolume: 80,
         };
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
@@ -302,6 +305,10 @@ class Game {
     simulationTick() {
         this.tick++;
         this.timeOfDay = this.tick % CONFIG.TICKS_PER_DAY;
+
+        if (this.tick % 30 === 0 && window.soundManager) {
+            window.soundManager.updateMusicState(this);
+        }
 
         const hostileEntities = [];
         for (const e of this.entities) { if (e.hostile && e.hp > 0 && !e.tamed) hostileEntities.push(e); }
@@ -976,6 +983,7 @@ class Game {
                 teleportEntity(colonist, pos.x, pos.y);
                 colonist.path = [];
                 this.combatEffects.push({ x: pos.x, y: pos.y, char: COMBAT_VISUALS.spellTeleportChar, color: COMBAT_VISUALS.spellTeleportColor, ttl: 3 });
+                window.soundManager?.playSFX('spell_teleport');
                 this.notifications.push({ text: `${colonist.name} warped!`, tick: this.tick, type: 'success' });
                 break;
             }
@@ -996,6 +1004,7 @@ class Game {
                         this.combatEffects.push({ x: tx, y: ty, char: COMBAT_VISUALS.spellGrowthChar, color: COMBAT_VISUALS.spellGrowthColor, ttl: 4 });
                     }
                 }
+                window.soundManager?.playSFX('spell_growth');
                 this.notifications.push({ text: `${colonist.name} cast ${spell.name} — ${boosted} crops boosted!`, tick: this.tick, type: 'success' });
                 break;
             }
@@ -1016,6 +1025,7 @@ class Game {
                         this.combatEffects.push({ x: tx, y: ty, char: COMBAT_VISUALS.spellTerraformChar, color: COMBAT_VISUALS.spellTerraformColor, ttl: 4 });
                     }
                 }
+                window.soundManager?.playSFX('spell_terraform');
                 this.notifications.push({ text: `${colonist.name} cast ${spell.name} — ${changed} tiles transformed!`, tick: this.tick, type: 'success' });
                 break;
             }
@@ -1128,6 +1138,7 @@ class Game {
         this.notifications.push({ text: `${def.name} animated!`, tick: this.tick, type: 'success' });
         this.eventLog.add(this, `Crafted a ${def.name}`, 'success', { type: 'position', x, y });
         this.combatEffects.push({ x, y, char: COMBAT_VISUALS.golemActivateChar, color: COMBAT_VISUALS.golemActivateColor, ttl: COMBAT_VISUALS.golemActivateTtl });
+        window.soundManager?.playSFX('golem_activate');
     }
 
     findBuilding(type) {
@@ -1749,6 +1760,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-colorblind').value = 'none';
         document.getElementById('start-notif-dur').value = '100';
         document.getElementById('start-layout-mode').value = 'auto';
+        document.getElementById('start-music-vol').value = 70;
+        document.getElementById('start-music-vol-val').textContent = '70';
+        document.getElementById('start-sfx-vol').value = 80;
+        document.getElementById('start-sfx-vol-val').textContent = '80';
     });
 
     // Shared transition from start screen into active game
@@ -1759,10 +1774,14 @@ document.addEventListener('DOMContentLoaded', () => {
         initPanelOverlay();
         initResizeHandles(fitGameFont);
         if (window.innerWidth <= 768) setFooterMode(true);
+        SoundManager.init();
+        window.soundManager = SoundManager;
         requestAnimationFrame(() => {
             fitGameFont();
             const game = new Game();
             setup(game);
+            SoundManager.setMusicVolume(game.settings.musicVolume);
+            SoundManager.setSFXVolume(game.settings.sfxVolume);
             const tm = game.settings.toolbarMode || (game.settings.alwaysShowToolbar ? 'always' : 'auto');
             game.settings.toolbarMode = tm;
             const toolbar = document.getElementById('touch-toolbar');
@@ -1809,6 +1828,8 @@ document.addEventListener('DOMContentLoaded', () => {
             colorblindMode: document.getElementById('start-colorblind').value,
             notificationDuration: parseInt(document.getElementById('start-notif-dur').value) || 100,
             layoutMode: document.getElementById('start-layout-mode').value,
+            musicVolume: parseInt(document.getElementById('start-music-vol').value) || 70,
+            sfxVolume: parseInt(document.getElementById('start-sfx-vol').value) || 80,
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);

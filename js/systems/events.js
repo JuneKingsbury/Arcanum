@@ -305,6 +305,7 @@ export class EventSystem {
             game.map[fireY][fireX].onFire = true;
             game.map[fireY][fireX].fireTimer = FIRE_CONFIG.initialLifespan;
             if (game.mapIndex) game.mapIndex.addFire(fireX, fireY);
+            window.soundManager?.playSFX('fire_ignite');
             game.notifications.push({ text: 'Fire has broken out!', tick: game.tick, type: 'danger' });
             game.eventLog.add(game, 'Fire has broken out!', 'danger', { type: 'position', x: fireX, y: fireY });
             const t = THOUGHTS.fire_panic;
@@ -410,6 +411,7 @@ export function updateFires(game) {
                     neighbor.fireTimer = FIRE_CONFIG.spreadTimerMin + Math.floor(Math.random() * (FIRE_CONFIG.spreadTimerMax - FIRE_CONFIG.spreadTimerMin));
                     game.mapIndex.addFire(nx, ny);
                     game.combatEffects.push({ x: nx, y: ny, char: COMBAT_VISUALS.fireIgniteChar, color: COMBAT_VISUALS.fireIgniteColor, ttl: COMBAT_VISUALS.fireIgniteTtl });
+                    window.soundManager?.playSFX('fire_ignite');
                 }
             }
         }

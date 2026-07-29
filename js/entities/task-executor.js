@@ -93,6 +93,7 @@ export function completeTask(colonist, task, game) {
             applyThought(colonist, 'built_something', game.tick);
             game.story.checkMilestone('first_building_placed', game);
             game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.buildCompleteChar, color: COMBAT_VISUALS.buildCompleteColor, ttl: COMBAT_VISUALS.buildCompleteTtl });
+            window.soundManager?.playSFX('build_complete');
             break;
         }
         case 'chop':
@@ -112,6 +113,7 @@ export function completeTask(colonist, task, game) {
                     tile.terrain = 'dirt';
                     tile.passable = true;
                     game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.mineDustChar, color: COMBAT_VISUALS.mineDustColor, ttl: COMBAT_VISUALS.mineDustTtl });
+                    window.soundManager?.playSFX('mine_hit');
                 }
             }
             tile.designation = null;
@@ -137,6 +139,7 @@ export function completeTask(colonist, task, game) {
                 tile.zone.growth = 0;
                 applyThought(colonist, 'harvested', game.tick);
                 game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.harvestChar, color: COMBAT_VISUALS.harvestColor, ttl: COMBAT_VISUALS.harvestTtl });
+                window.soundManager?.playSFX('harvest');
             }
             break;
         }
@@ -181,6 +184,7 @@ export function completeTask(colonist, task, game) {
                 }
                 applyThought(colonist, 'crafted', game.tick);
                 game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.craftCompleteChar, color: COMBAT_VISUALS.craftCompleteColor, ttl: COMBAT_VISUALS.craftCompleteTtl });
+                window.soundManager?.playSFX('craft_complete');
             }
             break;
         }
@@ -239,6 +243,7 @@ export function completeTask(colonist, task, game) {
                 game.eventLog.add(game, `Research unlocked: ${name}`, 'success', null);
                 game.story.checkMilestone(`research_${completedKey}`, game);
                 game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.researchCompleteChar, color: COMBAT_VISUALS.researchCompleteColor, ttl: COMBAT_VISUALS.researchCompleteTtl });
+                window.soundManager?.playSFX('research_complete');
             }
             let tomeRate = game.research.activeResearch
                 ? MAGIC_STUDY_CONFIG.studyTicksPerProgress

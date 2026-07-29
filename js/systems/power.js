@@ -190,6 +190,7 @@ export class PowerSystem {
                 tile._turretLastAttackTick = game.tick;
                 target.hp -= damage;
                 target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+                window.soundManager?.playSFX('turret_fire');
                 const color = t.type === 'void_turret' ? COMBAT_VISUALS.shotColorVoid : COMBAT_VISUALS.shotColorArcane;
                 const dist = manhattanDist(t.x, t.y, target.x, target.y);
                 const duration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;

@@ -126,6 +126,7 @@ export class CombatSystem {
             const raider = game.raiders[i];
             if (raider.hp <= 0) {
                 game.combatEffects.push({ x: raider.x, y: raider.y, char: COMBAT_VISUALS.deathChar, color: COMBAT_VISUALS.deathColor, ttl: COMBAT_VISUALS.deathTtl });
+                window.soundManager?.playSFX('enemy_death');
                 if (raider.loot) {
                     for (const drop of raider.loot) {
                         if (Math.random() < (drop.chance || 1)) {
@@ -133,6 +134,7 @@ export class CombatSystem {
                         }
                     }
                     game.combatEffects.push({ x: raider.x, y: raider.y, char: COMBAT_VISUALS.lootDropChar, color: COMBAT_VISUALS.lootDropColor, ttl: COMBAT_VISUALS.lootDropTtl });
+                    window.soundManager?.playSFX('loot_drop');
                 }
                 game.raiders.splice(i, 1);
                 continue;

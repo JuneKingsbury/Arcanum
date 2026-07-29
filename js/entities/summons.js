@@ -12,6 +12,7 @@ export function spawnSummon(summonType, x, y, ownerId, game) {
     if (!summon) return null;
     emitSparkles(game, x, y, def.color);
     game.combatEffects.push({ x, y, char: COMBAT_VISUALS.summonArriveChar, color: COMBAT_VISUALS.summonArriveColor, ttl: COMBAT_VISUALS.summonArriveTtl });
+    window.soundManager?.playSFX('summon_arrival');
     game.entities.push(summon);
     return summon;
 }

@@ -74,6 +74,7 @@ export class WaveSystem {
         game.notifications.push({ text: `Wave ${this.currentWave} begins! Defend the Void Nexus!`, tick: game.tick, type: 'danger' });
         game.eventLog.add(game, `Wave ${this.currentWave} started — ${this.enemiesToSpawn} enemies incoming!`, 'danger', { type: 'position', ...nexus });
         game.overlays.push({ type: 'screenFlash', color: COMBAT_VISUALS.waveAlertColor, alpha: 0.2, ttl: COMBAT_VISUALS.waveAlertTtl });
+        window.soundManager?.playSFX('wave_alert');
 
         if (game.settings.autoPauseHostile && !game.paused) {
             game.togglePause();
@@ -98,6 +99,7 @@ export class WaveSystem {
             if (enemy.hp <= 0) {
                 game.combatEffects.push({ x: enemy.x, y: enemy.y, char: COMBAT_VISUALS.deathChar, color: COMBAT_VISUALS.deathColor, ttl: COMBAT_VISUALS.deathTtl });
                 game.combatEffects.push({ x: enemy.x, y: enemy.y, char: COMBAT_VISUALS.lootDropChar, color: COMBAT_VISUALS.lootDropColor, ttl: COMBAT_VISUALS.lootDropTtl });
+                window.soundManager?.playSFX('enemy_death');
                 game.resources.add({ void_essence: WAVE_CONFIG.essencePerKill });
                 if (enemy.loot) {
                     for (const drop of enemy.loot) {

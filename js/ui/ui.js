@@ -1813,6 +1813,16 @@ export class UI {
         html += `</div>`;
         html += `</div>`;
 
+        html += `<div class="settings-section"><div class="settings-section-title">Audio</div>`;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-music-vol">Music Volume: <span id="music-vol-val">${s.musicVolume}</span></label>`;
+        html += `<input type="range" id="set-music-vol" min="0" max="100" value="${s.musicVolume}" style="width:80px" oninput="document.getElementById('music-vol-val').textContent=this.value;window.game.settings.musicVolume=parseInt(this.value);if(window.soundManager)window.soundManager.setMusicVolume(parseInt(this.value))">`;
+        html += `</div>`;
+        html += `<div class="settings-row">`;
+        html += `<label for="set-sfx-vol">SFX Volume: <span id="sfx-vol-val">${s.sfxVolume}</span></label>`;
+        html += `<input type="range" id="set-sfx-vol" min="0" max="100" value="${s.sfxVolume}" style="width:80px" oninput="document.getElementById('sfx-vol-val').textContent=this.value;window.game.settings.sfxVolume=parseInt(this.value);if(window.soundManager)window.soundManager.setSFXVolume(parseInt(this.value))">`;
+        html += `</div></div>`;
+
         html += `<div class="settings-section"><div class="settings-section-title">Gameplay</div>`;
         html += this._settingsCheck('set-pause-hostile', s.autoPauseHostile, 'window.game.settings.autoPauseHostile=this.checked', 'Auto-pause on hostile event (raids)');
         html += this._settingsCheck('set-pause-event', s.autoPauseEvent, 'window.game.settings.autoPauseEvent=this.checked', 'Auto-pause on choice events (wanderers, caravans)');
