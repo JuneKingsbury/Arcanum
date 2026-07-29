@@ -140,6 +140,40 @@ class EquipmentEditor {
                 </div>
             </div>
 
+            <div class="fe-section-title" id="eq-ranged-section" style="display:none;">Ranged</div>
+            <div id="eq-ranged-fields" style="display:none;">
+                <div class="fe-row">
+                    <div class="fe-field" style="flex:0 0 auto;">
+                        <label>Ranged Weapon</label>
+                        <input type="checkbox" id="eq-ranged" style="width:auto;margin-top:6px;">
+                    </div>
+                    <div class="fe-field">
+                        <label>Range</label>
+                        <input type="number" id="eq-range" value="5" min="1" max="20">
+                    </div>
+                    <div class="fe-field" style="flex:0 0 60px;">
+                        <label>Proj Char</label>
+                        <input type="text" id="eq-projChar" maxlength="2" placeholder="·">
+                    </div>
+                    <div class="fe-field" style="flex:0 0 60px;">
+                        <label>Proj Color</label>
+                        <input type="color" id="eq-projColor" value="#ffaa33">
+                    </div>
+                </div>
+                <div class="fe-row">
+                    <div class="fe-field">
+                        <label>Skin Key</label>
+                        <select id="eq-skinKey">
+                            <option value="">(none)</option>
+                            <option value="projectile_spell">projectile_spell</option>
+                            <option value="projectile_arrow">projectile_arrow</option>
+                            <option value="projectile_bolt">projectile_bolt</option>
+                            <option value="projectile_void">projectile_void</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="fe-section-title">Effects</div>
             <div id="eq-effects-container"></div>
 
@@ -206,6 +240,11 @@ class EquipmentEditor {
         this.category = cat;
         const dropdown = document.getElementById('eq-category');
         if (dropdown) dropdown.value = cat;
+        const showRanged = cat === 'weapon';
+        const rangedSection = document.getElementById('eq-ranged-section');
+        const rangedFields = document.getElementById('eq-ranged-fields');
+        if (rangedSection) rangedSection.style.display = showRanged ? '' : 'none';
+        if (rangedFields) rangedFields.style.display = showRanged ? '' : 'none';
         this._refreshConfigDropdown();
         this._schedulePreview();
     }
@@ -278,6 +317,15 @@ class EquipmentEditor {
 
         const item = { key, name, category: this.category };
         item.effects = this._effectPicker ? this._effectPicker.getEffects() : [];
+
+        if (this.category === 'weapon' && document.getElementById('eq-ranged').checked) {
+            item.ranged = true;
+            item.range = parseInt(document.getElementById('eq-range').value) || 5;
+            item.projectileChar = document.getElementById('eq-projChar').value || '·';
+            item.projectileColor = document.getElementById('eq-projColor').value || '#ffaa33';
+            const skinKey = document.getElementById('eq-skinKey').value;
+            if (skinKey) item.skinKey = skinKey;
+        }
         return item;
     }
 
@@ -287,6 +335,13 @@ class EquipmentEditor {
         out += `    name: '${item.name || item.key}',\n`;
         if (item.effects && item.effects.length) {
             out += formatEffectsCode(item.effects) + ',\n';
+        }
+        if (item.ranged) {
+            out += `    ranged: true,\n`;
+            out += `    range: ${item.range || 5},\n`;
+            out += `    projectileChar: '${item.projectileChar || '·'}',\n`;
+            out += `    projectileColor: '${item.projectileColor || '#ffaa33'}',\n`;
+            if (item.skinKey) out += `    skinKey: '${item.skinKey}',\n`;
         }
         out += `},`;
         return out;
@@ -317,6 +372,11 @@ class EquipmentEditor {
         document.getElementById('eq-name').value = '';
         document.getElementById('eq-char').value = '';
         document.getElementById('eq-color').value = '#cccccc';
+        document.getElementById('eq-ranged').checked = false;
+        document.getElementById('eq-range').value = '5';
+        document.getElementById('eq-projChar').value = '';
+        document.getElementById('eq-projColor').value = '#ffaa33';
+        document.getElementById('eq-skinKey').value = '';
         if (this._effectPicker) this._effectPicker.clear();
     }
 
@@ -328,6 +388,14 @@ class EquipmentEditor {
         document.getElementById('eq-key').value = item.key;
         document.getElementById('eq-name').value = item.name;
         if (this._effectPicker) this._effectPicker.setEffects(item.effects || []);
+
+        if (item.category === 'weapon' && item.ranged) {
+            document.getElementById('eq-ranged').checked = true;
+            document.getElementById('eq-range').value = item.range || 5;
+            document.getElementById('eq-projChar').value = item.projectileChar || '';
+            document.getElementById('eq-projColor').value = item.projectileColor || '#ffaa33';
+            document.getElementById('eq-skinKey').value = item.skinKey || '';
+        }
 
         this.batchItems.splice(index, 1);
         this._renderBatchList();
@@ -573,6 +641,14 @@ class EquipmentEditor {
         document.getElementById('eq-key').value = key;
         document.getElementById('eq-name').value = def.name || key;
 
+        if (this.category === 'weapon' && def.ranged) {
+            document.getElementById('eq-ranged').checked = true;
+            document.getElementById('eq-range').value = def.range || 5;
+            document.getElementById('eq-projChar').value = def.projectileChar || '';
+            document.getElementById('eq-projColor').value = def.projectileColor || '#ffaa33';
+            document.getElementById('eq-skinKey').value = def.skinKey || '';
+        }
+
         if (def.effects) {
             this._effectPicker.setEffects(def.effects);
         } else {
@@ -585,7 +661,9 @@ class EquipmentEditor {
     _legacyToEffects(def) {
         const effects = [];
         const statKeys = STAT_KEYS.map(s => s.value);
+        const skipKeys = new Set(['ranged', 'range', 'projectileChar', 'projectileColor', 'skinKey']);
         for (const key of statKeys) {
+            if (skipKeys.has(key)) continue;
             if (def[key] !== undefined && def[key] !== 0) {
                 effects.push({ type: 'stat_bonus', stat: key, value: def[key], context: 'passive' });
             }

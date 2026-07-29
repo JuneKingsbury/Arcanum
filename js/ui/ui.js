@@ -2067,10 +2067,8 @@ export class UI {
         const entries = Object.entries(STORY_MILESTONES)
             .filter(([, m]) => m.tab === tab);
 
-        const unlockedEntries = entries.filter(([k]) => unlocked.has(k))
-            .sort((a, b) => b[1].order - a[1].order);
-        const lockedEntries = entries.filter(([k]) => !unlocked.has(k))
-            .sort((a, b) => a[1].order - b[1].order);
+        const unlockedEntries = entries.filter(([k]) => unlocked.has(k)).reverse();
+        const lockedEntries = entries.filter(([k]) => !unlocked.has(k));
 
         html += '<div class="story-entries">';
         for (const [key, milestone] of unlockedEntries) {
