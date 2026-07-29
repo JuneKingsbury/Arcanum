@@ -1809,10 +1809,30 @@ export class UI {
         html += this._settingsCheck('set-darken-pause', s.darkenOnPause, 'window.game.settings.darkenOnPause=this.checked;if(window.game.paused)document.getElementById("game").classList.toggle("paused",this.checked)', 'Darken screen when paused');
         html += this._settingsCheck('set-always-toolbar', s.alwaysShowToolbar, 'window.game.settings.alwaysShowToolbar=this.checked;document.getElementById("touch-toolbar").style.display=this.checked?"flex":""', 'Always show mobile toolbar (button bar)');
         html += this._settingsCheck('set-large-clicks', s.largeClickTargets, 'window.game.settings.largeClickTargets=this.checked;document.getElementById("game-container").classList.toggle("large-targets",this.checked)', 'Larger click targets (buttons & checkboxes)');
+        html += this._settingsCheck('set-pause-focus', s.pauseOnFocusLoss, 'window.game.settings.pauseOnFocusLoss=this.checked', 'Pause when window loses focus');
+        html += `<div class="settings-row"><label for="set-colorblind">Colorblind mode:</label><select id="set-colorblind" onchange="window.game.settings.colorblindMode=this.value;document.getElementById('game-container').setAttribute('data-colorblind',this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
+        for (const [val, label] of [['none','None'],['protanopia','Protanopia (red-blind)'],['deuteranopia','Deuteranopia (green-blind)'],['tritanopia','Tritanopia (blue-blind)']]) {
+            html += `<option value="${val}"${s.colorblindMode === val ? ' selected' : ''}>${label}</option>`;
+        }
+        html += `</select></div>`;
+        html += `<div class="settings-row"><label for="set-notif-dur">Notification duration:</label><select id="set-notif-dur" onchange="window.game.settings.notificationDuration=parseInt(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
+        for (const [val, label] of [['50','Short (50 ticks)'],['100','Normal (100 ticks)'],['200','Long (200 ticks)'],['500','Persistent (500 ticks)']]) {
+            html += `<option value="${val}"${s.notificationDuration === parseInt(val) ? ' selected' : ''}>${label}</option>`;
+        }
+        html += `</select></div>`;
+        html += `</div>`;
+
+        html += `<div class="settings-section"><div class="settings-section-title">Visual Effects</div>`;
+        html += this._settingsCheck('set-overlays', s.showOverlays, 'window.game.settings.showOverlays=this.checked', 'Master toggle: all combat/overlay effects');
+        html += this._settingsCheck('set-damage-flash', s.showDamageFlash, 'window.game.settings.showDamageFlash=this.checked', 'Damage flash on hit');
+        html += this._settingsCheck('set-screen-shake', s.enableScreenShake, 'window.game.settings.enableScreenShake=this.checked', 'Enable screen shake');
+        html += this._settingsCheck('set-combat-particles', s.showCombatParticles, 'window.game.settings.showCombatParticles=this.checked', 'Combat/action particles (sparks, skulls)');
+        html += this._settingsCheck('set-projectiles', s.showProjectiles, 'window.game.settings.showProjectiles=this.checked', 'Projectile trails (arrows, bolts)');
+        html += this._settingsCheck('set-progress-bars', s.showProgressBars, 'window.game.settings.showProgressBars=this.checked', 'Progress & health bars');
+        html += this._settingsCheck('set-portal-path', s.showPortalPath, 'window.game.settings.showPortalPath=this.checked', 'Portal path highlighting');
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Performance</div>`;
-        html += this._settingsCheck('set-overlays', s.showOverlays, 'window.game.settings.showOverlays=this.checked', 'Show overlay effects (progress bars, combat)');
         html += this._settingsCheck('set-night', s.showNightLighting, 'window.game.settings.showNightLighting=this.checked', 'Show night lighting/darkness');
         html += this._settingsCheck('set-weather', s.showWeatherParticles, 'window.game.settings.showWeatherParticles=this.checked', 'Show weather particles (future feature)');
         html += this._settingsCheck('set-minimap', s.showMinimap, 'window.game.settings.showMinimap=this.checked;document.getElementById("minimap-container").style.display=this.checked?"":"none"', 'Show minimap');
@@ -1943,7 +1963,8 @@ export class UI {
     }
 
     updateNotifications() {
-        const recent = this.game.notifications.filter(n => this.game.tick - n.tick < 100);
+        const duration = this.game.settings.notificationDuration || 100;
+        const recent = this.game.notifications.filter(n => this.game.tick - n.tick < duration);
         this.game.notifications = recent;
         this.elements.notifications.innerHTML = recent.slice(-4).map(n =>
             `<div class="notif notif-${n.type}">${n.text}</div>`

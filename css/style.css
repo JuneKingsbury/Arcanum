@@ -1660,6 +1660,16 @@ body {
     font-size: 13px;
 }
 
+#game-container[data-colorblind="protanopia"] {
+    filter: url(#cb-protanopia);
+}
+#game-container[data-colorblind="deuteranopia"] {
+    filter: url(#cb-deuteranopia);
+}
+#game-container[data-colorblind="tritanopia"] {
+    filter: url(#cb-tritanopia);
+}
+
 /* Small screens / phones */
 @media (max-width: 768px) {
     body {

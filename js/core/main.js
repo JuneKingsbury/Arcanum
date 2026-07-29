@@ -61,6 +61,15 @@ class Game {
             darkenOnPause: true,
             alwaysShowToolbar: false,
             largeClickTargets: false,
+            pauseOnFocusLoss: true,
+            enableScreenShake: true,
+            colorblindMode: 'none',
+            notificationDuration: 100,
+            showDamageFlash: true,
+            showCombatParticles: true,
+            showProjectiles: true,
+            showProgressBars: true,
+            showPortalPath: true,
             craftTargets: {},
         };
         this._fpsFrames = 0;
@@ -194,6 +203,17 @@ class Game {
                 this.skinManager.switchSkin(this.settings.activeSkin);
             }
             this.ui.populateSkinDropdown();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.settings.pauseOnFocusLoss && !this.paused) {
+                this.togglePause();
+            }
+        });
+        window.addEventListener('blur', () => {
+            if (this.settings.pauseOnFocusLoss && !this.paused) {
+                this.togglePause();
+            }
         });
     }
 
@@ -1679,6 +1699,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-autocook').value = '0';
         document.getElementById('start-autosave').value = '60';
         document.getElementById('start-overlays').checked = true;
+        document.getElementById('start-damage-flash').checked = true;
+        document.getElementById('start-screen-shake').checked = true;
+        document.getElementById('start-combat-particles').checked = true;
+        document.getElementById('start-projectiles').checked = true;
+        document.getElementById('start-progress-bars').checked = true;
+        document.getElementById('start-portal-path').checked = true;
         document.getElementById('start-night').checked = true;
         document.getElementById('start-weather').checked = true;
         document.getElementById('start-minimap').checked = true;
@@ -1687,6 +1713,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-darken-pause').checked = true;
         document.getElementById('start-always-toolbar').checked = false;
         document.getElementById('start-large-clicks').checked = false;
+        document.getElementById('start-pause-focus').checked = true;
+        document.getElementById('start-colorblind').value = 'none';
+        document.getElementById('start-notif-dur').value = '100';
     });
 
     // Shared transition from start screen into active game
@@ -1707,6 +1736,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (game.settings.largeClickTargets) {
                 document.getElementById('game-container').classList.add('large-targets');
             }
+            if (game.settings.colorblindMode && game.settings.colorblindMode !== 'none') {
+                document.getElementById('game-container').setAttribute('data-colorblind', game.settings.colorblindMode);
+            }
             fitGameFont();
             game.start();
         });
@@ -1721,6 +1753,12 @@ document.addEventListener('DOMContentLoaded', () => {
             autoCookTarget: parseInt(document.getElementById('start-autocook').value) || 0,
             autoSaveInterval: parseInt(document.getElementById('start-autosave').value) || 0,
             showOverlays: document.getElementById('start-overlays').checked,
+            showDamageFlash: document.getElementById('start-damage-flash').checked,
+            enableScreenShake: document.getElementById('start-screen-shake').checked,
+            showCombatParticles: document.getElementById('start-combat-particles').checked,
+            showProjectiles: document.getElementById('start-projectiles').checked,
+            showProgressBars: document.getElementById('start-progress-bars').checked,
+            showPortalPath: document.getElementById('start-portal-path').checked,
             showNightLighting: document.getElementById('start-night').checked,
             showWeatherParticles: document.getElementById('start-weather').checked,
             showMinimap: document.getElementById('start-minimap').checked,
@@ -1732,11 +1770,19 @@ document.addEventListener('DOMContentLoaded', () => {
             darkenOnPause: document.getElementById('start-darken-pause').checked,
             alwaysShowToolbar: document.getElementById('start-always-toolbar').checked,
             largeClickTargets: document.getElementById('start-large-clicks').checked,
+            pauseOnFocusLoss: document.getElementById('start-pause-focus').checked,
+            colorblindMode: document.getElementById('start-colorblind').value,
+            notificationDuration: parseInt(document.getElementById('start-notif-dur').value) || 100,
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
         RENDER_CONFIG.terrainDithering = document.getElementById('start-dither').checked;
-        launchGame(game => Object.assign(game.settings, startSettings));
+        launchGame(game => {
+            Object.assign(game.settings, startSettings);
+            if (startSettings.colorblindMode !== 'none') {
+                document.getElementById('game-container').setAttribute('data-colorblind', startSettings.colorblindMode);
+            }
+        });
     });
 
     loadBtn.addEventListener('click', () => {

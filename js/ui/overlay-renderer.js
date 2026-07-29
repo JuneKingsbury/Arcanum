@@ -38,16 +38,17 @@ export class OverlayRenderer {
 
         if (!game.overlays || game.overlays.length === 0) return;
 
+        const s = game.settings;
         for (const overlay of game.overlays) {
             switch (overlay.type) {
                 case 'progress_bar':
-                    this._renderProgressBar(ctx, overlay, cw, ch, camera);
+                    if (s.showProgressBars) this._renderProgressBar(ctx, overlay, cw, ch, camera);
                     break;
                 case 'beam':
                     this._renderBeam(ctx, overlay, cw, ch, camera);
                     break;
                 case 'health_bar':
-                    this._renderHealthBar(ctx, overlay, cw, ch, camera);
+                    if (s.showProgressBars) this._renderHealthBar(ctx, overlay, cw, ch, camera);
                     break;
                 case 'glow':
                     this._renderGlow(ctx, overlay, cw, ch, camera);
