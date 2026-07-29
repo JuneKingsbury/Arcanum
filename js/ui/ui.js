@@ -717,7 +717,7 @@ export class UI {
             `<span class="${t.moodEffect >= 0 ? 'positive' : 'negative'}">${t.text} (${t.moodEffect > 0 ? '+' : ''}${t.moodEffect.toFixed(0)})</span>`
         ).join('<br>');
 
-        const weaponTip = colonist.weapon ? `${colonist.weapon.damage} damage${colonist.weapon.miningSpeed ? `, +${Math.round((colonist.weapon.miningSpeed-1)*100)}% mining` : ''}${colonist.weapon.choppingSpeed ? `, +${Math.round((colonist.weapon.choppingSpeed-1)*100)}% chopping` : ''}` : 'No weapon equipped';
+        const weaponTip = colonist.weapon ? `${colonist.weapon.damage} damage${colonist.weapon.ranged ? `, range ${colonist.weapon.range}` : ''}${colonist.weapon.spellDamageBonus ? `, +${Math.round(colonist.weapon.spellDamageBonus*100)}% spell dmg` : ''}${colonist.weapon.miningSpeed ? `, +${Math.round((colonist.weapon.miningSpeed-1)*100)}% mining` : ''}${colonist.weapon.choppingSpeed ? `, +${Math.round((colonist.weapon.choppingSpeed-1)*100)}% chopping` : ''}` : 'No weapon equipped';
         const armorTip = colonist.armor ? `${Math.round(colonist.armor.damageReduction * 100)}% damage reduction${colonist.armor.spellDamageBonus ? `, +${Math.round(colonist.armor.spellDamageBonus*100)}% spell dmg` : ''}` : 'No armor equipped';
         const helmetTip = colonist.helmet ? `${Math.round(colonist.helmet.damageReduction * 100)}% damage reduction${colonist.helmet.spellDamageBonus ? `, +${Math.round(colonist.helmet.spellDamageBonus*100)}% spell dmg` : ''}` : 'No helmet equipped';
         const toolTip = colonist.tool ? Object.entries(colonist.tool).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => `${k}: ${typeof v === 'number' ? (v > 1 ? `+${Math.round((v-1)*100)}%` : `${Math.round(v*100)}%`) : v}`).join(', ') : 'No tool equipped';

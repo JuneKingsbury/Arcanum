@@ -27,7 +27,6 @@ export class Renderer {
         this._rallySet = new Map();
         this._portalMap = new Map();
         this._portalPathMap = new Map();
-        this._shotMap = new Map();
         this._effectMap = new Map();
         this._movingEntities = [];
 
@@ -250,6 +249,9 @@ export class Renderer {
         if (e.char === COMBAT_VISUALS.spellGrowthChar && e.color === COMBAT_VISUALS.spellGrowthColor) return this.skinManager.getSprite('effects', 'spell_growth');
         if (e.char === COMBAT_VISUALS.spellTerraformChar && e.color === COMBAT_VISUALS.spellTerraformColor) return this.skinManager.getSprite('effects', 'spell_terraform');
         if (e.char === COMBAT_VISUALS.spellDivinationChar && e.color === COMBAT_VISUALS.spellDivinationColor) return this.skinManager.getSprite('effects', 'spell_divination');
+        if (e.char === COMBAT_VISUALS.magicLevelUpChar) return this.skinManager.getSprite('effects', 'magic_levelup');
+        if (e.char === COMBAT_VISUALS.spellCastChar) return this.skinManager.getSprite('effects', 'spell_cast');
+        if (e.char === '✝') return this.skinManager.getSprite('effects', 'smite');
         return null;
     }
 
@@ -314,7 +316,7 @@ export class Renderer {
             if (isEntityMoving(e)) {
                 movingEntities.push({ entity: e, char: e.char, color: e.color, type: e.type });
             } else {
-                entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: e.type });
+                entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: e.type, _dmgFlashUntil: e._dmgFlashUntil });
             }
         }
         if (game.waves) {
@@ -323,7 +325,7 @@ export class Renderer {
                 if (isEntityMoving(e)) {
                     movingEntities.push({ entity: e, char: e.char, color: e.color, type: 'wave_enemy' });
                 } else {
-                    entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy' });
+                    entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy', _dmgFlashUntil: e._dmgFlashUntil });
                 }
             }
         }
@@ -334,7 +336,7 @@ export class Renderer {
             if (isEntityMoving(r)) {
                 movingEntities.push({ entity: r, char: rChar, color: rColor, type: 'raider' });
             } else {
-                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: rChar, color: rColor, type: 'raider' });
+                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: rChar, color: rColor, type: 'raider', _dmgFlashUntil: r._dmgFlashUntil });
             }
         }
         const rallySet = this._rallySet;
@@ -351,7 +353,7 @@ export class Renderer {
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
-                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType };
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil };
                 if (isEntityMoving(c)) {
                     movingEntities.push({ entity: c, ...entData });
                 } else {
@@ -380,17 +382,6 @@ export class Renderer {
             for (const pt of pathPoints) {
                 const key = pt.y * CONFIG.MAP_WIDTH + pt.x;
                 if (!portalMap.has(key)) portalPathMap.set(key, true);
-            }
-        }
-
-        const shotMap = this._shotMap;
-        shotMap.clear();
-        if (game.power && game.power.activeShots) {
-            for (const shot of game.power.activeShots) {
-                const points = getLinePoints(shot.fromX, shot.fromY, shot.toX, shot.toY);
-                for (const p of points) {
-                    shotMap.set(p.y * CONFIG.MAP_WIDTH + p.x, shot.color);
-                }
             }
         }
 
@@ -446,13 +437,9 @@ export class Renderer {
                 const entity = entityMap.get(tileKey);
                 if (entity) {
                     char = entity.char;
-                    color = entity.color;
-                }
-
-                const shotColor = shotMap.get(tileKey);
-                if (shotColor && !entity) {
-                    char = '*';
-                    color = shotColor;
+                    color = entity._dmgFlashUntil > game.tick ? COMBAT_VISUALS.dmgFlashColor : entity.color;
+                } else if (tile.structure && tile._dmgFlashUntil > game.tick) {
+                    color = COMBAT_VISUALS.dmgFlashColor;
                 }
 
                 const effect = effectMap.get(tileKey);
@@ -489,14 +476,36 @@ export class Renderer {
                     let overlaySprite = null;
                     if (effect) {
                         overlaySprite = this._resolveEffectSprite(effect);
-                    } else if (shotColor && !entity) {
-                        overlaySprite = this._resolveEffectSprite('turret_shot');
                     } else if (portalMap.has(tileKey)) {
                         overlaySprite = this._resolveEffectSprite('portal');
                     }
                     if (overlaySprite) {
-                        const baseSprite = this._resolveSprite(tile, null, game.weather.season);
-                        if (baseSprite) ctx.drawImage(baseSprite, px, py, cw, ch);
+                        const ground = this._resolveGroundSprite(tile, game.weather.season);
+                        if (ground) ctx.drawImage(ground, px, py, cw, ch);
+                        if (entity) {
+                            const entitySprite = this._resolveSprite(tile, entity, game.weather.season);
+                            if (entitySprite) {
+                                const shakeActive = entity._atkShakeUntil > game.tick;
+                                const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
+                                const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+                                ctx.drawImage(entitySprite, px + shakeX, py + shakeY, cw, ch);
+                                if (entity._dmgFlashUntil > game.tick) {
+                                    const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
+                                    if (flashSprite) {
+                                        ctx.drawImage(flashSprite, px + shakeX, py + shakeY, cw, ch);
+                                    } else {
+                                        ctx.globalAlpha = COMBAT_VISUALS.dmgFlashAlpha;
+                                        ctx.fillStyle = COMBAT_VISUALS.dmgFlashColor;
+                                        ctx.fillRect(px, py, cw, ch);
+                                        ctx.globalAlpha = 1.0;
+                                        lastColor = '';
+                                    }
+                                }
+                            }
+                        } else {
+                            const baseSprite = this._resolveSprite(tile, null, game.weather.season);
+                            if (baseSprite) ctx.drawImage(baseSprite, px, py, cw, ch);
+                        }
                         ctx.drawImage(overlaySprite, px, py, cw, ch);
                         spriteDrawn = true;
                     } else {
@@ -508,16 +517,45 @@ export class Renderer {
                                 const ground = this._resolveGroundSprite(tile, game.weather.season);
                                 if (ground) ctx.drawImage(ground, px, py, cw, ch);
                             }
-                            ctx.drawImage(sprite, px, py, cw, ch);
+                            const shakeActive = entity && entity._atkShakeUntil > game.tick;
+                            const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
+                            const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+                            ctx.drawImage(sprite, px + shakeX, py + shakeY, cw, ch);
                             if (!tile.structure && !tile.resource && !tile.zone && !entity && !tile.floor) {
                                 this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map);
                             }
                             if (entity && entity.type === 'colonist') {
-                                // 4x4 pixel color indicator in top-right corner of the tile
-                                // so colonists are distinguishable even with identical sprites
                                 ctx.fillStyle = entity.color;
                                 ctx.fillRect(px + cw - 4, py, 4, 4);
                                 lastColor = '';
+                            }
+                            if (entity && entity._dmgFlashUntil > game.tick) {
+                                const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
+                                if (flashSprite) {
+                                    ctx.drawImage(flashSprite, px + shakeX, py + shakeY, cw, ch);
+                                } else {
+                                    ctx.globalAlpha = COMBAT_VISUALS.dmgFlashAlpha;
+                                    ctx.fillStyle = COMBAT_VISUALS.dmgFlashColor;
+                                    ctx.fillRect(px, py, cw, ch);
+                                    ctx.globalAlpha = 1.0;
+                                    lastColor = '';
+                                }
+                            }
+                            if (entity && shakeActive) {
+                                const swingSprite = this.skinManager.getSprite('effects', 'attack_swing');
+                                if (swingSprite) ctx.drawImage(swingSprite, px, py, cw, ch);
+                            }
+                            if (!entity && tile.structure && tile._dmgFlashUntil > game.tick) {
+                                const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
+                                if (flashSprite) {
+                                    ctx.drawImage(flashSprite, px, py, cw, ch);
+                                } else {
+                                    ctx.globalAlpha = COMBAT_VISUALS.dmgFlashAlpha;
+                                    ctx.fillStyle = COMBAT_VISUALS.dmgFlashColor;
+                                    ctx.fillRect(px, py, cw, ch);
+                                    ctx.globalAlpha = 1.0;
+                                    lastColor = '';
+                                }
                             }
                             if (tile.pedestalArtifact) {
                                 const itemSprite = this.skinManager.getSprite('items', tile.pedestalArtifact);
@@ -559,18 +597,25 @@ export class Renderer {
                 }
 
                 if (!spriteDrawn) {
+                    const asciiShake = entity && entity._atkShakeUntil > game.tick;
+                    const asx = asciiShake ? ((game.tick * 7) % 5) - 2 : 0;
+                    const asy = asciiShake ? ((game.tick * 13) % 3) - 1 : 0;
                     if (char === '█' || char === '▓' || char === '▒') {
                         if (color !== lastColor) {
                             ctx.fillStyle = color;
                             lastColor = color;
                         }
-                        ctx.fillRect(px, py, cw, ch);
+                        ctx.fillRect(px + asx, py + asy, cw, ch);
                     } else {
+                        if (this.skinManager.isActive) {
+                            const ground = this._resolveGroundSprite(tile, game.weather.season);
+                            if (ground) ctx.drawImage(ground, px, py, cw, ch);
+                        }
                         if (color !== lastColor) {
                             ctx.fillStyle = color;
                             lastColor = color;
                         }
-                        ctx.fillText(char, px + this._textOffsetX, py);
+                        ctx.fillText(char, px + this._textOffsetX + asx, py + asy);
                     }
                 }
 
@@ -601,13 +646,17 @@ export class Renderer {
             const sx = pos.x - camera.x;
             const sy = pos.y - camera.y;
             if (sx < -1 || sx >= CONFIG.VIEWPORT_WIDTH + 1 || sy < -1 || sy >= CONFIG.VIEWPORT_HEIGHT + 1) continue;
-            const rpx = Math.round(sx * cw);
-            const rpy = Math.round(sy * ch);
+            const ent = me.entity;
+            const shakeActive = ent._atkShakeUntil > game.tick;
+            const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
+            const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+            const rpx = Math.round(sx * cw) + shakeX;
+            const rpy = Math.round(sy * ch) + shakeY;
             if (this.skinManager.isActive) {
-                const destTile = map[me.entity.y]?.[me.entity.x];
+                const destTile = map[ent.y]?.[ent.x];
                 if (destTile) {
                     const ground = this._resolveGroundSprite(destTile, game.weather.season);
-                    if (ground) ctx.drawImage(ground, rpx, rpy, cw, ch);
+                    if (ground) ctx.drawImage(ground, rpx - shakeX, rpy - shakeY, cw, ch);
                 }
                 const sprite = this._resolveSprite(destTile || {}, me, game.weather.season);
                 if (sprite) {
@@ -620,9 +669,48 @@ export class Renderer {
                     ctx.fillStyle = me.color;
                     ctx.fillRect(rpx + cw - 4, rpy, 4, 4);
                 }
+                if (ent._dmgFlashUntil > game.tick) {
+                    const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
+                    if (flashSprite) {
+                        ctx.drawImage(flashSprite, rpx, rpy, cw, ch);
+                    } else {
+                        ctx.globalAlpha = COMBAT_VISUALS.dmgFlashAlpha;
+                        ctx.fillStyle = COMBAT_VISUALS.dmgFlashColor;
+                        ctx.fillRect(rpx, rpy, cw, ch);
+                        ctx.globalAlpha = 1.0;
+                    }
+                }
+                if (shakeActive) {
+                    const swingSprite = this.skinManager.getSprite('effects', 'attack_swing');
+                    if (swingSprite) ctx.drawImage(swingSprite, rpx - shakeX, rpy - shakeY, cw, ch);
+                }
             } else {
-                ctx.fillStyle = me.color;
+                ctx.fillStyle = ent._dmgFlashUntil > game.tick ? COMBAT_VISUALS.dmgFlashColor : me.color;
                 ctx.fillText(me.char, rpx + this._textOffsetX, rpy);
+            }
+        }
+
+        // --- Draw projectiles at interpolated positions ---
+        if (game.projectiles) {
+            for (const p of game.projectiles) {
+                const t = Math.min(1, (now - p._startTime) / p._duration);
+                const px2 = p.fromX + (p.toX - p.fromX) * t;
+                const py2 = p.fromY + (p.toY - p.fromY) * t;
+                const screenX = (px2 - camera.x) * cw;
+                const screenY = (py2 - camera.y) * ch;
+                if (screenX < -cw || screenX > this.canvas.width || screenY < -ch || screenY > this.canvas.height) continue;
+                if (this.skinManager.isActive) {
+                    const sprite = p.skinKey ? this.skinManager.getSprite('effects', p.skinKey) : null;
+                    if (sprite) {
+                        ctx.drawImage(sprite, Math.round(screenX), Math.round(screenY), cw, ch);
+                    } else {
+                        ctx.fillStyle = p.color;
+                        ctx.fillText(p.char, Math.round(screenX) + this._textOffsetX, Math.round(screenY));
+                    }
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.fillText(p.char, Math.round(screenX) + this._textOffsetX, Math.round(screenY));
+                }
             }
         }
 

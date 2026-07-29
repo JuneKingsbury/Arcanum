@@ -174,6 +174,8 @@ export class WaveSystem {
         const dist = manhattanDist(enemy.x, enemy.y, this.nexusPosition.x, this.nexusPosition.y);
         if (dist <= 1) {
             this.nexusHp -= enemy.damage;
+            const nexusTile = game.map[this.nexusPosition.y]?.[this.nexusPosition.x];
+            if (nexusTile) nexusTile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
             game.combatEffects.push({ x: this.nexusPosition.x, y: this.nexusPosition.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.nexusDamageColor, ttl: COMBAT_VISUALS.hitTtl });
             return;
         }

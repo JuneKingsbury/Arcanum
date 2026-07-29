@@ -252,12 +252,12 @@ export const COLONIST_CONFIG = {
 // To add a magic school: add entry here. Colonists auto-get it, info panel shows it, spells reference it.
 // baseLevel: starting range [min, max]. biasBonus: added when this is the colonist's magic bias.
 export const MAGIC_SKILLS = {
-    evocation:     { name: 'Evocation', baseLevel: [0, 0], biasBonus: 2, description: 'Ranged combat magic' },
-    enchantment:   { name: 'Enchantment', baseLevel: [0, 0], biasBonus: 2, description: 'Support spells and golem animation' },
-    abjuration:    { name: 'Abjuration', baseLevel: [0, 0], biasBonus: 2, description: 'Healing and protective magic' },
-    conjuration:   { name: 'Conjuration', baseLevel: [0, 0], biasBonus: 2, description: 'Summoning and teleportation' },
-    transmutation: { name: 'Transmutation', baseLevel: [0, 0], biasBonus: 2, description: 'Environmental and growth magic' },
-    divination:    { name: 'Divination', baseLevel: [0, 0], biasBonus: 2, description: 'Predicting and influencing fate' },
+    evocation:     { name: 'Evocation', baseLevel: [0, 0], biasBonus: 2, color: '#ff6644', description: 'Ranged combat magic' },
+    enchantment:   { name: 'Enchantment', baseLevel: [0, 0], biasBonus: 2, color: '#88ffff', description: 'Support spells and golem animation' },
+    abjuration:    { name: 'Abjuration', baseLevel: [0, 0], biasBonus: 2, color: '#44ff44', description: 'Healing and protective magic' },
+    conjuration:   { name: 'Conjuration', baseLevel: [0, 0], biasBonus: 2, color: '#9966ff', description: 'Summoning and teleportation' },
+    transmutation: { name: 'Transmutation', baseLevel: [0, 0], biasBonus: 2, color: '#88ff88', description: 'Environmental and growth magic' },
+    divination:    { name: 'Divination', baseLevel: [0, 0], biasBonus: 2, color: '#ccaaff', description: 'Predicting and influencing fate' },
 };
 
 // Mana system tuning. Max mana and regen scale with combined magic school levels.
@@ -519,6 +519,11 @@ export const RECIPES = {
     craft_crystal_staff: { input: { stone: 3, planks: 2, runite: 1 }, output: { crystal_staff: 1 }, skill: 'crafting', ticks: 28, station: 'workbench', research: 'arcane_studies', category: 'Equipment' },
     craft_runic_wand: { input: { runite: 2, planks: 2 }, output: { runic_wand: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
     craft_void_staff: { input: { void_essence: 5, runite: 2, planks: 2 }, output: { void_staff: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
+    craft_short_bow: { input: { wood: 3, leather: 1 }, output: { short_bow: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
+    craft_hunting_bow: { input: { planks: 2, leather: 2, iron: 1 }, output: { hunting_bow: 1 }, skill: 'crafting', ticks: 22, station: 'workbench', category: 'Equipment' },
+    craft_iron_crossbow: { input: { iron: 3, planks: 2, leather: 1 }, output: { iron_crossbow: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', research: 'runecraft', category: 'Equipment' },
+    craft_runic_crossbow: { input: { runite: 3, iron: 2, planks: 2 }, output: { runic_crossbow: 1 }, skill: 'crafting', ticks: 42, station: 'workbench', research: 'runeforging', category: 'Equipment' },
+    craft_void_longbow: { input: { void_essence: 4, runite: 2, planks: 3 }, output: { void_longbow: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Equipment' },
     craft_boots_of_haste: { input: { void_essence: 3, planks: 2, runite: 1 }, output: { boots_of_haste: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Artifacts' },
     craft_ward_of_the_sentinel: { input: { void_essence: 4, runite: 3, stone: 2 }, output: { ward_of_the_sentinel: 1 }, skill: 'crafting', ticks: 65, station: 'workbench', research: 'void_forging', category: 'Artifacts' },
     craft_drum_of_rallying: { input: { wood: 6, runite: 2, planks: 3 }, output: { drum_of_rallying: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'runeforging', category: 'Artifacts' },
@@ -531,6 +536,7 @@ export const RECIPES = {
     craft_tome_quicken: { input: { planks: 2, stone: 1 }, output: { tome_quicken: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_phase_step: { input: { planks: 2, stone: 1 }, output: { tome_phase_step: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_nurture: { input: { planks: 2, wheat: 2 }, output: { tome_nurture: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_smite: { input: { planks: 2, runite: 1, iron: 1 }, output: { tome_smite: 1 }, skill: 'crafting', ticks: 20, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_magic_missile: { input: { planks: 3, runite: 1 }, output: { tome_magic_missile: 1 }, skill: 'crafting', ticks: 30, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_heal: { input: { planks: 3, runite: 1, berries: 2 }, output: { tome_heal: 1 }, skill: 'crafting', ticks: 32, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_haste: { input: { planks: 4, runite: 2 }, output: { tome_haste: 1 }, skill: 'crafting', ticks: 38, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
@@ -562,10 +568,15 @@ export const WEAPONS = {
     void_dagger: { name: 'Void Dagger', damage: 20, spellDamageBonus: 0.35 },
     runic_blade: { name: 'Runic Blade', damage: 22 },
     runic_greatsword: { name: 'Runic Greatsword', damage: 26 },
-    wooden_wand: { name: 'Wooden Wand', damage: 3, spellDamageBonus: 0.3 },
-    crystal_staff: { name: 'Crystal Staff', damage: 8, spellDamageBonus: 0.2 },
-    runic_wand: { name: 'Runic Wand', damage: 5, spellDamageBonus: 0.5 },
-    void_staff: { name: 'Void Staff', damage: 12, spellDamageBonus: 0.4 },
+    wooden_wand: { name: 'Wooden Wand', damage: 3, spellDamageBonus: 0.3, ranged: true, range: 5, projectileChar: '·', projectileColor: '#aaccff', skinKey: 'projectile_spell' },
+    crystal_staff: { name: 'Crystal Staff', damage: 8, spellDamageBonus: 0.2, ranged: true, range: 6, projectileChar: '✦', projectileColor: '#88ddff', skinKey: 'projectile_spell' },
+    runic_wand: { name: 'Runic Wand', damage: 5, spellDamageBonus: 0.5, ranged: true, range: 6, projectileChar: '·', projectileColor: '#dd88ff', skinKey: 'projectile_spell' },
+    void_staff: { name: 'Void Staff', damage: 12, spellDamageBonus: 0.4, ranged: true, range: 7, projectileChar: '✦', projectileColor: '#cc00ff', skinKey: 'projectile_spell' },
+    short_bow: { name: 'Short Bow', damage: 6, ranged: true, range: 5, projectileChar: '-', projectileColor: '#ffaa33', skinKey: 'projectile_arrow' },
+    hunting_bow: { name: 'Hunting Bow', damage: 9, ranged: true, range: 6, projectileChar: '-', projectileColor: '#ffaa33', skinKey: 'projectile_arrow' },
+    iron_crossbow: { name: 'Iron Crossbow', damage: 13, ranged: true, range: 7, projectileChar: '→', projectileColor: '#aaddff', skinKey: 'projectile_bolt' },
+    runic_crossbow: { name: 'Runic Crossbow', damage: 17, ranged: true, range: 8, projectileChar: '→', projectileColor: '#bb99ff', skinKey: 'projectile_bolt' },
+    void_longbow: { name: 'Void Longbow', damage: 22, ranged: true, range: 9, projectileChar: '⟶', projectileColor: '#cc00ff', skinKey: 'projectile_void' },
     void_blade: { name: 'Void Blade', damage: 30 },
 };
 
@@ -844,6 +855,20 @@ export const SPELLS = {
         projectileColor: '#ff44ff',
         projectileChar: '*',
     },
+    smite: {
+        name: 'Smite',
+        school: 'evocation',
+        minLevel: 1,
+        manaCost: 6,
+        cooldown: 20,
+        castType: 'auto',
+        trigger: 'inCombat',
+        effect: 'melee_damage',
+        damage: 12,
+        range: 1,
+        projectileColor: '#ffffaa',
+        projectileChar: '✝',
+    },
     fireball: {
         name: 'Fireball',
         school: 'evocation',
@@ -1025,6 +1050,7 @@ export const SPELL_TOMES = {
     tome_quicken: { name: 'Tome: Quicken', spell: 'quicken', learningWork: 60, minSchoolLevel: 0 },
     tome_phase_step: { name: 'Tome: Phase Step', spell: 'phase_step', learningWork: 60, minSchoolLevel: 0 },
     tome_nurture: { name: 'Tome: Nurture', spell: 'nurture', learningWork: 60, minSchoolLevel: 0 },
+    tome_smite: { name: 'Tome: Smite', spell: 'smite', learningWork: 120, minSchoolLevel: 1 },
     tome_magic_missile: { name: 'Tome: Magic Missile', spell: 'magic_missile', learningWork: 150, minSchoolLevel: 1 },
     tome_fireball: { name: 'Tome: Fireball', spell: 'fireball', learningWork: 350, minSchoolLevel: 3 },
     tome_haste: { name: 'Tome: Haste', spell: 'haste', learningWork: 280, minSchoolLevel: 2 },
@@ -2334,6 +2360,17 @@ export const COMBAT_VISUALS = {
     spellDivinationChar: '?',
     spellDivinationColor: '#ccaaff',
     spellRangePreviewBg: '#1a0033', // background for targeting range preview tiles
+    magicLevelUpChar: '★',
+    magicLevelUpTtl: 5,
+    dmgFlashTtl: 2,
+    dmgFlashColor: '#ff2222',
+    dmgFlashAlpha: 0.4,
+    atkShakeTtl: 2,
+    atkShakePx: 2,
+    spellCastChar: '◇',
+    spellCastColor: '#cc88ff',
+    projectileSpeed: 12,
+    projectileChar: '•',
 };
 
 // Colors for exploration/event log entry types. Used by ui.js _expLogColor().

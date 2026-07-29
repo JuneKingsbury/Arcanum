@@ -86,6 +86,7 @@ class Game {
         this.entities = [];
         this.raiders = [];
         this.combatEffects = [];
+        this.projectiles = [];
         this.divinationModifiers = [];
         this.activeComplexStructures = [];
         this.overlays = [];
@@ -314,6 +315,8 @@ class Game {
         updateSummons(this);
 
         this.combatEffects = this.combatEffects.filter(e => e.ttl-- > 0);
+        const now = performance.now();
+        this.projectiles = this.projectiles.filter(p => now < p._startTime + p._duration);
         if (this.divinationModifiers) {
             this.divinationModifiers = this.divinationModifiers.filter(m => m.expiresAt > this.tick);
         }
@@ -965,6 +968,18 @@ class Game {
                 break;
             }
         }
+        this.combatEffects.push({
+            x: colonist.x, y: colonist.y,
+            char: COMBAT_VISUALS.spellCastChar,
+            color: spell.projectileColor || COMBAT_VISUALS.spellCastColor,
+            ttl: 2,
+        });
+        this.overlays.push({
+            type: 'glow',
+            x: colonist.x, y: colonist.y,
+            color: spell.projectileColor || COMBAT_VISUALS.spellCastColor,
+            radius: 1.2, alpha: 0.35, ttl: 3,
+        });
         grantCastXp(colonist, spell, this);
         addThought(colonist, 'Cast a spell', 3, 80, this.tick);
         this.story.checkMilestone('first_spell_cast', this);

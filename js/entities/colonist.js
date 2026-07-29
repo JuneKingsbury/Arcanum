@@ -414,6 +414,12 @@ export function grantCastXp(colonist, spell, game) {
         colonist.magicSkills[school] = Math.min(10, colonist.magicSkills[school] + 1);
         recalcMaxMana(colonist);
         game.notifications.push({ text: `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}`, tick: game.tick, type: 'success' });
+        game.combatEffects.push({
+            x: colonist.x, y: colonist.y,
+            char: COMBAT_VISUALS.magicLevelUpChar,
+            color: MAGIC_SKILLS[school].color || '#ffdd44',
+            ttl: COMBAT_VISUALS.magicLevelUpTtl,
+        });
     }
 }
 
@@ -438,6 +444,18 @@ function tryAutocastSpells(colonist, game) {
         grantCastXp(colonist, spell, game);
         applyThought(colonist, 'cast_spell', game.tick);
         game.story.checkMilestone('first_spell_cast', game);
+        game.combatEffects.push({
+            x: colonist.x, y: colonist.y,
+            char: COMBAT_VISUALS.spellCastChar,
+            color: spell.projectileColor || COMBAT_VISUALS.spellCastColor,
+            ttl: 2,
+        });
+        game.overlays.push({
+            type: 'glow',
+            x: colonist.x, y: colonist.y,
+            color: spell.projectileColor || COMBAT_VISUALS.spellCastColor,
+            radius: 1.2, alpha: 0.35, ttl: 3,
+        });
     }
 }
 
@@ -479,7 +497,15 @@ function applySpellEffect(colonist, spell, game) {
             const spellBonus = getEquipmentSpellBonus(colonist);
             if (spellBonus) dmg = Math.floor(dmg * (1 + spellBonus));
             target.hp -= dmg;
-            game.combatEffects.push({ x: target.x, y: target.y, char: spell.projectileChar || '*', color: spell.projectileColor || '#ff44ff', ttl: 3 });
+            target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+            const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+            game.projectiles.push({
+                fromX: colonist.x, fromY: colonist.y, toX: target.x, toY: target.y,
+                char: spell.projectileChar || '*',
+                color: spell.projectileColor || '#ff44ff',
+                skinKey: 'projectile_spell',
+                _startTime: performance.now(), _duration: projDuration,
+            });
             break;
         }
         case 'ranged_damage_aoe': {
@@ -490,14 +516,37 @@ function applySpellEffect(colonist, spell, game) {
             let aoeDmg = spell.damage;
             const aoeSpellBonus = getEquipmentSpellBonus(colonist);
             if (aoeSpellBonus) aoeDmg = Math.floor(aoeDmg * (1 + aoeSpellBonus));
+            const aoeProjDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+            game.projectiles.push({
+                fromX: colonist.x, fromY: colonist.y, toX: target.x, toY: target.y,
+                char: spell.projectileChar || '●',
+                color: spell.projectileColor || '#ff6600',
+                skinKey: 'projectile_spell',
+                _startTime: performance.now(), _duration: aoeProjDuration,
+            });
             const allHostiles = [...game.raiders, ...(game.waves ? game.waves.enemies : []), ...game.entities.filter(w => w.category === 'animal' && !w.tamed && w.hostile)];
             for (const h of allHostiles) {
                 if (h.hp <= 0) continue;
                 if (manhattanDist(target.x, target.y, h.x, h.y) <= spell.radius) {
                     h.hp -= aoeDmg;
+                    h._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
                     game.combatEffects.push({ x: h.x, y: h.y, char: spell.projectileChar || '●', color: spell.projectileColor || '#ff6600', ttl: 3 });
                 }
             }
+            break;
+        }
+        case 'melee_damage': {
+            const target = findNearestHostile(colonist, game);
+            if (!target) return;
+            const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
+            if (dist > (spell.range || 1)) return;
+            let dmg = spell.damage;
+            const spellBonus = getEquipmentSpellBonus(colonist);
+            if (spellBonus) dmg = Math.floor(dmg * (1 + spellBonus));
+            target.hp -= dmg;
+            target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+            colonist._atkShakeUntil = game.tick + COMBAT_VISUALS.atkShakeTtl;
+            game.combatEffects.push({ x: target.x, y: target.y, char: spell.projectileChar || '✝', color: spell.projectileColor || '#ffffaa', ttl: 4 });
             break;
         }
         case 'heal':
@@ -576,7 +625,9 @@ function updateIdle(colonist, game) {
     const threat = findNearestHostile(colonist, game);
     if (threat) {
         const dist = manhattanDist(colonist.x, colonist.y, threat.x, threat.y);
-        if (waveActive || dist <= COLONIST_CONFIG.fightEngageDistance) {
+        const wpnRange = colonist.weapon && colonist.weapon.ranged ? colonist.weapon.range : 0;
+        const autoEngageDist = Math.max(COLONIST_CONFIG.fightEngageDistance, wpnRange);
+        if (waveActive || dist <= autoEngageDist) {
             colonist.state = 'fighting';
             return;
         }
@@ -885,7 +936,9 @@ function updateFighting(colonist, game) {
 
     const dist = manhattanDist(colonist.x, colonist.y, target.x, target.y);
     const waveActive = game.waves && game.waves.active && game.waves.enemies.length > 0;
-    if (dist > COLONIST_CONFIG.fightEngageDistance && !waveActive) {
+    const weaponReach = colonist.weapon && colonist.weapon.ranged ? colonist.weapon.range : 0;
+    const engageDist = Math.max(COLONIST_CONFIG.fightEngageDistance, weaponReach);
+    if (dist > engageDist && !waveActive) {
         colonist.state = 'idle';
         return;
     }
@@ -895,7 +948,33 @@ function updateFighting(colonist, game) {
         return;
     }
 
-    if (dist > 1) {
+    const weapon = colonist.weapon;
+    const isRanged = weapon && weapon.ranged;
+    const weaponRange = isRanged ? weapon.range : 1;
+
+    if (isRanged && dist <= weaponRange && dist >= 2) {
+        let weaponDmg = weapon.damage;
+        for (const item of getEquippedItems(colonist)) {
+            if (item !== weapon && item.damage) weaponDmg += item.damage;
+        }
+        let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+        const critChance = getEquipmentStat(colonist, 'critChance');
+        if (critChance > 0 && Math.random() < critChance) {
+            dmg *= 2;
+            game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
+        }
+        target.hp -= dmg;
+        target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+        colonist._atkShakeUntil = game.tick + COMBAT_VISUALS.atkShakeTtl;
+        const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+        game.projectiles.push({
+            fromX: colonist.x, fromY: colonist.y, toX: target.x, toY: target.y,
+            char: weapon.projectileChar || '-',
+            color: weapon.projectileColor || '#ffaa33',
+            skinKey: weapon.skinKey || 'projectile_arrow',
+            _startTime: performance.now(), _duration: projDuration,
+        });
+    } else if (dist > 1 && (!isRanged || dist > weaponRange)) {
         const dx = Math.sign(target.x - colonist.x);
         const dy = Math.sign(target.y - colonist.y);
         const dur = CONFIG.TICK_RATE / game.speed;
@@ -905,20 +984,22 @@ function updateFighting(colonist, game) {
             moveEntity(colonist, colonist.x, colonist.y + dy, dur);
         }
         return;
+    } else {
+        let weaponDmg = weapon ? weapon.damage : WEAPONS.fists.damage;
+        for (const item of getEquippedItems(colonist)) {
+            if (item !== weapon && item.damage) weaponDmg += item.damage;
+        }
+        let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+        const critChance = getEquipmentStat(colonist, 'critChance');
+        if (critChance > 0 && Math.random() < critChance) {
+            dmg *= 2;
+            game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
+        }
+        target.hp -= dmg;
+        target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+        colonist._atkShakeUntil = game.tick + COMBAT_VISUALS.atkShakeTtl;
+        game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
     }
-
-    let weaponDmg = colonist.weapon ? colonist.weapon.damage : WEAPONS.fists.damage;
-    for (const item of getEquippedItems(colonist)) {
-        if (item !== colonist.weapon && item.damage) weaponDmg += item.damage;
-    }
-    let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
-    const critChance = getEquipmentStat(colonist, 'critChance');
-    if (critChance > 0 && Math.random() < critChance) {
-        dmg *= 2;
-        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
-    }
-    target.hp -= dmg;
-    game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
 
     if (target.hp <= 0) {
         const hpOnKill = getEquipmentStat(colonist, 'hpOnKill');
@@ -1028,6 +1109,7 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
     }
     const actualDmg = Math.floor(damage * mult);
     colonist.hp -= actualDmg;
+    colonist._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
     game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.damageTakenColor, ttl: COMBAT_VISUALS.hitTtl });
 
     const thornsDamage = getEquipmentStat(colonist, 'thornsDamage');

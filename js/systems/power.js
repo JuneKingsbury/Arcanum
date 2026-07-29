@@ -10,7 +10,6 @@ export class PowerSystem {
         this.lamps = [];
         this.turrets = [];
         this.voidTurrets = [];
-        this.activeShots = [];
     }
 
     update(game) {
@@ -94,9 +93,6 @@ export class PowerSystem {
     updateTurrets(game) {
         if (!this.powered) return;
 
-        this.activeShots = this.activeShots.filter(s => s.ttl > 0);
-        for (const s of this.activeShots) s.ttl--;
-
         const allTurrets = [
             ...this.turrets.map(t => ({ ...t, type: 'arcane_sentinel' })),
             ...this.voidTurrets.map(t => ({ ...t, type: 'void_turret' })),
@@ -144,11 +140,15 @@ export class PowerSystem {
 
             if (target && manhattanDist(t.x, t.y, target.x, target.y) <= range) {
                 target.hp -= damage;
+                target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
                 const color = t.type === 'void_turret' ? COMBAT_VISUALS.shotColorVoid : COMBAT_VISUALS.shotColorArcane;
-                this.activeShots.push({ fromX: t.x, fromY: t.y, toX: target.x, toY: target.y, color, ttl: 2 });
-                game.overlays.push({
-                    type: 'beam', fromX: t.x, fromY: t.y, toX: target.x, toY: target.y,
-                    color, width: t.type === 'void_turret' ? 2 : 1.5, alpha: 0.8, ttl: 2,
+                const dist = manhattanDist(t.x, t.y, target.x, target.y);
+                const duration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+                game.projectiles.push({
+                    fromX: t.x, fromY: t.y, toX: target.x, toY: target.y,
+                    char: COMBAT_VISUALS.projectileChar, color,
+                    skinKey: t.type === 'void_turret' ? 'projectile_void' : 'projectile_arcane',
+                    _startTime: performance.now(), _duration: duration,
                 });
             }
         }

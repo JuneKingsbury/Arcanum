@@ -38,6 +38,16 @@ const EFFECT_ITEMS = [
     { key: 'spell_terraform', char: '.', color: '#88ff88', desc: 'Terraform spell effect' },
     { key: 'spell_divination', char: '?', color: '#ccaaff', desc: 'Divination spell effect' },
     { key: 'summon_sparkle', char: '✦', color: '#9966ff', desc: 'Summon appear/disappear sparkle' },
+    { key: 'magic_levelup', char: '★', color: '#ffdd44', desc: 'Magic skill level-up icon' },
+    { key: 'spell_cast', char: '◇', color: '#cc88ff', desc: 'Spell casting visual at caster' },
+    { key: 'damage_flash', char: '█', color: '#ff2222', desc: 'Damage taken overlay (tints entity red)' },
+    { key: 'attack_swing', char: '/', color: '#ffffff', desc: 'Melee attack swing overlay' },
+    { key: 'projectile_arcane', char: '•', color: '#ff4444', desc: 'Arcane sentinel projectile' },
+    { key: 'projectile_void', char: '•', color: '#cc00ff', desc: 'Void turret projectile' },
+    { key: 'projectile_arrow', char: '-', color: '#ffaa33', desc: 'Arrow/ranged attack projectile' },
+    { key: 'projectile_spell', char: '*', color: '#ff44ff', desc: 'Spell projectile (evocation)' },
+    { key: 'projectile_bolt', char: '→', color: '#aaddff', desc: 'Crossbow bolt projectile' },
+    { key: 'smite', char: '✝', color: '#ffffaa', desc: 'Smite melee spell hit effect' },
 ];
 
 let editorInstance = null;

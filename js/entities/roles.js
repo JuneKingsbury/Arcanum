@@ -1,4 +1,4 @@
-import { CONFIG, BUILDINGS } from '../core/config.js';
+import { CONFIG, BUILDINGS, COMBAT_VISUALS } from '../core/config.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { isPassable, isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { moveEntity } from '../systems/movement-lerp.js';
@@ -134,11 +134,14 @@ export const ROLE_HANDLERS = {
 
             if (dist <= range && dist >= 2) {
                 target.hp -= entity.damage;
-                game.combatEffects.push({
-                    x: target.x, y: target.y,
+                target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+                const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+                game.projectiles.push({
+                    fromX: entity.x, fromY: entity.y, toX: target.x, toY: target.y,
                     char: entity.projectileChar || '-',
                     color: entity.projectileColor || entity.color,
-                    ttl: 2,
+                    skinKey: 'projectile_arrow',
+                    _startTime: performance.now(), _duration: projDuration,
                 });
                 if (dist < preferDist) {
                     fleeFrom(entity, target, game.map, dur);

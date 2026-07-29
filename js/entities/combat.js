@@ -267,6 +267,7 @@ export function attackStructure(game, x, y, damage) {
     }
 
     tile.structureHp -= damage;
+    tile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
     if (game.combatEffects) game.combatEffects.push({ x, y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.structureDamageColor, ttl: COMBAT_VISUALS.hitTtl });
 
     if (tile.structureHp <= 0) {
