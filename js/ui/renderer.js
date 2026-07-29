@@ -404,7 +404,7 @@ export class Renderer {
 
         const effectMap = this._effectMap;
         effectMap.clear();
-        if (game.combatEffects) {
+        if (game.combatEffects && game.settings.showOverlays) {
             for (const e of game.combatEffects) {
                 effectMap.set(e.y * CONFIG.MAP_WIDTH + e.x, e);
             }
@@ -454,8 +454,8 @@ export class Renderer {
                 const entity = entityMap.get(tileKey);
                 if (entity) {
                     char = entity.char;
-                    color = entity._dmgFlashUntil > game.tick ? COMBAT_VISUALS.dmgFlashColor : entity.color;
-                } else if (tile.structure && tile._dmgFlashUntil > game.tick) {
+                    color = (game.settings.showOverlays && entity._dmgFlashUntil > game.tick) ? COMBAT_VISUALS.dmgFlashColor : entity.color;
+                } else if (tile.structure && game.settings.showOverlays && tile._dmgFlashUntil > game.tick) {
                     color = COMBAT_VISUALS.dmgFlashColor;
                 }
 
@@ -502,11 +502,11 @@ export class Renderer {
                         if (entity) {
                             const entitySprite = this._resolveSprite(tile, entity, game.weather.season);
                             if (entitySprite) {
-                                const shakeActive = entity._atkShakeUntil > game.tick;
+                                const shakeActive = game.settings.showOverlays && entity._atkShakeUntil > game.tick;
                                 const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
                                 const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
                                 ctx.drawImage(entitySprite, px + shakeX, py + shakeY, cw, ch);
-                                if (entity._dmgFlashUntil > game.tick) {
+                                if (game.settings.showOverlays && entity._dmgFlashUntil > game.tick) {
                                     const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
                                     if (flashSprite) {
                                         ctx.drawImage(flashSprite, px + shakeX, py + shakeY, cw, ch);
@@ -534,7 +534,7 @@ export class Renderer {
                                 const ground = this._resolveGroundSprite(tile, game.weather.season);
                                 if (ground) ctx.drawImage(ground, px, py, cw, ch);
                             }
-                            const shakeActive = entity && entity._atkShakeUntil > game.tick;
+                            const shakeActive = game.settings.showOverlays && entity && entity._atkShakeUntil > game.tick;
                             const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
                             const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
                             ctx.drawImage(sprite, px + shakeX, py + shakeY, cw, ch);
@@ -546,7 +546,7 @@ export class Renderer {
                                 ctx.fillRect(px + cw - 4, py, 4, 4);
                                 lastColor = '';
                             }
-                            if (entity && entity._dmgFlashUntil > game.tick) {
+                            if (game.settings.showOverlays && entity && entity._dmgFlashUntil > game.tick) {
                                 const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
                                 if (flashSprite) {
                                     ctx.drawImage(flashSprite, px + shakeX, py + shakeY, cw, ch);
@@ -562,7 +562,7 @@ export class Renderer {
                                 const swingSprite = this.skinManager.getSprite('effects', 'attack_swing');
                                 if (swingSprite) ctx.drawImage(swingSprite, px, py, cw, ch);
                             }
-                            if (!entity && tile.structure && tile._dmgFlashUntil > game.tick) {
+                            if (game.settings.showOverlays && !entity && tile.structure && tile._dmgFlashUntil > game.tick) {
                                 const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
                                 if (flashSprite) {
                                     ctx.drawImage(flashSprite, px, py, cw, ch);
@@ -614,7 +614,7 @@ export class Renderer {
                 }
 
                 if (!spriteDrawn) {
-                    const asciiShake = entity && entity._atkShakeUntil > game.tick;
+                    const asciiShake = game.settings.showOverlays && entity && entity._atkShakeUntil > game.tick;
                     const asx = asciiShake ? ((game.tick * 7) % 5) - 2 : 0;
                     const asy = asciiShake ? ((game.tick * 13) % 3) - 1 : 0;
                     if (char === '█' || char === '▓' || char === '▒') {
@@ -664,7 +664,7 @@ export class Renderer {
             const sy = pos.y - camera.y;
             if (sx < -1 || sx >= CONFIG.VIEWPORT_WIDTH + 1 || sy < -1 || sy >= CONFIG.VIEWPORT_HEIGHT + 1) continue;
             const ent = me.entity;
-            const shakeActive = ent._atkShakeUntil > game.tick;
+            const shakeActive = game.settings.showOverlays && ent._atkShakeUntil > game.tick;
             const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
             const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
             const rpx = Math.round(sx * cw) + shakeX;
@@ -686,7 +686,7 @@ export class Renderer {
                     ctx.fillStyle = me.color;
                     ctx.fillRect(rpx + cw - 4, rpy, 4, 4);
                 }
-                if (ent._dmgFlashUntil > game.tick) {
+                if (game.settings.showOverlays && ent._dmgFlashUntil > game.tick) {
                     const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
                     if (flashSprite) {
                         ctx.drawImage(flashSprite, rpx, rpy, cw, ch);
@@ -702,13 +702,13 @@ export class Renderer {
                     if (swingSprite) ctx.drawImage(swingSprite, rpx - shakeX, rpy - shakeY, cw, ch);
                 }
             } else {
-                ctx.fillStyle = ent._dmgFlashUntil > game.tick ? COMBAT_VISUALS.dmgFlashColor : me.color;
+                ctx.fillStyle = (game.settings.showOverlays && ent._dmgFlashUntil > game.tick) ? COMBAT_VISUALS.dmgFlashColor : me.color;
                 ctx.fillText(me.char, rpx + this._textOffsetX, rpy);
             }
         }
 
         // --- Draw projectiles at interpolated positions ---
-        if (game.projectiles) {
+        if (game.projectiles && game.settings.showOverlays) {
             for (const p of game.projectiles) {
                 const t = Math.min(1, (now - p._startTime) / p._duration);
                 const px2 = p.fromX + (p.toX - p.fromX) * t;

@@ -1644,6 +1644,22 @@ body {
    ============================ */
 
 
+/* Accessibility: larger click targets */
+.large-targets button,
+.large-targets .mode-opt,
+.large-targets select {
+    min-height: 36px;
+    min-width: 36px;
+    font-size: 13px;
+}
+.large-targets input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
+.large-targets .settings-row label {
+    font-size: 13px;
+}
+
 /* Small screens / phones */
 @media (max-width: 768px) {
     body {

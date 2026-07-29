@@ -1805,6 +1805,12 @@ export class UI {
         html += `</select></div>`;
         html += `</div>`;
 
+        html += `<div class="settings-section"><div class="settings-section-title">Accessibility</div>`;
+        html += this._settingsCheck('set-darken-pause', s.darkenOnPause, 'window.game.settings.darkenOnPause=this.checked;if(window.game.paused)document.getElementById("game").classList.toggle("paused",this.checked)', 'Darken screen when paused');
+        html += this._settingsCheck('set-always-toolbar', s.alwaysShowToolbar, 'window.game.settings.alwaysShowToolbar=this.checked;document.getElementById("touch-toolbar").style.display=this.checked?"flex":""', 'Always show mobile toolbar (button bar)');
+        html += this._settingsCheck('set-large-clicks', s.largeClickTargets, 'window.game.settings.largeClickTargets=this.checked;document.getElementById("game-container").classList.toggle("large-targets",this.checked)', 'Larger click targets (buttons & checkboxes)');
+        html += `</div>`;
+
         html += `<div class="settings-section"><div class="settings-section-title">Performance</div>`;
         html += this._settingsCheck('set-overlays', s.showOverlays, 'window.game.settings.showOverlays=this.checked', 'Show overlay effects (progress bars, combat)');
         html += this._settingsCheck('set-night', s.showNightLighting, 'window.game.settings.showNightLighting=this.checked', 'Show night lighting/darkness');

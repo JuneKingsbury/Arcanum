@@ -103,11 +103,20 @@
                 <div class="settings-row"><input type="checkbox" id="start-dither" checked><label for="start-dither">Terrain dithering (sprite mode only)</label></div>
             </div>
             <div class="settings-section">
+                <div class="settings-section-title">Accessibility</div>
+                <div class="settings-row"><input type="checkbox" id="start-darken-pause" checked><label for="start-darken-pause">Darken screen when paused</label></div>
+                <div class="settings-row"><input type="checkbox" id="start-always-toolbar"><label for="start-always-toolbar">Always show mobile toolbar (button bar)</label></div>
+                <div class="settings-row"><input type="checkbox" id="start-large-clicks"><label for="start-large-clicks">Larger click targets (buttons & checkboxes)</label></div>
+            </div>
+            <div class="settings-section">
                 <div class="settings-section-title">Save Data</div>
                 <div class="settings-row" style="gap:8px;">
                     <button id="export-game" disabled style="flex:1;padding:4px 8px;font-size:11px;">Export Save</button>
                     <button id="import-game" style="flex:1;padding:4px 8px;font-size:11px;">Import Save</button>
                 </div>
+            </div>
+            <div style="margin-top:12px; text-align:center;">
+                <button id="start-reset-defaults" style="padding:6px 16px; font-size:11px; background:#442222; border:1px solid #664444; color:#ff8888; border-radius:4px; cursor:pointer;">Reset to Defaults</button>
             </div>
         </div>
     </div>

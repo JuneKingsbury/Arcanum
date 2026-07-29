@@ -58,6 +58,9 @@ class Game {
             autoSaveInterval: 60,
             activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
             demoMode: false,
+            darkenOnPause: true,
+            alwaysShowToolbar: false,
+            largeClickTargets: false,
             craftTargets: {},
         };
         this._fpsFrames = 0;
@@ -348,7 +351,7 @@ class Game {
 
     togglePause() {
         this.paused = !this.paused;
-        document.getElementById('game').classList.toggle('paused', this.paused);
+        document.getElementById('game').classList.toggle('paused', this.paused && this.settings.darkenOnPause);
         document.getElementById('pause-overlay').style.display = this.paused ? 'block' : 'none';
     }
 
@@ -1663,6 +1666,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalBackdrop.addEventListener('click', closeModals);
 
+    document.getElementById('start-reset-defaults').addEventListener('click', () => {
+        document.getElementById('start-skin').value = 'ascii';
+        document.getElementById('start-names').value = 'selected';
+        document.getElementById('start-ui-font-size').value = 12;
+        document.getElementById('start-ui-font-val').textContent = '12px';
+        document.getElementById('start-autopause-hostile').checked = true;
+        document.getElementById('start-autopause-event').checked = true;
+        document.getElementById('start-pause-death').checked = false;
+        document.getElementById('start-peaceful-check').checked = false;
+        document.getElementById('start-demo-mode').checked = false;
+        document.getElementById('start-autocook').value = '0';
+        document.getElementById('start-autosave').value = '60';
+        document.getElementById('start-overlays').checked = true;
+        document.getElementById('start-night').checked = true;
+        document.getElementById('start-weather').checked = true;
+        document.getElementById('start-minimap').checked = true;
+        document.getElementById('start-fps').checked = false;
+        document.getElementById('start-dither').checked = true;
+        document.getElementById('start-darken-pause').checked = true;
+        document.getElementById('start-always-toolbar').checked = false;
+        document.getElementById('start-large-clicks').checked = false;
+    });
+
     // Shared transition from start screen into active game
     function launchGame(setup) {
         startScreen.style.display = 'none';
@@ -1675,6 +1701,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fitGameFont();
             const game = new Game();
             setup(game);
+            if (game.settings.alwaysShowToolbar) {
+                document.getElementById('touch-toolbar').style.display = 'flex';
+            }
+            if (game.settings.largeClickTargets) {
+                document.getElementById('game-container').classList.add('large-targets');
+            }
             fitGameFont();
             game.start();
         });
@@ -1697,6 +1729,9 @@ document.addEventListener('DOMContentLoaded', () => {
             uiFontSize: parseInt(document.getElementById('start-ui-font-size').value) || 12,
             activeSkin: document.getElementById('start-skin').value || 'ascii',
             demoMode: document.getElementById('start-demo-mode').checked,
+            darkenOnPause: document.getElementById('start-darken-pause').checked,
+            alwaysShowToolbar: document.getElementById('start-always-toolbar').checked,
+            largeClickTargets: document.getElementById('start-large-clicks').checked,
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
