@@ -1,4 +1,4 @@
-import { CONFIG, RAID_CONFIG, RAID_TYPES, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG } from '../core/config.js';
+import { CONFIG, RAID_CONFIG, RAID_TYPES, BUILDINGS, COMBAT_VISUALS, PATHFINDING_CONFIG, COLONIST_CONFIG } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { findPathForEnemies, manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
@@ -178,7 +178,11 @@ function updateRaider(raider, game) {
 
     const dist = manhattanDist(raider.x, raider.y, nearest.x, nearest.y);
     if (dist <= 1) {
-        colonistTakeDamage(nearest, raider.damage, game, raider);
+        const cooldown = raider.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+        if (game.tick - (raider._lastAttackTick || 0) >= cooldown) {
+            raider._lastAttackTick = game.tick;
+            colonistTakeDamage(nearest, raider.damage, game, raider);
+        }
         return;
     }
 

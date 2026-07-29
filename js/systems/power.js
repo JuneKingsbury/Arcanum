@@ -119,6 +119,10 @@ export class PowerSystem {
         if (!this.powered) return;
 
         for (const ward of this.aoeWards) {
+            const wardTile = game.map[ward.y][ward.x];
+            const wardCooldown = BUILDINGS[wardTile.structure]?.power?.attackCooldown || 3;
+            if (game.tick - (wardTile._turretLastAttackTick || 0) < wardCooldown) continue;
+            wardTile._turretLastAttackTick = game.tick;
             const enemies = [];
             for (const r of game.raiders) {
                 if (r.hp > 0 && manhattanDist(ward.x, ward.y, r.x, r.y) <= ward.radius) enemies.push(r);
@@ -141,6 +145,9 @@ export class PowerSystem {
 
         for (const t of allTurrets) {
             const pwr = BUILDINGS[t.type].power;
+            const cooldown = pwr.attackCooldown || 3;
+            const tile = game.map[t.y][t.x];
+            if (game.tick - (tile._turretLastAttackTick || 0) < cooldown) continue;
             const range = pwr.range;
             const damage = pwr.damage;
 
@@ -180,6 +187,7 @@ export class PowerSystem {
             }
 
             if (target && manhattanDist(t.x, t.y, target.x, target.y) <= range) {
+                tile._turretLastAttackTick = game.tick;
                 target.hp -= damage;
                 target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
                 const color = t.type === 'void_turret' ? COMBAT_VISUALS.shotColorVoid : COMBAT_VISUALS.shotColorArcane;

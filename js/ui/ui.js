@@ -1,4 +1,4 @@
-import { CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES } from '../core/config.js';
+import { CONFIG, COLONIST_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -723,7 +723,7 @@ export class UI {
             `<span class="${t.moodEffect >= 0 ? 'positive' : 'negative'}">${t.text} (${t.moodEffect > 0 ? '+' : ''}${t.moodEffect.toFixed(0)})</span>`
         ).join('<br>');
 
-        const weaponTip = colonist.weapon ? `${colonist.weapon.damage} damage${colonist.weapon.ranged ? `, range ${colonist.weapon.range}` : ''}${colonist.weapon.spellDamageBonus ? `, +${Math.round(colonist.weapon.spellDamageBonus*100)}% spell dmg` : ''}${colonist.weapon.miningSpeed ? `, +${Math.round((colonist.weapon.miningSpeed-1)*100)}% mining` : ''}${colonist.weapon.choppingSpeed ? `, +${Math.round((colonist.weapon.choppingSpeed-1)*100)}% chopping` : ''}` : 'No weapon equipped';
+        const weaponTip = colonist.weapon ? getWeaponTooltip(colonist) : 'No weapon equipped';
         const armorTip = colonist.armor ? `${Math.round(colonist.armor.damageReduction * 100)}% damage reduction${colonist.armor.spellDamageBonus ? `, +${Math.round(colonist.armor.spellDamageBonus*100)}% spell dmg` : ''}` : 'No armor equipped';
         const helmetTip = colonist.helmet ? `${Math.round(colonist.helmet.damageReduction * 100)}% damage reduction${colonist.helmet.spellDamageBonus ? `, +${Math.round(colonist.helmet.spellDamageBonus*100)}% spell dmg` : ''}` : 'No helmet equipped';
         const toolTip = colonist.tool ? Object.entries(colonist.tool).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => `${k}: ${typeof v === 'number' ? (v > 1 ? `+${Math.round((v-1)*100)}%` : `${Math.round(v*100)}%`) : v}`).join(', ') : 'No tool equipped';
@@ -889,7 +889,7 @@ export class UI {
     _buildSlotSelect(colonist, slot) {
         const overlayStyle = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
         const SLOT_CONFIG = {
-            weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => `${w.damage} dmg` },
+            weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => { const cd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown; return `${w.damage} dmg (${(w.damage / cd).toFixed(1)}/t)`; } },
             armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => `${Math.round(a.damageReduction * 100)}% DR` },
             helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => `${Math.round(h.damageReduction * 100)}% DR` },
             tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/') },
@@ -1147,7 +1147,7 @@ export class UI {
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${label}</div>`;
             html += `<div class="info-row">HP: ${r.hp}/${r.maxHp}</div>`;
-            html += `<div class="info-row">Damage: ${r.weapon?.name ? r.weapon.name + ' ' : ''}(${r.damage} dmg)</div>`;
+            html += `<div class="info-row">Damage: ${r.weapon?.name ? r.weapon.name + ' ' : ''}(${r.damage} dmg, ${(r.damage / (r.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)}/tick)</div>`;
             html += `<div class="info-row">State: ${r.fleeing ? 'Fleeing' : 'Attacking'}</div>`;
             if (r.roles && r.roles.length > 0) html += getRoleInfoHtml(r);
             html += `</div>`;
@@ -1224,7 +1224,7 @@ export class UI {
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${name}</div>`;
             html += `<div class="info-row">HP: ${s.hp}/${s.maxHp}</div>`;
-            html += `<div class="info-row">Damage: ${s.damage}</div>`;
+            html += `<div class="info-row">Damage: ${s.damage} (${(s.damage / (s.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)}/tick)</div>`;
             if (s.roles && s.roles.length > 0) {
                 html += getRoleInfoHtml(s);
             } else {
@@ -2112,6 +2112,26 @@ function statColor(value) {
     if (value >= 40) return '#cccc44';
     if (value >= 20) return '#cc8844';
     return '#cc4444';
+}
+
+function getWeaponTooltip(colonist) {
+    const w = colonist.weapon;
+    const baseCd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+    const atkSpeed = 1 + getEquipmentStat(colonist, 'attackSpeed');
+    const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
+    const baseDpt = (w.damage / baseCd).toFixed(1);
+    let tip = `${w.damage} dmg`;
+    if (baseCd !== effCd) {
+        const effDpt = (w.damage / effCd).toFixed(1);
+        tip += `, base ${baseDpt}/t → ${effDpt}/t (cd ${baseCd}→${effCd})`;
+    } else {
+        tip += `, ${baseDpt}/t (cd ${baseCd})`;
+    }
+    if (w.ranged) tip += `, range ${w.range}`;
+    if (w.spellDamageBonus) tip += `, +${Math.round(w.spellDamageBonus * 100)}% spell dmg`;
+    if (w.miningSpeed) tip += `, +${Math.round((w.miningSpeed - 1) * 100)}% mining`;
+    if (w.choppingSpeed) tip += `, +${Math.round((w.choppingSpeed - 1) * 100)}% chopping`;
+    return tip;
 }
 
 installArcanePanel(UI);

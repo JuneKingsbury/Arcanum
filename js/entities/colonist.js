@@ -153,6 +153,7 @@ export function updateColonist(colonist, game) {
         case 'fleeing': updateFleeing(colonist, game); break;
         case 'drafted': updateDrafted(colonist, game); break;
         case 'wandering': updateWandering(colonist, game); break;
+        case 'hunting': updateHunting(colonist, game); break;
     }
 
     if (game.tick % 15 === 0) {
@@ -972,7 +973,18 @@ function updateFighting(colonist, game) {
     const isRanged = weapon && weapon.ranged;
     const weaponRange = isRanged ? weapon.range : 1;
 
+    const baseCooldown = (weapon && weapon.attackCooldown) || COLONIST_CONFIG.baseAttackCooldown;
+    let atkSpeed = 1 + getEquipmentStat(colonist, 'attackSpeed');
+    if (colonist.activeEffects) {
+        for (const e of colonist.activeEffects) {
+            if (e.type === 'attackSpeed' && e.attackSpeedBonus) atkSpeed += e.attackSpeedBonus;
+        }
+    }
+    const effectiveCooldown = Math.max(1, Math.round(baseCooldown / atkSpeed));
+
     if (isRanged && dist <= weaponRange && dist >= 2) {
+        if (game.tick - (colonist._lastAttackTick || 0) < effectiveCooldown) return;
+        colonist._lastAttackTick = game.tick;
         let weaponDmg = weapon.damage;
         for (const item of getEquippedItems(colonist)) {
             if (item !== weapon && item.damage) weaponDmg += item.damage;
@@ -1005,6 +1017,8 @@ function updateFighting(colonist, game) {
         }
         return;
     } else {
+        if (game.tick - (colonist._lastAttackTick || 0) < effectiveCooldown) return;
+        colonist._lastAttackTick = game.tick;
         let weaponDmg = weapon ? weapon.damage : WEAPONS.fists.damage;
         for (const item of getEquippedItems(colonist)) {
             if (item !== weapon && item.damage) weaponDmg += item.damage;
@@ -1025,6 +1039,77 @@ function updateFighting(colonist, game) {
         if (hpOnKill > 0) colonist.hp = Math.min(colonist.maxHp, colonist.hp + hpOnKill);
         addThought(colonist, 'Won a fight', COLONIST_CONFIG.victoryMoodBonus, COLONIST_CONFIG.victoryMoodDuration, game.tick);
         colonist.state = 'idle';
+    }
+}
+
+function updateHunting(colonist, game) {
+    const threat = findNearestHostile(colonist, game);
+    if (threat && manhattanDist(colonist.x, colonist.y, threat.x, threat.y) <= COLONIST_CONFIG.fightEngageDistance) {
+        colonist.state = 'fighting';
+        delete colonist.huntTargetId;
+        return;
+    }
+
+    const animal = game.entities.find(a => a.id === colonist.huntTargetId && a.category === 'animal');
+    if (!animal || animal.hp <= 0) {
+        colonist.state = 'idle';
+        delete colonist.huntTargetId;
+        return;
+    }
+
+    const dist = manhattanDist(colonist.x, colonist.y, animal.x, animal.y);
+    const weapon = colonist.weapon;
+    const isRanged = weapon && weapon.ranged;
+    const attackRange = isRanged ? weapon.range : 1;
+
+    if (dist > attackRange) {
+        const dx = Math.sign(animal.x - colonist.x);
+        const dy = Math.sign(animal.y - colonist.y);
+        const dur = CONFIG.TICK_RATE / game.speed;
+        if (dx !== 0 && isPassable(game.map, colonist.x + dx, colonist.y)) {
+            moveEntity(colonist, colonist.x + dx, colonist.y, dur);
+        } else if (dy !== 0 && isPassable(game.map, colonist.x, colonist.y + dy)) {
+            moveEntity(colonist, colonist.x, colonist.y + dy, dur);
+        }
+        return;
+    }
+
+    const baseCooldown = (weapon && weapon.attackCooldown) || COLONIST_CONFIG.baseAttackCooldown;
+    let atkSpeed = 1 + getEquipmentStat(colonist, 'attackSpeed');
+    if (colonist.activeEffects) {
+        for (const e of colonist.activeEffects) {
+            if (e.type === 'attackSpeed' && e.attackSpeedBonus) atkSpeed += e.attackSpeedBonus;
+        }
+    }
+    const effectiveCooldown = Math.max(1, Math.round(baseCooldown / atkSpeed));
+
+    if (game.tick - (colonist._lastAttackTick || 0) < effectiveCooldown) return;
+    colonist._lastAttackTick = game.tick;
+
+    let huntDmg = weapon ? weapon.damage : WEAPONS.fists.damage;
+    for (const item of getEquippedItems(colonist)) {
+        if (item !== weapon && item.damage) huntDmg += item.damage;
+    }
+    huntDmg += Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+
+    animal.hp -= huntDmg;
+    animal._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+    colonist._atkShakeUntil = game.tick + COMBAT_VISUALS.atkShakeTtl;
+
+    if (isRanged && dist >= 2) {
+        const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+        game.projectiles.push({
+            fromX: colonist.x, fromY: colonist.y, toX: animal.x, toY: animal.y,
+            char: weapon.projectileChar || '-',
+            color: weapon.projectileColor || '#ffaa33',
+            skinKey: weapon.skinKey || 'projectile_arrow',
+            _startTime: performance.now(), _duration: projDuration,
+        });
+    }
+
+    if (animal.hp <= 0) {
+        colonist.state = 'idle';
+        delete colonist.huntTargetId;
     }
 }
 

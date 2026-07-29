@@ -1,4 +1,4 @@
-import { CONFIG, WAVE_CONFIG, WAVE_TYPES, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, WAVE_CONFIG, WAVE_TYPES, COMBAT_VISUALS, COLONIST_CONFIG } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
@@ -165,6 +165,9 @@ export class WaveSystem {
             if (score > bestScore) { bestScore = score; bestTarget = c; }
         }
         if (bestTarget) {
+            const cooldown = enemy.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+            if (game.tick - (enemy._lastAttackTick || 0) < cooldown) return;
+            enemy._lastAttackTick = game.tick;
             colonistTakeDamage(bestTarget, enemy.damage, game, enemy);
             return;
         }
@@ -176,6 +179,9 @@ export class WaveSystem {
 
         const dist = manhattanDist(enemy.x, enemy.y, this.nexusPosition.x, this.nexusPosition.y);
         if (dist <= 1) {
+            const cooldown = enemy.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+            if (game.tick - (enemy._lastAttackTick || 0) < cooldown) return;
+            enemy._lastAttackTick = game.tick;
             this.nexusHp -= enemy.damage;
             const nexusTile = game.map[this.nexusPosition.y]?.[this.nexusPosition.x];
             if (nexusTile) nexusTile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;

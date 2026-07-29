@@ -302,7 +302,7 @@ class Game {
             updatePedestals(this);
         }
 
-        if (this.tick % 3 === 0 && this.power.hasPower()) {
+        if (this.power.hasPower()) {
             this.power.updateTurrets(this);
         }
 

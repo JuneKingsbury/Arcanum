@@ -1,4 +1,5 @@
-import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS, COLONIST_CONFIG } from '../core/config.js';
+import { getEquipmentStat } from '../entities/colonist.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
 let nextExpeditionId = 1;
@@ -247,6 +248,9 @@ export class ExplorationSystem {
             exp.nextEncounterTick = game.tick + Math.floor(exp.duration * EXPLORATION_CONFIG.encounterSpacing);
             exp.partySnapshot = exp.partyIds.map(id => {
                 const c = game.getColonist(id);
+                const baseCd = (c.weapon && c.weapon.attackCooldown) || COLONIST_CONFIG.baseAttackCooldown;
+                const atkSpeed = 1 + getEquipmentStat(c, 'attackSpeed');
+                const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
                 return {
                     id: c.id, name: c.name, hp: c.hp, maxHp: c.maxHp,
                     weapon: c.weapon, armor: c.armor, helmet: c.helmet,
@@ -256,6 +260,8 @@ export class ExplorationSystem {
                     maxMana: c.maxMana || 0,
                     spellCooldowns: {},
                     spellDamageBonus: (c.weapon?.spellDamageBonus || 0) + (c.armor?.spellDamageBonus || 0) + (c.helmet?.spellDamageBonus || 0) + (c.tool?.spellDamageBonus || 0) + ((!c.artifactBroken && c.artifact?.spellDamageBonus) || 0),
+                    attackCooldown: baseCd,
+                    effectiveCooldown: effCd,
                     shieldActive: false,
                     shieldReduction: 0,
                 };
@@ -427,33 +433,36 @@ export class ExplorationSystem {
         const partyDmgMult = getPartyExpeditionEffect(exp.partySnapshot, 'partyDamageMult');
         for (const member of alive) {
             if (member.hp <= 0) continue;
-            const target = combat.enemies.find(e => e.hp > 0);
-            if (!target) break;
             let weaponDmg = member.weapon ? member.weapon.damage : EXPLORATION_CONFIG.baseFistDamage;
             const memberItems = [member.weapon, member.armor, member.helmet, member.artifact].filter(Boolean);
             for (const item of memberItems) { if (item !== member.weapon && item.damage) weaponDmg += item.damage; }
-            let dmg = Math.floor((weaponDmg + randInt(0, 3)) * partyDmgMult);
-            let critHit = false;
             const critChance = memberItems.reduce((sum, it) => sum + (it.critChance || 0), 0);
-            if (critChance > 0 && Math.random() < critChance) { dmg *= 2; critHit = true; }
+            const hitsPerRound = Math.max(1, Math.round(member.attackCooldown / member.effectiveCooldown));
+            for (let hit = 0; hit < hitsPerRound; hit++) {
+                const target = combat.enemies.find(e => e.hp > 0);
+                if (!target) break;
+                let dmg = Math.floor((weaponDmg + randInt(0, 3)) * partyDmgMult);
+                let critHit = false;
+                if (critChance > 0 && Math.random() < critChance) { dmg *= 2; critHit = true; }
 
-            if (Math.random() < 0.15) {
-                const msg = pickRandom(EXPLORATION_EVENTS.combatMiss)
-                    .replace('{attacker}', member.name)
-                    .replace('{target}', 'an enemy');
-                this._addLog(exp, game, msg, 'combat');
-            } else {
-                target.hp -= dmg;
-                const hitMsg = critHit ? `${member.name} lands a critical strike for ${dmg} damage!` : null;
-                const msg = hitMsg || pickRandom(EXPLORATION_EVENTS.combatHit)
-                    .replace('{attacker}', member.name)
-                    .replace('{target}', 'an enemy')
-                    .replace('{dmg}', dmg);
-                this._addLog(exp, game, msg, 'combat');
-                if (target.hp <= 0) {
-                    this._addLog(exp, game, `${member.name} slays a foe!`, 'success');
-                    const hpOnKill = memberItems.reduce((sum, it) => sum + (it.hpOnKill || 0), 0);
-                    if (hpOnKill > 0) member.hp = Math.min(member.maxHp, member.hp + hpOnKill);
+                if (Math.random() < 0.15) {
+                    const msg = pickRandom(EXPLORATION_EVENTS.combatMiss)
+                        .replace('{attacker}', member.name)
+                        .replace('{target}', 'an enemy');
+                    this._addLog(exp, game, msg, 'combat');
+                } else {
+                    target.hp -= dmg;
+                    const hitMsg = critHit ? `${member.name} lands a critical strike for ${dmg} damage!` : null;
+                    const msg = hitMsg || pickRandom(EXPLORATION_EVENTS.combatHit)
+                        .replace('{attacker}', member.name)
+                        .replace('{target}', 'an enemy')
+                        .replace('{dmg}', dmg);
+                    this._addLog(exp, game, msg, 'combat');
+                    if (target.hp <= 0) {
+                        this._addLog(exp, game, `${member.name} slays a foe!`, 'success');
+                        const hpOnKill = memberItems.reduce((sum, it) => sum + (it.hpOnKill || 0), 0);
+                        if (hpOnKill > 0) member.hp = Math.min(member.maxHp, member.hp + hpOnKill);
+                    }
                 }
             }
         }
@@ -462,44 +471,48 @@ export class ExplorationSystem {
 
         for (const enemy of combat.enemies) {
             if (enemy.hp <= 0) continue;
-            let target = null;
-            let bestScore = Infinity;
-            for (const p of alive) {
-                if (p.hp <= 0) continue;
-                const priority = p.artifact?.expedition?.targetPriority || 0;
-                const score = -priority;
-                if (score < bestScore) { bestScore = score; target = p; }
-            }
-            if (!target) break;
-            const targetItems = [target.weapon, target.armor, target.helmet, target.artifact].filter(Boolean);
-            const dodgeChance = targetItems.reduce((sum, it) => sum + (it.dodgeChance || 0), 0);
-            if (dodgeChance > 0 && Math.random() < dodgeChance) {
-                this._addLog(exp, game, `${target.name} dodges an attack!`, 'combat');
-                continue;
-            }
-            let dmg = enemy.damage + randInt(0, 2);
-            for (const item of targetItems) {
-                if (item.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.damageReduction)));
-                if (item.expedition?.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.expedition.damageReduction)));
-            }
-            if (target.shieldActive) {
-                dmg = Math.max(1, Math.floor(dmg * (1 - target.shieldReduction)));
-            }
+            const enemyCd = enemy.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+            const enemyHits = Math.max(1, Math.round(COLONIST_CONFIG.baseAttackCooldown / enemyCd));
+            for (let hit = 0; hit < enemyHits; hit++) {
+                let target = null;
+                let bestScore = Infinity;
+                for (const p of alive) {
+                    if (p.hp <= 0) continue;
+                    const priority = p.artifact?.expedition?.targetPriority || 0;
+                    const score = -priority;
+                    if (score < bestScore) { bestScore = score; target = p; }
+                }
+                if (!target) break;
+                const targetItems = [target.weapon, target.armor, target.helmet, target.artifact].filter(Boolean);
+                const dodgeChance = targetItems.reduce((sum, it) => sum + (it.dodgeChance || 0), 0);
+                if (dodgeChance > 0 && Math.random() < dodgeChance) {
+                    this._addLog(exp, game, `${target.name} dodges an attack!`, 'combat');
+                    continue;
+                }
+                let dmg = enemy.damage + randInt(0, 2);
+                for (const item of targetItems) {
+                    if (item.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.damageReduction)));
+                    if (item.expedition?.damageReduction) dmg = Math.max(1, Math.floor(dmg * (1 - item.expedition.damageReduction)));
+                }
+                if (target.shieldActive) {
+                    dmg = Math.max(1, Math.floor(dmg * (1 - target.shieldReduction)));
+                }
 
-            if (Math.random() < 0.15) {
-                const msg = pickRandom(EXPLORATION_EVENTS.combatMiss)
-                    .replace('{attacker}', 'An enemy')
-                    .replace('{target}', target.name);
-                this._addLog(exp, game, msg, 'combat');
-            } else {
-                target.hp -= dmg;
-                const msg = pickRandom(EXPLORATION_EVENTS.combatHit)
-                    .replace('{attacker}', 'An enemy')
-                    .replace('{target}', target.name)
-                    .replace('{dmg}', dmg);
-                this._addLog(exp, game, msg, 'combat');
-                if (target.hp <= 0) {
-                    this._checkExpeditionRevive(exp, target, game);
+                if (Math.random() < 0.15) {
+                    const msg = pickRandom(EXPLORATION_EVENTS.combatMiss)
+                        .replace('{attacker}', 'An enemy')
+                        .replace('{target}', target.name);
+                    this._addLog(exp, game, msg, 'combat');
+                } else {
+                    target.hp -= dmg;
+                    const msg = pickRandom(EXPLORATION_EVENTS.combatHit)
+                        .replace('{attacker}', 'An enemy')
+                        .replace('{target}', target.name)
+                        .replace('{dmg}', dmg);
+                    this._addLog(exp, game, msg, 'combat');
+                    if (target.hp <= 0) {
+                        this._checkExpeditionRevive(exp, target, game);
+                    }
                 }
             }
         }
@@ -765,7 +778,11 @@ export function estimatePartyStrength(game, colonistIds, realmKey, difficulty) {
         for (const item of items) {
             if (item !== c.weapon && item.damage) dmg += item.damage;
         }
-        totalDmg += dmg;
+        const baseCd = (c.weapon && c.weapon.attackCooldown) || COLONIST_CONFIG.baseAttackCooldown;
+        const atkSpeed = 1 + getEquipmentStat(c, 'attackSpeed');
+        const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
+        const hitsPerRound = Math.max(1, Math.round(baseCd / effCd));
+        totalDmg += dmg * hitsPerRound;
         totalHp += c.hp;
         let dr = 1;
         for (const item of items) {

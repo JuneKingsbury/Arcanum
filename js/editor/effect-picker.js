@@ -36,6 +36,7 @@ export const EFFECT_TYPES = [
 
 export const STAT_KEYS = [
     { value: 'damage', label: 'Damage' },
+    { value: 'attackSpeed', label: 'Attack Speed' },
     { value: 'damageReduction', label: 'Damage Reduction' },
     { value: 'critChance', label: 'Crit Chance' },
     { value: 'dodgeChance', label: 'Dodge Chance' },

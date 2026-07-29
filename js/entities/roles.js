@@ -1,8 +1,15 @@
-import { CONFIG, BUILDINGS, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, BUILDINGS, COMBAT_VISUALS, COLONIST_CONFIG } from '../core/config.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { isPassable, isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { moveEntity } from '../systems/movement-lerp.js';
 import { colonistTakeDamage } from './colonist.js';
+
+function canAttack(entity, game) {
+    const cooldown = entity.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+    if (game.tick - (entity._lastAttackTick || 0) < cooldown) return false;
+    entity._lastAttackTick = game.tick;
+    return true;
+}
 
 export const ROLE_HANDLERS = {
     guard: {
@@ -51,8 +58,10 @@ export const ROLE_HANDLERS = {
                 rs.target = { x: target.x, y: target.y };
                 const dist = manhattanDist(entity.x, entity.y, target.x, target.y);
                 if (dist <= 1) {
-                    target.hp -= damage;
-                    game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
+                    if (canAttack(entity, game)) {
+                        target.hp -= damage;
+                        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
+                    }
                 } else {
                     moveToward(entity, target, game.map, dur);
                 }
@@ -133,16 +142,18 @@ export const ROLE_HANDLERS = {
             const dist = manhattanDist(entity.x, entity.y, target.x, target.y);
 
             if (dist <= range && dist >= 2) {
-                target.hp -= entity.damage;
-                target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
-                const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
-                game.projectiles.push({
-                    fromX: entity.x, fromY: entity.y, toX: target.x, toY: target.y,
-                    char: entity.projectileChar || '-',
-                    color: entity.projectileColor || entity.color,
-                    skinKey: 'projectile_arrow',
-                    _startTime: performance.now(), _duration: projDuration,
-                });
+                if (canAttack(entity, game)) {
+                    target.hp -= entity.damage;
+                    target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+                    const projDuration = (dist / COMBAT_VISUALS.projectileSpeed) * 1000;
+                    game.projectiles.push({
+                        fromX: entity.x, fromY: entity.y, toX: target.x, toY: target.y,
+                        char: entity.projectileChar || '-',
+                        color: entity.projectileColor || entity.color,
+                        skinKey: 'projectile_arrow',
+                        _startTime: performance.now(), _duration: projDuration,
+                    });
+                }
                 if (dist < preferDist) {
                     fleeFrom(entity, target, game.map, dur);
                 }
@@ -182,14 +193,16 @@ export const ROLE_HANDLERS = {
 
             const dist = manhattanDist(entity.x, entity.y, target.x, target.y);
             if (dist <= 1) {
-                const bonus = !rs.charged ? (role.chargeBonus || 5) : 0;
-                rs.charged = true;
-                const dmg = entity.damage + bonus;
-                if (target.hp !== undefined) {
-                    target.hp -= dmg;
-                    game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
-                } else {
-                    colonistTakeDamage(target, dmg, game, entity);
+                if (canAttack(entity, game)) {
+                    const bonus = !rs.charged ? (role.chargeBonus || 5) : 0;
+                    rs.charged = true;
+                    const dmg = entity.damage + bonus;
+                    if (target.hp !== undefined) {
+                        target.hp -= dmg;
+                        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
+                    } else {
+                        colonistTakeDamage(target, dmg, game, entity);
+                    }
                 }
             } else {
                 moveToward(entity, target, game.map, dur);
@@ -216,15 +229,19 @@ export const ROLE_HANDLERS = {
             for (const c of nearbyColonists) {
                 if (c.hp <= 0) continue;
                 if (manhattanDist(entity.x, entity.y, c.x, c.y) <= 1) {
-                    colonistTakeDamage(c, entity.damage, game, entity);
+                    if (canAttack(entity, game)) {
+                        colonistTakeDamage(c, entity.damage, game, entity);
+                    }
                     return;
                 }
             }
 
             const dist = manhattanDist(entity.x, entity.y, nexus.x, nexus.y);
             if (dist <= 1) {
-                game.waves.nexusHp -= entity.damage;
-                game.combatEffects.push({ x: nexus.x, y: nexus.y, char: '!', color: '#aa33ff', ttl: 2 });
+                if (canAttack(entity, game)) {
+                    game.waves.nexusHp -= entity.damage;
+                    game.combatEffects.push({ x: nexus.x, y: nexus.y, char: '!', color: '#aa33ff', ttl: 2 });
+                }
                 return;
             }
 

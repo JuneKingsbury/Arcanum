@@ -210,11 +210,12 @@ export function completeTask(colonist, task, game) {
             if (task.targetAnimalId) {
                 const animal = game.entities.find(a => a.id === task.targetAnimalId && a.category === 'animal' && !a.tamed);
                 if (animal && animal.hp > 0) {
-                    let huntDmg = colonist.weapon ? colonist.weapon.damage : 5;
-                    for (const item of getEquippedItems(colonist)) {
-                        if (item !== colonist.weapon && item.damage) huntDmg += item.damage;
-                    }
-                    animal.hp -= huntDmg + (colonist.skills.animals || 1) * 2;
+                    colonist.huntTargetId = task.targetAnimalId;
+                    colonist.state = 'hunting';
+                    colonist.currentTaskId = null;
+                    colonist.workProgress = 0;
+                    game.taskQueue.complete(task.id);
+                    return;
                 }
             }
             break;
