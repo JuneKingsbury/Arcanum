@@ -69,6 +69,7 @@ class Game {
             showDamageFlash: true,
             showCombatParticles: true,
             showProjectiles: true,
+            showEquipmentOverlays: true,
             showProgressBars: true,
             showPortalPath: true,
             craftTargets: {},
@@ -584,6 +585,7 @@ class Game {
         if (c[slot]) this.resources[addMethod](c[slot]);
         c[slot] = item;
         this._recalcEquipmentStats(c);
+        if (slot === 'armor' || slot === 'helmet') this.renderer?.skinManager?.invalidateComposite(colonistId);
         this.notifications.push({ text: `${c.name} equipped ${item.name}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);
@@ -596,6 +598,7 @@ class Game {
         this.resources[addMethod](c[slot]);
         c[slot] = null;
         this._recalcEquipmentStats(c);
+        if (slot === 'armor' || slot === 'helmet') this.renderer?.skinManager?.invalidateComposite(colonistId);
         this.notifications.push({ text: `${c.name} unequipped ${label}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);

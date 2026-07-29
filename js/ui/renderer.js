@@ -67,6 +67,10 @@ export class Renderer {
         const sm = this.skinManager;
         if (entity) {
             if (entity.type === 'colonist') {
+                if (entity.armorKey || entity.helmetKey) {
+                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey);
+                    if (comp) return comp;
+                }
                 return sm.getColonistSprite(entity.colonistId, entity.drafted);
             }
             if (entity.type === 'golem') {
@@ -370,7 +374,8 @@ export class Renderer {
                 } else {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
-                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil };
+                const showEq = game.settings.showEquipmentOverlays;
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
                 if (isEntityMoving(c)) {
                     movingEntities.push({ entity: c, ...entData });
                 } else {

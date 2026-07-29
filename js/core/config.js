@@ -609,6 +609,13 @@ export const HELMETS = {
     void_crown: { name: 'Void Crown', damageReduction: 0.18, spellDamageBonus: 0.10 },
 };
 
+// Sprite overlay offsets for equipment_worn sprites composited on colonists.
+// offsetY is a fraction of sprite height (negative = up). Applied during rendering.
+export const EQUIPMENT_OVERLAY_OFFSETS = {
+    helmet: { offsetY: -0.25 },
+    armor: { offsetY: 0 },
+};
+
 // To add a tool: add entry here + a recipe with output: { <key>: 1 }. Equipped in a separate slot from weapons.
 // Any stat can be placed on any equipment type. See README.md "Equipment Stat Reference" for the full list.
 export const TOOLS = {

@@ -1,9 +1,12 @@
+import { HELMETS, EQUIPMENT_OVERLAY_OFFSETS } from '../core/config.js';
+
 export class SkinManager {
     constructor() {
         this._sprites = new Map();
         this._skinNames = ['ascii'];
         this._activeSkin = 'ascii';
         this._colonistVariantCount = 0;
+        this._compositeCache = new Map();
     }
 
     get isActive() {
@@ -63,11 +66,13 @@ export class SkinManager {
             this._activeSkin = 'ascii';
             this._colonistVariantCount = 0;
             this._itemDataURLCache = null;
+            this._compositeCache.clear();
             return;
         }
         await this._loadSkin(skinName);
         this._activeSkin = skinName;
         this._itemDataURLCache = null;
+        this._compositeCache.clear();
     }
 
     getSprite(category, key) {
@@ -104,6 +109,52 @@ export class SkinManager {
             if (s) return s;
         }
         return this._sprites.get('entities:colonist') || null;
+    }
+
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey) {
+        if (!armorKey && !helmetKey) return this.getColonistSprite(colonistId, drafted);
+
+        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}`;
+        if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
+
+        const base = this.getColonistSprite(colonistId, drafted);
+        if (!base) return null;
+
+        const armorSprite = armorKey ? this._sprites.get('equipment_worn:' + armorKey) : null;
+        const helmetSprite = helmetKey ? this._sprites.get('equipment_worn:' + helmetKey) : null;
+
+        if (!armorSprite && !helmetSprite) {
+            this._compositeCache.set(cacheKey, base);
+            return base;
+        }
+
+        const cw = base.width || base.naturalWidth || 16;
+        const ch = base.height || base.naturalHeight || 16;
+        const canvas = document.createElement('canvas');
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(base, 0, 0, cw, ch);
+        if (armorSprite) {
+            const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.armor.offsetY || 0));
+            ctx.drawImage(armorSprite, 0, offY, cw, ch);
+        }
+        if (helmetSprite) {
+            const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.helmet.offsetY || 0));
+            ctx.drawImage(helmetSprite, 0, offY, cw, ch);
+        }
+
+        this._compositeCache.set(cacheKey, canvas);
+        return canvas;
+    }
+
+    invalidateComposite(colonistId) {
+        for (const key of this._compositeCache.keys()) {
+            if (key.startsWith(colonistId + ':')) {
+                this._compositeCache.delete(key);
+            }
+        }
     }
 
     async _loadSkin(skinName) {

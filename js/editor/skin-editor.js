@@ -1,4 +1,4 @@
-import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES } from '../core/config.js';
+import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES, EQUIPMENT_OVERLAY_OFFSETS } from '../core/config.js';
 
 const CANVAS_SIZES = [8, 16, 32, 64, 128];
 const STORAGE_PREFIX = 'convocation_skin_editor_';
@@ -162,6 +162,7 @@ class SkinEditor {
         this._onionSkinKey = null; // spriteKey of overlay sprite
         this._onionSkinData = null; // ImageData or pixel array
         this._onionSkinOpacity = 0.3;
+        this._onionSkinOffsetY = 0;
 
         // Tile preview
         this._showTilePreview = false;
@@ -377,7 +378,7 @@ class SkinEditor {
     }
 
     _buildCategoryFilter() {
-        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects', 'Icons', 'Overlays'];
+        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects', 'Icons', 'Overlays', 'Equipment Worn'];
         const container = document.getElementById('se-category-filter');
         container.innerHTML = categories.map(c =>
             `<button class="bp-cat${c === this.categoryFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
@@ -475,6 +476,14 @@ class SkinEditor {
             case 'Overlays':
                 for (const e of OVERLAY_ITEMS) {
                     items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'overlays' });
+                }
+                break;
+            case 'Equipment Worn':
+                for (const [key, def] of Object.entries(ARMORS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.armor.char, color: def.charColor || ITEM_CHARS.armor.color, desc: `Worn: ${def.name}`, category: 'equipment_worn' });
+                }
+                for (const [key, def] of Object.entries(HELMETS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.helmet.char, color: def.charColor || ITEM_CHARS.helmet.color, desc: `Worn: ${def.name}`, category: 'equipment_worn' });
                 }
                 break;
         }
@@ -1246,6 +1255,24 @@ class SkinEditor {
             this._setOnionSkinFromSprite(prevSpriteKey);
         }
 
+        if (category === 'equipment_worn') {
+            const colonistSprite = this.savedSprites['entities:colonist_1'];
+            if (colonistSprite) {
+                this._onionSkinOpacity = 1.0;
+                const slotType = HELMETS[key] ? 'helmet' : 'armor';
+                const offset = EQUIPMENT_OVERLAY_OFFSETS[slotType]?.offsetY || 0;
+                this._onionSkinOffsetY = -offset;
+                this._setOnionSkinFromSprite('entities:colonist_1');
+            }
+        } else if (this._onionSkinOpacity === 1.0) {
+            this._onionSkinOpacity = 0.3;
+            this._onionSkinOffsetY = 0;
+            if (this._onionSkinKey && this._onionSkinKey !== '__pending__') {
+                this._onionSkinKey = null;
+                this._onionSkinData = null;
+            }
+        }
+
         this._buildPalette();
         this._refreshSavedList();
         this._updateActiveObjectDisplay();
@@ -1441,7 +1468,8 @@ class SkinEditor {
         if (this._onionSkinKey && this._onionSkinData) {
             ctx.globalAlpha = this._onionSkinOpacity;
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(this._onionSkinData, ox, oy, gridW, gridH);
+            const onionOffY = this._onionSkinOffsetY ? Math.floor(gridH * this._onionSkinOffsetY) : 0;
+            ctx.drawImage(this._onionSkinData, ox, oy + onionOffY, gridW, gridH);
             ctx.globalAlpha = 1.0;
         }
 
@@ -1558,8 +1586,18 @@ class SkinEditor {
                 this.previewCanvas.height = size;
             }
             ctx.clearRect(0, 0, size, size);
+            if (this.activeObject?.category === 'equipment_worn' && this._onionSkinData) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(this._onionSkinData, 0, 0, size, size);
+            }
             const imageData = new ImageData(this.pixels.slice(), size, size);
-            ctx.putImageData(imageData, 0, 0);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+            const previewOffY = (this.activeObject?.category === 'equipment_worn' && this._onionSkinOffsetY)
+                ? -Math.floor(size * this._onionSkinOffsetY) : 0;
+            ctx.drawImage(tempCanvas, 0, previewOffY);
         }
     }
 

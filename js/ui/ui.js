@@ -1877,6 +1877,7 @@ export class UI {
         html += this._settingsCheck('set-screen-shake', s.enableScreenShake, 'window.game.settings.enableScreenShake=this.checked', 'Enable screen shake');
         html += this._settingsCheck('set-combat-particles', s.showCombatParticles, 'window.game.settings.showCombatParticles=this.checked', 'Combat/action particles (sparks, skulls)');
         html += this._settingsCheck('set-projectiles', s.showProjectiles, 'window.game.settings.showProjectiles=this.checked', 'Projectile trails (arrows, bolts)');
+        html += this._settingsCheck('set-equip-overlays', s.showEquipmentOverlays, 'window.game.settings.showEquipmentOverlays=this.checked;window.game.renderer?.skinManager?._compositeCache.clear()', 'Show equipped armor/helmets on colonists (sprite mode)');
         html += this._settingsCheck('set-progress-bars', s.showProgressBars, 'window.game.settings.showProgressBars=this.checked', 'Progress & health bars');
         html += this._settingsCheck('set-portal-path', s.showPortalPath, 'window.game.settings.showPortalPath=this.checked', 'Portal path highlighting');
         html += this._settingsCheck('set-minimap', s.showMinimap, 'window.game.settings.showMinimap=this.checked;document.getElementById("minimap-container").style.display=this.checked?"":"none"', 'Show minimap');
@@ -1974,12 +1975,14 @@ export class UI {
         s.enableScreenShake = on;
         s.showCombatParticles = on;
         s.showProjectiles = on;
+        s.showEquipmentOverlays = on;
         s.showProgressBars = on;
         s.showPortalPath = on;
         s.showMinimap = on;
         window.RENDER_CONFIG.terrainDithering = on;
         document.getElementById('minimap-container').style.display = on ? '' : 'none';
-        const ids = ['set-night','set-weather','set-damage-flash','set-screen-shake','set-combat-particles','set-projectiles','set-progress-bars','set-portal-path','set-minimap','set-dither'];
+        if (!on) this.game.renderer?.skinManager?._compositeCache.clear();
+        const ids = ['set-night','set-weather','set-damage-flash','set-screen-shake','set-combat-particles','set-projectiles','set-equip-overlays','set-progress-bars','set-portal-path','set-minimap','set-dither'];
         for (const id of ids) {
             const el = document.getElementById(id);
             if (el) el.checked = on;
