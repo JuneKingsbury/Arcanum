@@ -154,6 +154,21 @@ export function updateColonist(colonist, game) {
         case 'drafted': updateDrafted(colonist, game); break;
         case 'wandering': updateWandering(colonist, game); break;
     }
+
+    if (game.tick % 15 === 0) {
+        if (colonist.needs.hunger < 20) {
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.needCriticalChar, color: COMBAT_VISUALS.needCriticalColor, ttl: COMBAT_VISUALS.needCriticalTtl });
+        }
+        if (colonist.thoughts && colonist.thoughts.some(t => t.text === 'Freezing outside')) {
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.freezingChar, color: COMBAT_VISUALS.freezingColor, ttl: COMBAT_VISUALS.freezingTtl });
+        }
+        if (colonist.maxMana > 0 && colonist.mana < colonist.maxMana && colonist.mana > 0) {
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.manaRegenChar, color: COMBAT_VISUALS.manaRegenColor, ttl: COMBAT_VISUALS.manaRegenTtl });
+        }
+    }
+    if (game.tick % 8 === 0 && colonist.activeEffects && colonist.activeEffects.some(e => e.moveSpeedBonus > 0)) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: '·', color: '#88ffff', ttl: 4 });
+    }
 }
 
 function updateNeeds(colonist, game) {
@@ -383,6 +398,7 @@ function tryUsePotions(colonist, game) {
 
             if (potion.effect === 'heal') {
                 colonist.hp = Math.min(colonist.maxHp, colonist.hp + potion.healAmount);
+                game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.healTickChar, color: COMBAT_VISUALS.healTickColor, ttl: COMBAT_VISUALS.healTickTtl });
             } else if (potion.effect === 'speed') {
                 if (!colonist.activeEffects) colonist.activeEffects = [];
                 colonist.activeEffects.push({
@@ -618,6 +634,7 @@ function updateIdle(colonist, game) {
         colonist.state = 'wandering';
         colonist.stateTimer = COLONIST_CONFIG.breakingWanderDuration[0] + Math.floor(Math.random() * (COLONIST_CONFIG.breakingWanderDuration[1] - COLONIST_CONFIG.breakingWanderDuration[0]));
         game.story.checkMilestone('first_mental_break', game);
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.mentalBreakChar, color: COMBAT_VISUALS.mentalBreakColor, ttl: COMBAT_VISUALS.mentalBreakTtl });
         return;
     }
 
@@ -910,6 +927,9 @@ function startSleeping(colonist, game) {
 function updateSleeping(colonist, game) {
     colonist.stateTimer--;
     colonist.needs.rest = Math.min(100, colonist.needs.rest + COLONIST_CONFIG.restPerTick);
+    if (game.tick % 12 === 0) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.sleepChar, color: COMBAT_VISUALS.sleepColor, ttl: COMBAT_VISUALS.sleepTtl });
+    }
     if (colonist.stateTimer <= 0 || colonist.needs.rest >= 100) {
         colonist.state = 'idle';
         const inBed = colonist.assignedBed &&
@@ -998,7 +1018,6 @@ function updateFighting(colonist, game) {
         target.hp -= dmg;
         target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
         colonist._atkShakeUntil = game.tick + COMBAT_VISUALS.atkShakeTtl;
-        game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
     }
 
     if (target.hp <= 0) {
@@ -1102,15 +1121,18 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
     let mult = 1;
     if (colonist.traits.includes('tough')) mult = TRAITS.tough.damageTakenMult;
     mult *= getEquipmentDamageReduction(colonist);
+    let shieldAbsorbed = false;
     if (colonist.activeEffects) {
         for (const e of colonist.activeEffects) {
-            if (e.type === 'shield' && e.damageReduction) mult *= (1 - e.damageReduction);
+            if (e.type === 'shield' && e.damageReduction) { mult *= (1 - e.damageReduction); shieldAbsorbed = true; }
         }
+    }
+    if (shieldAbsorbed) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.shieldBlockChar, color: COMBAT_VISUALS.shieldBlockColor, ttl: COMBAT_VISUALS.shieldBlockTtl });
     }
     const actualDmg = Math.floor(damage * mult);
     colonist.hp -= actualDmg;
     colonist._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
-    game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.damageTakenColor, ttl: COMBAT_VISUALS.hitTtl });
 
     const thornsDamage = getEquipmentStat(colonist, 'thornsDamage');
     if (thornsDamage > 0 && attacker && attacker.hp > 0) {
@@ -1132,6 +1154,7 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
         } else {
             colonist.hp = 0;
             colonist.state = 'dead';
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.deathChar, color: COMBAT_VISUALS.deathColor, ttl: COMBAT_VISUALS.deathTtl });
             game.eventLog.add(game, `${colonist.name} has died!`, 'danger', { type: 'colonist', id: colonist.id });
             game.story.checkMilestone('first_colonist_death', game);
             if (game.settings.pauseOnDeath && !game.paused) {

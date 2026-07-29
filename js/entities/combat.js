@@ -125,12 +125,14 @@ export class CombatSystem {
         for (let i = game.raiders.length - 1; i >= 0; i--) {
             const raider = game.raiders[i];
             if (raider.hp <= 0) {
+                game.combatEffects.push({ x: raider.x, y: raider.y, char: COMBAT_VISUALS.deathChar, color: COMBAT_VISUALS.deathColor, ttl: COMBAT_VISUALS.deathTtl });
                 if (raider.loot) {
                     for (const drop of raider.loot) {
                         if (Math.random() < (drop.chance || 1)) {
                             game.resources.add({ [drop.item]: drop.amount || 1 });
                         }
                     }
+                    game.combatEffects.push({ x: raider.x, y: raider.y, char: COMBAT_VISUALS.lootDropChar, color: COMBAT_VISUALS.lootDropColor, ttl: COMBAT_VISUALS.lootDropTtl });
                 }
                 game.raiders.splice(i, 1);
                 continue;
@@ -268,7 +270,6 @@ export function attackStructure(game, x, y, damage) {
 
     tile.structureHp -= damage;
     tile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
-    if (game.combatEffects) game.combatEffects.push({ x, y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.structureDamageColor, ttl: COMBAT_VISUALS.hitTtl });
 
     if (tile.structureHp <= 0) {
         const oldStructure = tile.structure;

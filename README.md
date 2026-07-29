@@ -52,8 +52,9 @@ Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early 
 ### Equipment
 Colonists have 5 gear slots, displayed in a person-shaped grid:
 
-- **Weapon** — Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
-- **Magic Weapon** — Wands and staves trade melee power for spell amplification. Wooden Wand (+30% spell dmg), Runic Wand (+50%), Crystal Staff (+20%), Void Staff (+40%). Best for dedicated spellcasters.
+- **Melee Weapon** — Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
+- **Ranged Weapon** — Bows and crossbows fire projectiles at enemies from a distance. Colonists stay at range instead of closing to melee. Short Bow (7 dmg, range 5) → Hunting Bow (10, range 6) → Iron Crossbow (14, range 7) → Runic Crossbow (18, range 8) → Void Longbow (22, range 10).
+- **Magic Weapon** — Wands and staves provide spell amplification and attack at range. Wooden Wand (range 5, +30% spell dmg), Crystal Staff (range 6, +20%), Runic Wand (range 7, +50%), Void Staff (range 8, +40%). Best for dedicated spellcasters.
 - **Armor** — Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
 - **Helmet** — Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (10%) → Runic Helm (14%) → Void Crown (18%, +spell dmg).
 - **Tool** — Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
@@ -216,7 +217,7 @@ Colonists learn spells by studying Spell Tomes at the Arcanum. Equip a tome, ass
 Each colonist has a personal mana pool (base 20 + bonuses from magic skill levels across all schools). Spells consume mana and go on cooldown. Mana regenerates over time. You can disable auto-casting for specific spells to conserve mana.
 
 ### The Six Schools
-- **Evocation** — Ranged combat (Magic Missile, Fireball, Chain Lightning). Your primary offensive magic.
+- **Evocation** — Combat magic (Magic Missile, Fireball, Chain Lightning, Smite). Your primary offensive magic — ranged and melee burst.
 - **Enchantment** — Work buffs (Haste, Animate Golem). Makes colonists faster and more productive.
 - **Abjuration** — Defense and healing (Heal, Shield, Mass Heal). Keeps your colony alive.
 - **Conjuration** — Summoning and movement (Summon Familiar, Warp, Blink).
@@ -394,7 +395,7 @@ Wolves are a special case. The taming UI shows your success chance and warns abo
 ## Combat & Defense
 
 ### How Combat Works
-Melee combat is 1-tile range. Damage = base + weapon bonus. Colonists auto-defend when attacked. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning) attack at range automatically.
+Combat is either melee (1-tile) or ranged (bows, crossbows, wands). Damage = base + weapon bonus. Colonists auto-defend when attacked and engage threats within their weapon's range. Ranged weapon holders fire projectiles and stay at distance; melee fighters close the gap. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning, Smite) also attack automatically — Smite is a melee-range burst for close encounters.
 
 ### Raids
 Raiders attack periodically (disabled in Peaceful Mode), scaling with both colony wealth and time elapsed. Early raids are gentle (1 raider after the first season), with full raid strength ramping up over 3 in-game years. This gives new colonies breathing room to establish defenses. Individual raiders flee when their HP drops below 30%. If 65% of the raiding party is dead or fleeing, the rest rout. A safety timeout ensures raiders eventually leave in stalemates.
@@ -606,7 +607,7 @@ R  Raider          E  Void Enemy      V  Void Nexus
 Ω  Rift Gate       S  Food Chest      I  Ice Box
 ◆  Artifact Pedestal  ⌂  Anvil        
 Ğ  Golem Forge     ⚒  Forge Core      ◎  Ritual Core
-⚑  Rally Point     *  Turret Beam     !  Melee Hit
+⚑  Rally Point     *  Turret Beam
 ```
 
 ---

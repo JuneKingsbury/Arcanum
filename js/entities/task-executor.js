@@ -1,4 +1,4 @@
-import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS } from '../core/config.js';
+import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS } from '../core/config.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
@@ -91,6 +91,7 @@ export function completeTask(colonist, task, game) {
             if (game.waves && game.waves.active) game.waves.invalidatePathPreview();
             applyThought(colonist, 'built_something', game.tick);
             game.story.checkMilestone('first_building_placed', game);
+            game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.buildCompleteChar, color: COMBAT_VISUALS.buildCompleteColor, ttl: COMBAT_VISUALS.buildCompleteTtl });
             break;
         }
         case 'chop':
@@ -109,6 +110,7 @@ export function completeTask(colonist, task, game) {
                 if (task.type === 'mine') {
                     tile.terrain = 'dirt';
                     tile.passable = true;
+                    game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.mineDustChar, color: COMBAT_VISUALS.mineDustColor, ttl: COMBAT_VISUALS.mineDustTtl });
                 }
             }
             tile.designation = null;
@@ -133,6 +135,7 @@ export function completeTask(colonist, task, game) {
                 tile.zone.state = 'empty';
                 tile.zone.growth = 0;
                 applyThought(colonist, 'harvested', game.tick);
+                game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.harvestChar, color: COMBAT_VISUALS.harvestColor, ttl: COMBAT_VISUALS.harvestTtl });
             }
             break;
         }
@@ -176,6 +179,7 @@ export function completeTask(colonist, task, game) {
                     game.resources.add(output);
                 }
                 applyThought(colonist, 'crafted', game.tick);
+                game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.craftCompleteChar, color: COMBAT_VISUALS.craftCompleteColor, ttl: COMBAT_VISUALS.craftCompleteTtl });
             }
             break;
         }
@@ -232,6 +236,7 @@ export function completeTask(colonist, task, game) {
                 game.notifications.push({ text: `Research complete: ${name}!`, tick: game.tick, type: 'success' });
                 game.eventLog.add(game, `Research unlocked: ${name}`, 'success', null);
                 game.story.checkMilestone(`research_${completedKey}`, game);
+                game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.researchCompleteChar, color: COMBAT_VISUALS.researchCompleteColor, ttl: COMBAT_VISUALS.researchCompleteTtl });
             }
             let tomeRate = game.research.activeResearch
                 ? MAGIC_STUDY_CONFIG.studyTicksPerProgress

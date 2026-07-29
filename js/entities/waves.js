@@ -73,6 +73,7 @@ export class WaveSystem {
 
         game.notifications.push({ text: `Wave ${this.currentWave} begins! Defend the Void Nexus!`, tick: game.tick, type: 'danger' });
         game.eventLog.add(game, `Wave ${this.currentWave} started — ${this.enemiesToSpawn} enemies incoming!`, 'danger', { type: 'position', ...nexus });
+        game.overlays.push({ type: 'screenFlash', color: COMBAT_VISUALS.waveAlertColor, alpha: 0.2, ttl: COMBAT_VISUALS.waveAlertTtl });
 
         if (game.settings.autoPauseHostile && !game.paused) {
             game.togglePause();
@@ -95,6 +96,8 @@ export class WaveSystem {
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             if (enemy.hp <= 0) {
+                game.combatEffects.push({ x: enemy.x, y: enemy.y, char: COMBAT_VISUALS.deathChar, color: COMBAT_VISUALS.deathColor, ttl: COMBAT_VISUALS.deathTtl });
+                game.combatEffects.push({ x: enemy.x, y: enemy.y, char: COMBAT_VISUALS.lootDropChar, color: COMBAT_VISUALS.lootDropColor, ttl: COMBAT_VISUALS.lootDropTtl });
                 game.resources.add({ void_essence: WAVE_CONFIG.essencePerKill });
                 if (enemy.loot) {
                     for (const drop of enemy.loot) {
@@ -176,7 +179,6 @@ export class WaveSystem {
             this.nexusHp -= enemy.damage;
             const nexusTile = game.map[this.nexusPosition.y]?.[this.nexusPosition.x];
             if (nexusTile) nexusTile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
-            game.combatEffects.push({ x: this.nexusPosition.x, y: this.nexusPosition.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.nexusDamageColor, ttl: COMBAT_VISUALS.hitTtl });
             return;
         }
 

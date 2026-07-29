@@ -1,4 +1,11 @@
 export const CHANGELOG = [
+    { date: '2026-07-29', message: 'Ranged weapons: Short Bow, Hunting Bow, Iron Crossbow, Runic Crossbow, Void Longbow — colonists fire projectiles at enemies from a distance' },
+    { date: '2026-07-29', message: 'Wands and staffs now have range — spellcasters stay at distance instead of closing to melee' },
+    { date: '2026-07-29', message: 'New spell: Smite (Evocation, melee-range burst damage) with craftable Tome of Smite' },
+    { date: '2026-07-29', message: 'Visual effects overhaul: 19 new ambient/combat effects (craft sparks, sleep Zzz, death skulls, shield blocks, harvest swirls, mine dust, and more)' },
+    { date: '2026-07-29', message: 'Screen flash overlay on wave start for dramatic wave alerts' },
+    { date: '2026-07-29', message: 'Floor/terrain sprites now remain visible underneath ASCII effect characters in sprite mode' },
+    { date: '2026-07-29', message: 'Removed redundant melee hit indicator (!) — damage flash now handles combat feedback' },
     { date: '2026-07-27', message: 'Critical colonist alerts: proactive warnings when colonists are near starvation, mental break, or freezing' },
     { date: '2026-07-27', message: 'Auto-craft system: toggle repeat on any recipe or set a stock target to maintain automatically' },
     { date: '2026-07-27', message: 'Expedition strength preview: party power rating (Easy/Fair/Tough/Dangerous/Suicidal) shown during setup' },

@@ -1,4 +1,4 @@
-import { SUMMON_TYPES } from '../core/config.js';
+import { SUMMON_TYPES, COMBAT_VISUALS } from '../core/config.js';
 import { createEntity } from './entity-factory.js';
 import { updateEntityRoles } from './roles.js';
 
@@ -11,6 +11,7 @@ export function spawnSummon(summonType, x, y, ownerId, game) {
     });
     if (!summon) return null;
     emitSparkles(game, x, y, def.color);
+    game.combatEffects.push({ x, y, char: COMBAT_VISUALS.summonArriveChar, color: COMBAT_VISUALS.summonArriveColor, ttl: COMBAT_VISUALS.summonArriveTtl });
     game.entities.push(summon);
     return summon;
 }

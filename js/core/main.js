@@ -1075,6 +1075,7 @@ class Game {
         this.addColonist(golem);
         this.notifications.push({ text: `${def.name} animated!`, tick: this.tick, type: 'success' });
         this.eventLog.add(this, `Crafted a ${def.name}`, 'success', { type: 'position', x, y });
+        this.combatEffects.push({ x, y, char: COMBAT_VISUALS.golemActivateChar, color: COMBAT_VISUALS.golemActivateColor, ttl: COMBAT_VISUALS.golemActivateTtl });
     }
 
     findBuilding(type) {

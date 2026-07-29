@@ -23,7 +23,7 @@ export const GLOSSARY = [
             ['Colonist Mana', 'Each colonist has a personal mana pool (base 20 + bonuses from magic skill levels). Spells consume mana and go on cooldown. Mana regenerates over time.'],
             ['Auto-Cast', 'Colonists auto-cast known spells when conditions are met (heal when ally is hurt, buff speed when working, etc.). Use the disable checkbox next to each spell to prevent auto-casting for mana conservation.'],
             ['Casting XP', 'Casting spells grants XP in that spell\'s school, in addition to studying tomes.'],
-            ['Evocation', 'Ranged combat spells (Magic Missile, Fireball, Chain Lightning). Damage enemies at range.'],
+            ['Evocation', 'Combat spells (Magic Missile, Fireball, Chain Lightning, Smite). Damage enemies at range or in melee.'],
             ['Enchantment', 'Buffs for everyday tasks (Haste, Animate Golem). Speed up colonist work.'],
             ['Abjuration', 'Defensive/healing spells (Heal, Shield, Mass Heal). Keep colonists alive.'],
             ['Conjuration', 'Summoning and teleportation (Summon Familiar, Warp, Blink).'],
@@ -70,7 +70,7 @@ export const GLOSSARY = [
         entries: [
             ['Planks', '2 wood → 3 planks. Used in beds, advanced buildings.'],
             ['Bricks', '2 stone → 3 bricks.'],
-            ['Weapons', 'Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine) → Enchanted Glaive (18, +spell) → Void Dagger (20, +spell) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30). Equip from info panel.'],
+            ['Weapons', 'Melee: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine) → Enchanted Glaive (18, +spell) → Void Dagger (20, +spell) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).\n\nRanged: Short Bow (7, r5) → Hunting Bow (10, r6) → Iron Crossbow (14, r7) → Runic Crossbow (18, r8) → Void Longbow (22, r10).\n\nMagic: Wooden Wand (+30%) → Crystal Staff (+20%) → Runic Wand (+50%) → Void Staff (+40%). Equip from info panel.'],
             ['Tools', '5 categories × 3 tiers (Stone → Iron → Runic):\n\n  Category   Bonus          Stone  Iron   Runic\n  Pickaxe    Mining speed   1.25x  1.45x  1.70x\n  Axe        Chopping speed 1.25x  1.45x  1.70x\n  Sickle     Farming speed  1.25x  1.45x  1.70x\n  Hammer     Crafting speed 1.25x  1.45x  1.70x\n  Mattock    Mine + Chop    1.15x  1.30x  1.50x\n\nMattocks are multi-purpose but weaker than specialists.'],
             ['Crafting Quality', 'Equipment quality is rolled on crafting based on the crafter\'s skill level. Higher skill = better odds of Fine/Superior results.\n\n  Quality    Stat Mult  Chance (base → high skill)\n  Crude      0.85x      20% → rare\n  Normal     1.00x      60% (default)\n  Fine       1.10x      15% → common\n  Superior   1.20x      5% → possible'],
             ['Salvage', 'Click ♻ on equipment in inventory to salvage it. Returns 50% of the recipe\'s input cost (rounded down, min 1 per resource). Items without a recipe return 1 plank.'],
@@ -123,9 +123,11 @@ export const GLOSSARY = [
     {
         title: 'Combat',
         entries: [
-            ['Combat', 'Melee, 1-tile range. Damage = base + weapon bonus. Colonists auto-defend when attacked. Yellow ! = colonist strikes, red ! = colonist hit.'],
-            ['Ranged Magic', 'Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning) attack enemies at range automatically.'],
-            ['Weapons', 'Fists (5 dmg), Stone Spear (8), Wooden Club (10), Hatchet (12), Iron Sword (14), Etched Axe (15), Iron Mace (16), Enchanted Glaive (18), Void Dagger (20), Runic Blade (22), Runic Greatsword (26), Void Blade (30).'],
+            ['Combat', 'Melee (1-tile) or ranged (bows/crossbows/wands). Damage = base + weapon bonus. Colonists auto-defend and engage threats within weapon range.'],
+            ['Ranged Weapons', 'Bows, crossbows, and the Void Longbow fire projectiles at enemies from a distance. Colonists with ranged weapons stay back instead of closing to melee.\n\n  Short Bow          range 5, 7 dmg\n  Hunting Bow        range 6, 10 dmg\n  Iron Crossbow      range 7, 14 dmg\n  Runic Crossbow     range 8, 18 dmg\n  Void Longbow       range 10, 22 dmg'],
+            ['Magic Weapons', 'Wands and staves provide spell damage bonus and attack at range without closing to melee.\n\n  Wooden Wand        range 5, +30% spell dmg\n  Crystal Staff      range 6, +20% spell dmg\n  Runic Wand         range 7, +50% spell dmg\n  Void Staff         range 8, +40% spell dmg'],
+            ['Ranged Magic', 'Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning, Smite) attack enemies automatically. Smite is a melee-range burst for close encounters.'],
+            ['Melee Weapons', 'Fists (5 dmg), Stone Spear (8), Wooden Club (10), Hatchet (12), Iron Sword (14), Etched Axe (15), Iron Mace (16), Enchanted Glaive (18), Void Dagger (20), Runic Blade (22), Runic Greatsword (26), Void Blade (30).'],
             ['Armor', 'Damage reduction stacks multiplicatively: Iron Brigandine (8%), Leather Vest (10%), Mana-Weave Robe (15%), Iron Chainmail (18%), Runic Plate (24%), Void Armor (30%).'],
             ['Raids', 'Raiders attack periodically (disabled in Peaceful Mode). Scale with colony wealth AND time — early raids are gentle (1-2 raiders), full strength ramps over 3 in-game years. Individual raiders flee below 30% HP; the group routs when 65% are dead or fleeing.'],
             ['Structure HP', 'Walls/doors/fences have HP. Enemies break through them. Auto-repairs when idle.'],
@@ -285,7 +287,6 @@ export const GLOSSARY = [
             ['◆', 'Artifact Pedestal', '#ccaa44'],
             ['⌂', 'Anvil', '#999999'],
             ['G', 'Golem', '#888888'],
-            ['!', 'Melee hit', '#ffff00'],
             ['*', 'Turret beam', '#ff4444'],
         ]
     },

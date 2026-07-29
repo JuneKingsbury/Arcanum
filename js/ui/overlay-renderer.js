@@ -52,6 +52,9 @@ export class OverlayRenderer {
                 case 'glow':
                     this._renderGlow(ctx, overlay, cw, ch, camera);
                     break;
+                case 'screenFlash':
+                    this._renderScreenFlash(ctx, overlay);
+                    break;
             }
         }
     }
@@ -126,6 +129,14 @@ export class OverlayRenderer {
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
+    }
+
+    _renderScreenFlash(ctx, overlay) {
+        ctx.save();
+        ctx.globalAlpha = overlay.alpha || 0.2;
+        ctx.fillStyle = overlay.color || '#ff0000';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         ctx.restore();
     }
 
