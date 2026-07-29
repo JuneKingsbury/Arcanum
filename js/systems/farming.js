@@ -1,4 +1,4 @@
-import { CROPS, WORK_CONFIG } from '../core/config.js';
+import { CROPS, TERRAIN, WORK_CONFIG } from '../core/config.js';
 
 // Derived from the 'research' field on each crop entry
 export const CROP_RESEARCH_REQS = Object.fromEntries(
@@ -75,7 +75,9 @@ function updateFarmTile(game, x, y, season, growthMult) {
     if (!crop) return;
 
     if (tile.zone.state === 'empty') {
-        if (!crop.seasons.includes(season)) return;
+        const canGrow = crop.seasons.includes(season) ||
+            (season === 'winter' && game.research.isResearched('irrigation'));
+        if (!canGrow) return;
         const existingTask = game.taskQueue.getByPosition(x, y);
         if (!existingTask) {
             game.taskQueue.add({
@@ -86,10 +88,17 @@ function updateFarmTile(game, x, y, season, growthMult) {
             });
         }
     } else if (tile.zone.state === 'growing') {
-        if (growthMult > 0) {
-            let effectiveMult = growthMult;
+        let effectiveGrowthMult = growthMult;
+        if (effectiveGrowthMult === 0 && game.research.isResearched('irrigation') && crop.seasons.includes !== undefined) {
+            effectiveGrowthMult = 0.5;
+        }
+        if (effectiveGrowthMult > 0) {
+            let effectiveMult = effectiveGrowthMult;
             if (tile.zone._growthBoost && game.tick < tile.zone._growthBoost.expiresAt) {
                 effectiveMult *= tile.zone._growthBoost.mult;
+            }
+            if (game.research.isResearched('irrigation') && isAdjacentToWater(game, x, y)) {
+                effectiveMult *= 1.2;
             }
             tile.zone.growth += effectiveMult;
             if (tile.zone.growth >= crop.growthTicks) {
@@ -116,4 +125,23 @@ function updateFarmTile(game, x, y, season, growthMult) {
             });
         }
     }
+}
+
+function isAdjacentToWater(game, x, y) {
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (const [dx, dy] of dirs) {
+        const nx = x + dx, ny = y + dy;
+        if (ny >= 0 && ny < game.map.length && nx >= 0 && nx < game.map[0].length) {
+            if (game.map[ny][nx].terrain === 'water') return true;
+        }
+    }
+    return false;
+}
+
+export function getHarvestYield(game, cropType) {
+    const crop = CROPS[cropType];
+    if (!crop) return 0;
+    let yield_ = crop.harvestYield;
+    if (game.research.isResearched('verdant_growth')) yield_ += 1;
+    return yield_;
 }

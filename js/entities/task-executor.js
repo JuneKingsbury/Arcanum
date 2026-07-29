@@ -2,6 +2,7 @@ import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, 
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
+import { getHarvestYield } from '../systems/farming.js';
 
 function applyQuality(item, colonist, ...statKeys) {
     const skill = colonist.skills.crafting || 1;
@@ -130,7 +131,7 @@ export function completeTask(colonist, task, game) {
             if (tile.zone) {
                 const crop = tile.zone.crop;
                 const yields = {};
-                yields[crop] = tile.zone.harvestYield || 2;
+                yields[crop] = getHarvestYield(game, crop);
                 game.resources.add(yields);
                 tile.zone.state = 'empty';
                 tile.zone.growth = 0;

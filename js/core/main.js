@@ -895,7 +895,8 @@ class Game {
     useConsumableItem(itemKey) {
         if (itemKey === 'crystal_capacitor') {
             this.manaCrystalBonus = (this.manaCrystalBonus || 0) + 1;
-            const newLimit = 4 + this.manaCrystalBonus;
+            const reservoirBonus = this.research.isResearched('mana_reservoir') ? 3 : 0;
+            const newLimit = 4 + this.manaCrystalBonus + reservoirBonus;
             this.notifications.push({ text: `Crystal Capacitor used! Mana crystal limit: ${newLimit}`, tick: this.tick, type: 'success' });
             this.eventLog.add(this, `Used Crystal Capacitor — mana crystal limit increased to ${newLimit}`, 'event', null);
         }

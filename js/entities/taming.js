@@ -72,10 +72,11 @@ export function completeTame(game, wildAnimalId) {
     return true;
 }
 
-export function getTameChance(colonist, animalType) {
+export function getTameChance(colonist, animalType, game) {
     const tamedDef = TAMED_ANIMALS[animalType];
     if (!tamedDef || !tamedDef.dangerousTame) return 1;
-    const baseChance = tamedDef.baseTameChance || 0.4;
+    let baseChance = tamedDef.baseTameChance || 0.4;
+    if (animalType === 'wolf' && game?.research?.isResearched('wolf_mastery')) baseChance += 0.2;
     const skillBonus = (colonist.skills.animals || 0) * WORK_CONFIG.tameSkillChanceBonus;
     return Math.min(1, baseChance + skillBonus);
 }
@@ -85,7 +86,7 @@ export function attemptDangerousTame(game, colonist, wildAnimalId) {
     if (!wildAnimal || wildAnimal.hp <= 0) return 'fail';
 
     const tamedDef = TAMED_ANIMALS[wildAnimal.type];
-    const chance = getTameChance(colonist, wildAnimal.type);
+    const chance = getTameChance(colonist, wildAnimal.type, game);
 
     if (Math.random() < chance) {
         completeTame(game, wildAnimalId);

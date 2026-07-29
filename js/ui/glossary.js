@@ -53,16 +53,20 @@ export const GLOSSARY = [
             ['Ice Box', '(I) Magical preservation. Reduces food spoilage by 40%. Consumes 1 mana.'],
             ['Rift Gate', '(Ω) Opens portals to other realms for exploration. Consumes 6 mana. Requires Planar Rift research.'],
             ['Void Nexus', '(V) Click to start wave defense. Needs research: Void Summoning.'],
-            ['Void Wall', '(▓) Reinforced wall (120 HP). Needs research: Void Forging.'],
-            ['Void Door', '(▒) Reinforced door (80 HP). Colonists pass, enemies must break. Needs research: Void Forging.'],
+            ['Reinforced Door', '(╬) Mid-tier reinforced door (50 HP). Needs research: Fortification.'],
+            ['Void Wall', '(▓) Reinforced wall (120 HP). Needs research: Void Architecture.'],
+            ['Void Door', '(▒) Reinforced door (80 HP). Colonists pass, enemies must break. Needs research: Void Architecture.'],
             ['Void Turret', '(Y) Stronger sentinel, range 5, 20 dmg. Consumes 5 mana. Needs research: Void Forging.'],
+            ['Inferno Ward', '(Ħ) Incinerates nearby enemies (radius 4, 8 dmg/tick). Also warms. Consumes 5 mana. Needs research: Pyroclasm.'],
+            ['Mana Relay', '(⊛) Mana buildings within 3 tiles consume 1 less mana (min 1). Consumes 1 mana. Needs research: Arcane Conduits.'],
+            ['Beacon', '(☀) Radiant beacon with massive light radius 15. Consumes 4 mana. Needs research: Brilliance.'],
         ]
     },
     {
         title: 'Farming',
         entries: [
             ['Farm Zone', 'Designate with Z mode. Select a crop type, drag an area on grass/dirt. Colonists auto-plant and harvest.'],
-            ['Crops', 'Plant in Farm Zone mode (Z). Growth affected by season and weather.\n\n  Crop      Seasons              Time  Yield\n  Wheat     Spring/Summer/Autumn  200   3\n  Berries   Spring/Summer/Autumn  150   2\n  Corn      Summer only           250   4\n  Potatoes  Spring/Autumn/Winter  180   3\n\nRain = 1.3x growth. Summer = 1.5x. No outdoor growth in winter (except potatoes).'],
+            ['Crops', 'Plant in Farm Zone mode (Z). Growth affected by season and weather.\n\n  Crop       Seasons              Time  Yield  Research\n  Wheat      Spring/Summer/Autumn  200   3      —\n  Berries    Spring/Summer/Autumn  150   2      —\n  Corn       Summer only           250   4      Druidcraft\n  Potatoes   Spring/Autumn/Winter  180   3      Druidcraft\n  Moonbloom  All seasons           220   2      Herbalism\n\nRain = 1.3x growth. Summer = 1.5x. No outdoor growth in winter (except potatoes and moonbloom). Irrigation research allows all crops at 0.5x in winter.'],
         ]
     },
     {
@@ -76,7 +80,7 @@ export const GLOSSARY = [
             ['Salvage', 'Click ♻ on equipment in inventory to salvage it. Returns 50% of the recipe\'s input cost (rounded down, min 1 per resource). Items without a recipe return 1 plank.'],
             ['Spell Tomes', 'Craft tomes at workbench to teach colonists spells. Each school has multiple tomes at different skill levels.'],
             ['Armor', 'Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%). Leather requires hides from hunting; iron armor needs smelted iron ore.'],
-            ['Potions', 'Health Potion (3 berries + 2 wheat), Speed Potion (2 corn + 2 potatoes + 1 berries). Auto-consumed when trigger conditions are met.'],
+            ['Potions', 'Health Potion (3 berries + 1 wheat), Speed Potion (2 corn + 2 potatoes + 1 berries), Mana Potion (3 moonbloom + 1 runite, needs Herbalism), Resistance Potion (2 moonbloom + 2 stone + 1 iron, needs Herbalism). Auto-consumed when trigger conditions are met.'],
             ['Cooking', 'Converts raw crops/meat into food at the cauldron. Cooked meals give mood bonus. Raw food gives mood penalty.'],
             ['Auto-Cook', 'Set a food target in the Food & Potions craft tab using +/- buttons. Automatically queues cooking when food drops below target.'],
             ['Auto-Craft', 'Toggle the ⟳ repeat button on any recipe to keep it auto-queued. Or set a stock target number — crafting stops when you have enough of the output.'],
@@ -189,13 +193,15 @@ export const GLOSSARY = [
         title: 'Research (Arcanum required)',
         entries: [
             ['How Research Works', 'Select a research topic, then colonists study at the Arcanum to progress it. Only one research can be active at a time. If no research is selected, tome study speed is doubled.'],
-            ['Research Tree', 'Research is organized into 4 tabs. Cross-tab prerequisites show as clickable badges.\n\n  Foundations & Nature    Arcane & Mana        Crafting & Lore      Void & Exploration\n  ──────────────────────  ───────────────────  ───────────────────  ──────────────────\n  Runecraft              Ley Channeling       Arcane Studies       Warding\n  Druidcraft             Luminance            Advanced Arcana      Void Summoning\n  Alchemy                Brilliance           Runeforging          Void Forging\n  Beast Binding          Ember Magic          Masterwork           Planar Rift\n  Verdant Growth         Arcane Infusion      Golem Craft          Deep Delving\n                         Mana Weaving\n                         Pyroclasm'],
+            ['Research Tree', 'Research is organized into 4 tabs. Cross-tab prerequisites show as clickable badges.\n\n  Foundations & Nature    Arcane & Mana        Crafting & Lore      Void & Exploration\n  ──────────────────────  ───────────────────  ───────────────────  ──────────────────\n  Stonework              Ley Channeling       Marksmanship         Warding\n  Runecraft              Luminance            Arcane Studies       Fortification\n  Druidcraft             Brilliance           Arcane Implements    Void Summoning\n  Alchemy                Arcane Conduits      Artisan\'s Touch      Void Architecture\n  Irrigation             Ember Magic          Advanced Arcana      Void Forging\n  Beast Binding          Arcane Infusion      Void Sorcery         Planar Rift\n  Trade Routes           Mana Reservoir       Runeforging          Deep Delving\n  Husbandry              Mana Weaving         Masterwork\n  Wolf Mastery           Pyroclasm            Golem Craft\n  Herbalism\n  Verdant Growth'],
         ]
     },
     {
         title: 'Mana (Leylines)',
         entries: [
-            ['Net Mana', 'Generation minus consumption. If negative, all mana buildings shut off.\n\n  Building           Mana\n  Mana Crystal       +10 (generates)\n  Ice Box            -1\n  Artifact Pedestal  -1 to -3 (varies by artifact)\n  Glowstone          -2\n  Arcane Sentinel    -3\n  Ember Ward         -3\n  Enchanting Table   -4\n  Void Turret        -5\n  Rift Gate          -6'],
+            ['Net Mana', 'Generation minus consumption. If negative, all mana buildings shut off.\n\n  Building           Mana\n  Mana Crystal       +8 (generates, +9 with Mana Reservoir)\n  Mana Relay         -1\n  Ice Box            -1\n  Artifact Pedestal  -1 to -3 (varies by artifact)\n  Glowstone          -2\n  Arcane Sentinel    -3\n  Ember Ward         -3\n  Enchanting Table   -4\n  Beacon             -4\n  Inferno Ward       -5\n  Void Turret        -5\n  Rift Gate          -6'],
+            ['Mana Relay', 'Arcane Conduits research. Mana buildings within 3 tiles of a relay consume 1 less mana (min 1). Does not stack — only one relay affects each building.'],
+            ['Mana Reservoir', 'Research that increases mana crystal cap by +3 (total 7 base) and each crystal generates +1 mana (9 total).'],
         ]
     },
     {
@@ -286,6 +292,10 @@ export const GLOSSARY = [
             ['◎', 'Ritual Core', '#aa44ff'],
             ['◆', 'Artifact Pedestal', '#ccaa44'],
             ['⌂', 'Anvil', '#999999'],
+            ['Ħ', 'Inferno Ward', '#ff4400'],
+            ['⊛', 'Mana Relay', '#aa88ff'],
+            ['☀', 'Beacon', '#ffffaa'],
+            ['╬', 'Reinforced Door', '#aa8855'],
             ['G', 'Golem', '#888888'],
             ['*', 'Turret beam', '#ff4444'],
         ]

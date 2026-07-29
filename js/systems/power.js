@@ -10,6 +10,7 @@ export class PowerSystem {
         this.lamps = [];
         this.turrets = [];
         this.voidTurrets = [];
+        this.aoeWards = [];
     }
 
     update(game) {
@@ -20,18 +21,30 @@ export class PowerSystem {
         this.poweredLamps = [];
         this.turrets = [];
         this.voidTurrets = [];
+        this.aoeWards = [];
 
         const allStructures = game.mapIndex.getAllStructurePositions();
+        const relays = [];
+        const consumers = [];
+
         for (const { x, y, type } of allStructures) {
             const bDef = BUILDINGS[type];
             if (!bDef) continue;
 
             if (bDef.power) {
                 const pwr = bDef.power;
-                if (pwr.generates) this.totalGenerated += pwr.generates;
-                if (pwr.consumes) this.totalConsumed += pwr.consumes;
+                if (pwr.generates) {
+                    let gen = pwr.generates;
+                    if (type === 'mana_crystal' && game.research.isResearched('mana_reservoir')) gen += 1;
+                    this.totalGenerated += gen;
+                }
+                if (pwr.consumes) {
+                    consumers.push({ x, y, type, consumes: pwr.consumes });
+                }
+                if (type === 'mana_relay') relays.push({ x, y, radius: pwr.radius || 3 });
 
                 if (pwr.warmRadius) this.heaters.push({ x, y, radius: pwr.warmRadius });
+                if (pwr.damage && pwr.warmRadius) this.aoeWards.push({ x, y, radius: pwr.warmRadius, damage: pwr.damage });
                 else if (pwr.damage && type === 'arcane_sentinel') this.turrets.push({ x, y });
                 else if (pwr.damage && type === 'void_turret') this.voidTurrets.push({ x, y });
             }
@@ -43,6 +56,18 @@ export class PowerSystem {
                     this.lamps.push({ x, y, radius: bDef.lightRadius });
                 }
             }
+        }
+
+        for (const c of consumers) {
+            let reduction = 0;
+            for (const relay of relays) {
+                if (c.type === 'mana_relay') continue;
+                if (manhattanDist(c.x, c.y, relay.x, relay.y) <= relay.radius) {
+                    reduction = 1;
+                    break;
+                }
+            }
+            this.totalConsumed += Math.max(1, c.consumes - reduction);
         }
 
         for (const { x, y, type } of allStructures) {
@@ -92,6 +117,22 @@ export class PowerSystem {
 
     updateTurrets(game) {
         if (!this.powered) return;
+
+        for (const ward of this.aoeWards) {
+            const enemies = [];
+            for (const r of game.raiders) {
+                if (r.hp > 0 && manhattanDist(ward.x, ward.y, r.x, r.y) <= ward.radius) enemies.push(r);
+            }
+            if (game.waves) {
+                for (const e of game.waves.enemies) {
+                    if (e.hp > 0 && manhattanDist(ward.x, ward.y, e.x, e.y) <= ward.radius) enemies.push(e);
+                }
+            }
+            for (const e of enemies) {
+                e.hp -= ward.damage;
+                e._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+            }
+        }
 
         const allTurrets = [
             ...this.turrets.map(t => ({ ...t, type: 'arcane_sentinel' })),

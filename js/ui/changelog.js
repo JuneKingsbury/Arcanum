@@ -133,7 +133,7 @@ export function renderCreditsHTML() {
     <div style="color:#ffcc00; font-size:16px; font-weight:bold; margin-bottom:16px;">Arcanum</div>
     <div style="color:#aaa; margin-bottom:20px;">A browser-based magical colony sim</div>
     <div style="color:#ccc; margin-bottom:8px;"><b>Design & Development</b></div>
-    <div style="color:#aaa; margin-bottom:20px;">June Kingsbury</div>
+    <div style="color:#aaa; margin-bottom:20px;">June "Mars" Kingsbury</div>
     <div style="color:#ccc; margin-bottom:8px;"><b>Built With</b></div>
     <div style="color:#aaa; margin-bottom:4px;">Vanilla JavaScript, HTML5 Canvas</div>
     <div style="color:#aaa; margin-bottom:20px;">jszip for skin ZIP file handling</div>

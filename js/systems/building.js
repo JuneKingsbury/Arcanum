@@ -25,7 +25,8 @@ export function designateBuild(game, x, y, buildType) {
                 if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
             }
         }
-        const bonus = def.maxCountBonusKey ? (game[def.maxCountBonusKey] || 0) : 0;
+        let bonus = def.maxCountBonusKey ? (game[def.maxCountBonusKey] || 0) : 0;
+        if (buildType === 'mana_crystal' && game.research.isResearched('mana_reservoir')) bonus += 3;
         if (count >= def.maxCount + bonus) return false;
     }
 

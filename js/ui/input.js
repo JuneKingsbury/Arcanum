@@ -24,6 +24,7 @@ export class InputHandler {
         this.cropOptions = Object.keys(CROPS);
         this.designateMode = 'chop';
         this.deconstructMode = false;
+        this.destroyMode = false;
         this.spellTargeting = null;
 
         this.charWidth = 0;
@@ -254,6 +255,14 @@ export class InputHandler {
             return;
         }
 
+        if (this.destroyMode) {
+            this.dragStart = pos;
+            this.dragEnd = pos;
+            this.dragging = true;
+            this._clickPos = pos;
+            return;
+        }
+
         if (this.mode === 'zone' || this.mode === 'designate') {
             this.dragStart = pos;
             this.dragEnd = pos;
@@ -313,7 +322,14 @@ export class InputHandler {
 
         if (this.dragging && this.dragStart) {
             const pos = this.getMouseTile(e);
-            if (this._rightDrag && this.mode === 'build') {
+            if (this.destroyMode) {
+                const wasDrag = this.dragStart.x !== pos.x || this.dragStart.y !== pos.y;
+                if (wasDrag) {
+                    this.destroyArea(this.dragStart, pos);
+                } else {
+                    this.handleLeftClick(this._clickPos || pos);
+                }
+            } else if (this._rightDrag && this.mode === 'build') {
                 this.deconstructArea(this.dragStart, pos);
             } else if (this.mode === 'build' && this.dragBuildTypes.has(this.buildType)) {
                 this.buildArea(this.dragStart, pos);
@@ -374,7 +390,7 @@ export class InputHandler {
         if (pos.x < 0 || pos.x >= CONFIG.MAP_WIDTH || pos.y < 0 || pos.y >= CONFIG.MAP_HEIGHT) return;
 
         this.game.cursor = pos;
-        if (this.mode === 'zone' || this.mode === 'designate' ||
+        if (this.destroyMode || this.mode === 'zone' || this.mode === 'designate' ||
             (this.mode === 'build' && (this.deconstructMode || this.dragBuildTypes.has(this.buildType))) ||
             this.mode === 'normal') {
             this.dragStart = pos;
@@ -451,7 +467,9 @@ export class InputHandler {
         if (this.dragging && this.dragStart) {
             const wasDrag = this._touchMoved && (this.dragStart.x !== pos.x || this.dragStart.y !== pos.y);
             if (wasDrag) {
-                if (this.mode === 'build' && this.deconstructMode) {
+                if (this.destroyMode) {
+                    this.destroyArea(this.dragStart, pos);
+                } else if (this.mode === 'build' && this.deconstructMode) {
                     this.deconstructArea(this.dragStart, pos);
                 } else if (this.mode === 'build' && this.dragBuildTypes.has(this.buildType)) {
                     this.buildArea(this.dragStart, pos);
@@ -477,6 +495,12 @@ export class InputHandler {
     toggleDeconstructMode() {
         this.deconstructMode = !this.deconstructMode;
         this.game.ui.updateModeDisplay(this);
+    }
+
+    toggleDestroyMode() {
+        this.destroyMode = !this.destroyMode;
+        const btn = document.getElementById('touch-destroy-btn');
+        if (btn) btn.classList.toggle('active', this.destroyMode);
     }
 
     toggleTouchPanMode() {
@@ -526,9 +550,35 @@ export class InputHandler {
         }
     }
 
+    destroyArea(start, end) {
+        const minX = Math.min(start.x, end.x), maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y), maxY = Math.max(start.y, end.y);
+
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                if (x < 0 || x >= CONFIG.MAP_WIDTH || y < 0 || y >= CONFIG.MAP_HEIGHT) continue;
+                const tile = this.game.map[y][x];
+                if (tile.zone) {
+                    removeFarmZone(this.game, x, y);
+                } else {
+                    cancelDesignation(this.game, x, y);
+                }
+            }
+        }
+    }
+
     handleLeftClick(pos) {
         if (this.spellTargeting) {
             this.executeSpellTarget(pos);
+            return;
+        }
+        if (this.destroyMode) {
+            const tile = this.game.map[pos.y][pos.x];
+            if (tile.zone) {
+                removeFarmZone(this.game, pos.x, pos.y);
+            } else {
+                cancelDesignation(this.game, pos.x, pos.y);
+            }
             return;
         }
         switch (this.mode) {
@@ -709,12 +759,20 @@ export class InputHandler {
             }
         }
         const bDef = BUILDINGS[tile.structure];
-        if (bDef?.power?.damage) {
-            const radius = bDef.power.range || 6;
-            return { x: pos.x, y: pos.y, radius, color: '#ff444466' };
+        if (bDef?.power?.damage && bDef.power.warmRadius) {
+            return { x: pos.x, y: pos.y, radius: bDef.power.warmRadius, color: '#ff444466' };
+        }
+        if (bDef?.power?.damage && bDef.power.range) {
+            return { x: pos.x, y: pos.y, radius: bDef.power.range, color: '#ff444466' };
         }
         if (bDef?.power?.warmRadius) {
             return { x: pos.x, y: pos.y, radius: bDef.power.warmRadius, color: '#ff884466' };
+        }
+        if (bDef?.lightRadius) {
+            return { x: pos.x, y: pos.y, radius: bDef.lightRadius, color: '#ffff4444' };
+        }
+        if (bDef?.power?.radius) {
+            return { x: pos.x, y: pos.y, radius: bDef.power.radius, color: '#aa88ff44' };
         }
         return null;
     }

@@ -19,7 +19,7 @@ export const CONFIG = {
     TICK_RATE: 200,             // ms between game ticks (lower = faster simulation)
     TICKS_PER_SEASON: 1500,     // ticks per season (5 days at 300 ticks/day)
     TICKS_PER_DAY: 300,         // ticks per in-game day (60 seconds real-time at 1x)
-    START_RESOURCES: { wood: 25, stone: 15, planks: 5, food: 20, meat: 0, wheat: 0, berries: 0, corn: 0, potatoes: 0, bricks: 0, hides: 0, leather: 0, iron_ore: 0, iron: 0, runite: 0, eggs: 0, milk: 0, wool: 0, void_essence: 0 },
+    START_RESOURCES: { wood: 25, stone: 15, planks: 5, food: 20, meat: 0, wheat: 0, berries: 0, corn: 0, potatoes: 0, moonbloom: 0, bricks: 0, hides: 0, leather: 0, iron_ore: 0, iron: 0, runite: 0, eggs: 0, milk: 0, wool: 0, void_essence: 0 },
     PEACEFUL_MODE: false,       // disables raids and hostile animals
     GAME_SPEED: 1,              // default simulation speed multiplier
     STOCKPILE_ALERTS: { wood: 5, stone: 5, food: 5 },
@@ -368,12 +368,12 @@ export const BUILD_CATEGORIES = ['Walls & Floors', 'Furniture', 'Production', 'D
 export const BUILDINGS = {
     wood_wall:         { char: '█', color: '#aa7744', cost: { wood: 2 }, work: 12, hp: 50, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, description: 'Blocks movement. Forms rooms when enclosing an area with doors.' },
     stone_wall:        { char: '█', color: '#666666', cost: { stone: 2 }, work: 16, hp: 70, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, description: 'Blocks movement. Forms rooms when enclosing an area with doors.' },
-    brick_wall:        { char: '█', color: '#b2463c', cost: { bricks: 2 }, work: 20, hp: 90, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, description: 'Blocks movement. Forms rooms when enclosing an area with doors.' },
+    brick_wall:        { char: '█', color: '#b2463c', cost: { bricks: 2 }, work: 20, hp: 90, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, research: 'stonework', description: 'Blocks movement. Forms rooms when enclosing an area with doors.' },
     fence:             { char: '|', color: '#886644', cost: { wood: 1 }, work: 5, hp: 20, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, description: 'Blocks movement like a wall but lighter to build.' },
     door:              { char: '+', color: '#cc9955', cost: { wood: 3 }, work: 15, hp: 30, structureType: 'door', category: 'Walls & Floors', passable: { colonist: true, animal: false, enemy: false }, breakable: true, description: 'Allows colonist passage. Blocks enemies. Room boundary.' },
     wood_floor:        { char: '·', color: '#aa7744', bg: '#3d2a14', cost: { wood: 1 }, work: 6, structureType: 'floor', category: 'Walls & Floors', description: 'Cosmetic flooring. Makes rooms nicer.' },
     stone_floor:       { char: '·', color: '#666666', bg: '#2a2a2a', cost: { stone: 1 }, work: 6, structureType: 'floor', category: 'Walls & Floors', description: 'Cosmetic flooring. Makes rooms nicer.' },
-    brick_floor:       { char: '·', color: '#b2463c', bg: '#3a1a18', cost: { bricks: 1 }, work: 6, structureType: 'floor', category: 'Walls & Floors', description: 'Cosmetic flooring. Makes rooms nicer.' },
+    brick_floor:       { char: '·', color: '#b2463c', bg: '#3a1a18', cost: { bricks: 1 }, work: 6, structureType: 'floor', category: 'Walls & Floors', research: 'stonework', description: 'Cosmetic flooring. Makes rooms nicer.' },
     torch:             { char: 'i', color: '#ffcc00', cost: { wood: 1 }, work: 4, structureType: 'furniture', category: 'Furniture', dragPlace: true, lightRadius: 5, description: 'Light source. Provides warmth in winter.' },
     bed:               { char: 'B', color: '#8855aa', cost: { wood: 5 }, work: 25, structureType: 'furniture', category: 'Furniture', description: 'Colonists sleep here. Assign for a mood bonus.' },
     food_chest:        { char: 'S', color: '#997744', cost: { planks: 4, stone: 2 }, work: 25, structureType: 'furniture', category: 'Furniture', description: 'Preserves food — reduces spoilage by 15% per chest (stacks up to 60%).' },
@@ -383,10 +383,10 @@ export const BUILDINGS = {
     beast_circle:      { char: 'A', color: '#9cf642', cost: { wood: 6 }, work: 28, structureType: 'furniture', category: 'Production', research: 'beast_binding', description: 'Required for binding creatures. Bound animals produce resources.' },
     void_nexus:        { char: 'V', color: '#9933ff', cost: { runite: 5, stone: 6, planks: 4 }, work: 60, structureType: 'furniture', category: 'Defense', passable: { colonist: false, animal: false, enemy: false }, research: 'void_summoning', maxCount: 1, description: 'Start wave defense here. Defend it from enemies to earn void essence.' },
     arcane_sentinel:   { char: 'X', color: '#ff4444', cost: { stone: 5, planks: 3 }, work: 50, structureType: 'furniture', category: 'Defense', passable: { colonist: false, animal: false, enemy: false }, research: 'warding', power: { consumes: 3, damage: 12, range: 4 }, description: 'Auto-attacks enemies in range 4, 12 dmg. Consumes 3 mana.' },
-    void_wall:         { char: '▓', color: '#6622aa', cost: { stone: 3, void_essence: 3 }, work: 15, hp: 120, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, research: 'void_forging', description: 'Reinforced wall (120 HP). Blocks enemies.' },
+    void_wall:         { char: '▓', color: '#6622aa', cost: { stone: 3, void_essence: 3 }, work: 15, hp: 120, structureType: 'wall', category: 'Walls & Floors', passable: { colonist: false, animal: false, enemy: false }, breakable: true, research: 'void_architecture', description: 'Reinforced wall (120 HP). Blocks enemies.' },
     void_turret:       { char: 'Y', color: '#aa33ff', cost: { stone: 5, planks: 3, void_essence: 6 }, work: 55, structureType: 'furniture', category: 'Defense', passable: { colonist: false, animal: false, enemy: false }, research: 'void_forging', power: { consumes: 5, damage: 20, range: 5 }, description: 'Auto-attacks enemies in range 5, 20 dmg. Consumes 5 mana.' },
-    void_door:         { char: '▒', color: '#7733bb', cost: { stone: 3, planks: 2, void_essence: 4 }, work: 20, hp: 80, structureType: 'door', category: 'Walls & Floors', passable: { colonist: true, animal: false, enemy: false }, breakable: true, research: 'void_forging', description: 'Reinforced door (80 HP). Colonists pass through, enemies must break it.' },
-    mana_crystal:      { char: 'W', color: '#aa44ff', cost: { wood: 8, stone: 4 }, work: 45, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'ley_channeling', maxCount: 4, maxCountBonusKey: 'manaCrystalBonus', power: { generates: 10 }, description: 'Generates 10 mana for powering magical buildings. Limit: 4 (upgradeable).' },
+    void_door:         { char: '▒', color: '#7733bb', cost: { stone: 3, planks: 2, void_essence: 4 }, work: 20, hp: 80, structureType: 'door', category: 'Walls & Floors', passable: { colonist: true, animal: false, enemy: false }, breakable: true, research: 'void_architecture', description: 'Reinforced door (80 HP). Colonists pass through, enemies must break it.' },
+    mana_crystal:      { char: 'W', color: '#aa44ff', cost: { wood: 8, stone: 4 }, work: 45, structureType: 'furniture', category: 'Arcane', passable: { colonist: false, animal: false, enemy: false }, research: 'ley_channeling', maxCount: 4, maxCountBonusKey: 'manaCrystalBonus', power: { generates: 8 }, description: 'Generates 8 mana for powering magical buildings. Limit: 4 (upgradeable).' },
     glowstone:         { char: 'L', color: '#ffff88', cost: { planks: 2, stone: 1 }, work: 14, structureType: 'furniture', category: 'Furniture', lightRadius: 10, research: 'luminance', power: { consumes: 2, radius: 5 }, description: 'Mana-powered light, radius 5. Consumes 2 mana.' },
     enchanting_table:  { char: 'P', color: '#bb88ff', cost: { planks: 4, stone: 3 }, work: 35, structureType: 'furniture', category: 'Production', research: 'arcane_infusion', power: { consumes: 4, speedMult: 2.0 }, description: '2x crafting speed. Consumes 4 mana.' },
     ember_ward:        { char: 'H', color: '#ff8844', cost: { stone: 4, planks: 2 }, work: 28, structureType: 'furniture', category: 'Arcane', research: 'ember_magic', power: { consumes: 3, warmRadius: 4 }, description: 'Warms nearby tiles (radius 4) in winter. Consumes 3 mana.' },
@@ -397,6 +397,10 @@ export const BUILDINGS = {
     ritual_core:       { char: '◎', color: '#aa44ff', cost: { runite: 5, void_essence: 3, planks: 4 }, work: 50, structureType: 'furniture', category: 'Arcane', research: 'advanced_arcana', description: 'Core of the Ritual Circle. Place altars around it to activate (-30% spell cooldowns).' },
     artifact_pedestal: { char: '◆', color: '#ccaa44', cost: { stone: 8, runite: 2 }, work: 35, structureType: 'furniture', category: 'Arcane', research: 'arcane_infusion', description: 'Place an artifact to project its effect in a radius. Mana cost varies by artifact.' },
     anvil:             { char: '⌂', color: '#999999', cost: { stone: 10, planks: 4 }, work: 30, structureType: 'furniture', category: 'Production', research: 'runeforging', description: 'Repair broken artifacts and equipment.' },
+    inferno_ward:      { char: 'Ħ', color: '#ff4400', cost: { stone: 5, runite: 3, planks: 2 }, work: 40, structureType: 'furniture', category: 'Defense', research: 'pyroclasm', power: { consumes: 5, warmRadius: 4, damage: 8 }, description: 'Incinerates nearby enemies (radius 4, 8 dmg/tick). Also warms. Consumes 5 mana.' },
+    mana_relay:        { char: '⊛', color: '#aa88ff', cost: { planks: 3, runite: 2 }, work: 25, structureType: 'furniture', category: 'Arcane', research: 'arcane_conduits', power: { consumes: 1, radius: 3 }, description: 'Mana buildings within 3 tiles consume 1 less mana (min 1). Does not stack. Consumes 1 mana.' },
+    beacon:            { char: '☀', color: '#ffffaa', cost: { stone: 4, runite: 3, planks: 2 }, work: 35, structureType: 'furniture', category: 'Arcane', lightRadius: 15, research: 'brilliance', power: { consumes: 4, radius: 10 }, description: 'Radiant beacon. Massive light radius 15. Consumes 4 mana.' },
+    reinforced_door:   { char: '╬', color: '#aa8855', cost: { stone: 3, iron: 2, planks: 2 }, work: 22, hp: 50, structureType: 'door', category: 'Walls & Floors', passable: { colonist: true, animal: false, enemy: false }, breakable: true, research: 'fortification', description: 'Reinforced door (50 HP). Mid-tier between regular and void doors.' },
 };
 
 // Auto-derived from BUILDINGS (terrain chars/colors + building chars/colors merged)
@@ -480,7 +484,7 @@ export const RECIPES = {
     craft_enchanted_glaive: { input: { iron: 2, runite: 1, planks: 2 }, output: { enchanted_glaive: 1 }, skill: 'crafting', ticks: 38, station: 'workbench', research: 'mana_weaving', category: 'Equipment' },
     craft_runic_blade: { input: { runite: 2, planks: 1 }, output: { runic_blade: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'runeforging', category: 'Equipment' },
     craft_runic_greatsword: { input: { runite: 4, iron: 2, planks: 2 }, output: { runic_greatsword: 1 }, skill: 'crafting', ticks: 50, station: 'workbench', research: 'masterwork', category: 'Equipment' },
-    craft_void_dagger: { input: { void_essence: 3, runite: 1 }, output: { void_dagger: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
+    craft_void_dagger: { input: { void_essence: 3, runite: 1 }, output: { void_dagger: 1 }, skill: 'crafting', ticks: 45, station: 'workbench', research: 'void_sorcery', category: 'Equipment' },
     craft_void_blade: { input: { void_essence: 6, runite: 2, planks: 1 }, output: { void_blade: 1 }, skill: 'crafting', ticks: 60, station: 'workbench', research: 'void_forging', category: 'Equipment' },
     craft_wool_parka: { input: { wool: 4, leather: 1 }, output: { wool_parka: 1 }, skill: 'crafting', ticks: 16, station: 'workbench', category: 'Equipment' },
     craft_iron_brigandine: { input: { iron: 2 }, output: { iron_brigandine: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
@@ -515,13 +519,13 @@ export const RECIPES = {
     craft_stone_mattock: { input: { stone: 3, planks: 2 }, output: { stone_mattock: 1 }, skill: 'crafting', ticks: 18, station: 'workbench', category: 'Tools' },
     craft_iron_mattock: { input: { iron: 3, planks: 2 }, output: { iron_mattock: 1 }, skill: 'crafting', ticks: 26, station: 'workbench', category: 'Tools' },
     craft_runic_mattock: { input: { runite: 3, planks: 2 }, output: { runic_mattock: 1 }, skill: 'crafting', ticks: 40, station: 'workbench', research: 'runeforging', category: 'Tools' },
-    craft_wooden_wand: { input: { wood: 3, planks: 1 }, output: { wooden_wand: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', research: 'arcane_studies', category: 'Equipment' },
-    craft_crystal_staff: { input: { stone: 3, planks: 2, runite: 1 }, output: { crystal_staff: 1 }, skill: 'crafting', ticks: 28, station: 'workbench', research: 'arcane_studies', category: 'Equipment' },
-    craft_runic_wand: { input: { runite: 2, planks: 2 }, output: { runic_wand: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
-    craft_void_staff: { input: { void_essence: 5, runite: 2, planks: 2 }, output: { void_staff: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'advanced_arcana', category: 'Equipment' },
+    craft_wooden_wand: { input: { wood: 3, planks: 1 }, output: { wooden_wand: 1 }, skill: 'crafting', ticks: 12, station: 'workbench', research: 'arcane_implements', category: 'Equipment' },
+    craft_crystal_staff: { input: { stone: 3, planks: 2, runite: 1 }, output: { crystal_staff: 1 }, skill: 'crafting', ticks: 28, station: 'workbench', research: 'arcane_implements', category: 'Equipment' },
+    craft_runic_wand: { input: { runite: 2, planks: 2 }, output: { runic_wand: 1 }, skill: 'crafting', ticks: 35, station: 'workbench', research: 'void_sorcery', category: 'Equipment' },
+    craft_void_staff: { input: { void_essence: 5, runite: 2, planks: 2 }, output: { void_staff: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_sorcery', category: 'Equipment' },
     craft_short_bow: { input: { wood: 3, leather: 1 }, output: { short_bow: 1 }, skill: 'crafting', ticks: 14, station: 'workbench', category: 'Equipment' },
     craft_hunting_bow: { input: { planks: 2, leather: 2, iron: 1 }, output: { hunting_bow: 1 }, skill: 'crafting', ticks: 22, station: 'workbench', category: 'Equipment' },
-    craft_iron_crossbow: { input: { iron: 3, planks: 2, leather: 1 }, output: { iron_crossbow: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', research: 'runecraft', category: 'Equipment' },
+    craft_iron_crossbow: { input: { iron: 3, planks: 2, leather: 1 }, output: { iron_crossbow: 1 }, skill: 'crafting', ticks: 30, station: 'workbench', research: 'marksmanship', category: 'Equipment' },
     craft_runic_crossbow: { input: { runite: 3, iron: 2, planks: 2 }, output: { runic_crossbow: 1 }, skill: 'crafting', ticks: 42, station: 'workbench', research: 'runeforging', category: 'Equipment' },
     craft_void_longbow: { input: { void_essence: 4, runite: 2, planks: 3 }, output: { void_longbow: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Equipment' },
     craft_boots_of_haste: { input: { void_essence: 3, planks: 2, runite: 1 }, output: { boots_of_haste: 1 }, skill: 'crafting', ticks: 55, station: 'workbench', research: 'void_forging', category: 'Artifacts' },
@@ -530,6 +534,8 @@ export const RECIPES = {
     repair_artifact: { input: { runite: 1 }, output: {}, skill: 'crafting', ticks: 40, station: 'anvil', category: 'Repair', special: 'repair' },
     brew_health_potion: { input: { berries: 3, wheat: 1 }, output: { health_potion: 1 }, skill: 'cooking', ticks: 16, station: 'cauldron', research: 'alchemy', category: 'Food & Potions' },
     brew_speed_potion: { input: { corn: 2, potatoes: 2, berries: 1 }, output: { speed_potion: 1 }, skill: 'cooking', ticks: 20, station: 'cauldron', research: 'alchemy', category: 'Food & Potions' },
+    brew_mana_potion: { input: { moonbloom: 3, runite: 1 }, output: { mana_potion: 1 }, skill: 'cooking', ticks: 22, station: 'cauldron', research: 'herbalism', category: 'Food & Potions' },
+    brew_resistance_potion: { input: { moonbloom: 2, stone: 2, iron: 1 }, output: { resistance_potion: 1 }, skill: 'cooking', ticks: 25, station: 'cauldron', research: 'herbalism', category: 'Food & Potions' },
     cook_meal: { input: { foodstuffs: 5 }, output: { food: 4 }, skill: 'cooking', ticks: 8, station: 'cauldron', category: 'Food & Potions' },
     craft_tome_spark: { input: { planks: 2, stone: 1 }, output: { tome_spark: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
     craft_tome_mend: { input: { planks: 2, berries: 2 }, output: { tome_mend: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
@@ -716,6 +722,22 @@ export const POTIONS = {
         duration: 100,                // ticks the effect lasts
         cooldown: 400,                // ticks between uses
     },
+    mana_potion: {
+        name: 'Mana Potion',
+        trigger: 'lowMana',           // used when mana < manaThreshold
+        manaThreshold: 0.3,           // fraction of max mana
+        effect: 'restoreMana',
+        manaAmount: 30,               // mana restored
+        cooldown: 300,                // ticks between uses
+    },
+    resistance_potion: {
+        name: 'Resistance Potion',
+        trigger: 'inCombat',          // used when in combat
+        effect: 'resistance',
+        damageReduction: 0.25,        // 25% damage reduction
+        duration: 80,                 // ticks the effect lasts
+        cooldown: 500,                // ticks between uses
+    },
 };
 
 // ASCII display characters for item categories. Used in inventory/equipment/craft displays when no skin sprite is active.
@@ -731,7 +753,7 @@ export const ITEM_CHARS = {
 };
 
 // Raw food ingredients usable in cooking. Add new ones here rather than in resources.js.
-export const FOODSTUFFS = ['wheat', 'berries', 'corn', 'potatoes', 'meat', 'eggs', 'milk'];
+export const FOODSTUFFS = ['wheat', 'berries', 'corn', 'potatoes', 'moonbloom', 'meat', 'eggs', 'milk'];
 
 // Food spoilage system. Percentage of stockpile lost per decay interval, modulated by item type,
 // season, and storage buildings. Cooking uses fast-rotting food first (sorted by decayMultipliers).
@@ -743,6 +765,7 @@ export const FOOD_DECAY_CONFIG = {
         berries: 2.0,
         meat: 1.8,
         eggs: 1.5,
+        moonbloom: 1.0,
         potatoes: 0.7,
         corn: 0.6,
         wheat: 0.5,
@@ -766,6 +789,7 @@ export const CROPS = {
     berries: { growthTicks: 150, harvestYield: 2, seasons: ['spring', 'summer', 'autumn'], char: '♣', readyChar: '●', color: '#cc44aa' },
     corn: { growthTicks: 250, harvestYield: 4, seasons: ['summer'], char: '↑', readyChar: '⌠', color: '#ffcc00', research: 'druidcraft' },
     potatoes: { growthTicks: 180, harvestYield: 3, seasons: ['spring', 'autumn', 'winter'], char: '~', readyChar: '◘', color: '#aa7744', research: 'druidcraft' },
+    moonbloom: { growthTicks: 220, harvestYield: 2, seasons: ['spring', 'summer', 'autumn', 'winter'], char: '✿', readyChar: '❀', color: '#cc88ff', research: 'herbalism' },
 };
 
 // ----------------------------------------------------------------------------
@@ -1079,34 +1103,55 @@ export const RESEARCH_TABS = [
 ];
 
 export const RESEARCH = {
+    // Foundations & Nature
+    stonework: { name: 'Stonework', cost: 70, requires: [], tab: 'foundations', description: 'Brick construction and faster mining' },
     runecraft: { name: 'Runecraft', cost: 50, requires: [], tab: 'foundations', description: 'Etch runes into stone weapons' },
     druidcraft: { name: 'Druidcraft', cost: 80, requires: [], tab: 'foundations', description: 'Unlock corn and potatoes' },
     alchemy: { name: 'Alchemy', cost: 60, requires: [], tab: 'foundations', description: 'Cooking produces +2 bonus food per meal' },
+    irrigation: { name: 'Irrigation', cost: 120, requires: ['druidcraft'], tab: 'foundations', description: 'Crops grow in winter at half speed; water-adjacent farms grow 20% faster' },
     beast_binding: { name: 'Beast Binding', cost: 140, requires: ['druidcraft'], tab: 'foundations', description: 'Bind and pen creatures' },
-    verdant_growth: { name: 'Verdant Growth', cost: 250, requires: ['beast_binding', 'alchemy'], tab: 'foundations', description: 'Grow rare herbs for potent brews' },
+    trade_routes: { name: 'Trade Routes', cost: 160, requires: ['alchemy'], tab: 'foundations', description: 'Caravans arrive more often and offer better prices' },
+    husbandry: { name: 'Husbandry', cost: 180, requires: ['beast_binding'], tab: 'foundations', description: 'Tamed animals produce 50% more and can breed' },
+    wolf_mastery: { name: 'Wolf Mastery', cost: 180, requires: ['beast_binding'], tab: 'foundations', description: 'Wolf tame chance +20%, tamed wolves deal +4 damage' },
+    herbalism: { name: 'Herbalism', cost: 200, requires: ['alchemy', 'druidcraft'], tab: 'foundations', description: 'Grow moonbloom and brew mana/resistance potions' },
+    verdant_growth: { name: 'Verdant Growth', cost: 250, requires: ['herbalism', 'beast_binding'], tab: 'foundations', description: 'All crops gain +1 harvest yield; moonbloom grows 30% faster' },
+
+    // Arcane & Mana
     ley_channeling: { name: 'Ley Channeling', cost: 180, requires: ['runecraft'], tab: 'arcane', description: 'Tap leylines for mana' },
     luminance: { name: 'Luminance', cost: 100, requires: ['ley_channeling'], tab: 'arcane', description: 'Mana-powered light' },
     brilliance: { name: 'Brilliance', cost: 260, requires: ['luminance'], tab: 'arcane', description: 'Radiant beacon lights large areas' },
+    arcane_conduits: { name: 'Arcane Conduits', cost: 220, requires: ['luminance'], tab: 'arcane', description: 'Mana relays reduce nearby building consumption' },
     ember_magic: { name: 'Ember Magic', cost: 120, requires: ['ley_channeling'], tab: 'arcane', description: 'Warmth wards for winter' },
     arcane_infusion: { name: 'Arcane Infusion', cost: 280, requires: ['ley_channeling'], tab: 'arcane', description: 'Faster enchanted crafting' },
+    mana_reservoir: { name: 'Mana Reservoir', cost: 320, requires: ['arcane_infusion'], tab: 'arcane', description: 'Mana crystal cap +3 and each generates +1 mana' },
     mana_weaving: { name: 'Mana Weaving', cost: 350, requires: ['arcane_infusion'], tab: 'arcane', description: 'Weave mana into protective garb' },
     pyroclasm: { name: 'Pyroclasm', cost: 400, requires: ['ember_magic', 'warding'], tab: 'arcane', description: 'Fire ward incinerates nearby foes' },
+
+    // Crafting & Lore
+    marksmanship: { name: 'Marksmanship', cost: 130, requires: ['runecraft'], tab: 'crafting', description: 'Crossbow crafting and +1 range to all ranged weapons' },
     arcane_studies: { name: 'Arcane Studies', cost: 90, requires: ['runecraft'], tab: 'crafting', description: 'Study and craft basic spell tomes' },
+    arcane_implements: { name: 'Arcane Implements', cost: 120, requires: ['runecraft', 'ley_channeling'], tab: 'crafting', description: 'Craft wands and staves for spellcasters' },
+    artisans_touch: { name: "Artisan's Touch", cost: 250, requires: ['runeforging'], tab: 'crafting', description: 'Better crafting quality odds; salvage returns 75%' },
     advanced_arcana: { name: 'Advanced Arcana', cost: 300, requires: ['arcane_studies', 'arcane_infusion'], tab: 'crafting', description: 'Craft advanced spell tomes' },
+    void_sorcery: { name: 'Void Sorcery', cost: 280, requires: ['advanced_arcana'], tab: 'crafting', description: 'Craft runic wands, void staves, and void daggers' },
     runeforging: { name: 'Runeforging', cost: 200, requires: ['runecraft'], tab: 'crafting', description: 'Forge runic weapons' },
     masterwork: { name: 'Masterwork', cost: 450, requires: ['runeforging', 'arcane_infusion'], tab: 'crafting', description: 'Forge legendary enchanted weapons' },
     golem_craft: { name: 'Golem Craft', cost: 420, requires: ['arcane_infusion', 'void_forging'], tab: 'crafting', description: 'Animate stone golems to serve as tireless workers' },
+
+    // Void & Exploration
     warding: { name: 'Warding', cost: 150, requires: ['runecraft'], tab: 'void', description: 'Conjure defensive wards' },
+    fortification: { name: 'Fortification', cost: 200, requires: ['warding', 'stonework'], tab: 'void', description: 'Reinforced doors and faster wall auto-repair' },
     void_summoning: { name: 'Void Summoning', cost: 300, requires: ['ley_channeling', 'warding'], tab: 'void', description: 'Open portals to summon waves of enemies' },
-    void_forging: { name: 'Void Forging', cost: 380, requires: ['void_summoning', 'runeforging'], tab: 'void', description: 'Forge void essence into powerful gear' },
+    void_architecture: { name: 'Void Architecture', cost: 200, requires: ['void_summoning'], tab: 'void', description: 'Build void-reinforced walls and doors' },
+    void_forging: { name: 'Void Forging', cost: 380, requires: ['void_architecture', 'runeforging'], tab: 'void', description: 'Forge void essence into powerful gear' },
     planar_rift: { name: 'Planar Rift', cost: 400, requires: ['void_summoning', 'ley_channeling'], tab: 'void', description: 'Open stable rifts for exploration expeditions' },
     deep_delving: { name: 'Deep Delving', cost: 550, requires: ['planar_rift'], tab: 'void', description: 'Access deeper, more dangerous realms' },
 };
 
 export const DEMO_LOCKED_RESEARCH = new Set([
-    'advanced_arcana', 'masterwork', 'golem_craft', 'mana_weaving',
-    'brilliance', 'pyroclasm', 'void_summoning', 'void_forging',
-    'planar_rift', 'deep_delving'
+    'advanced_arcana', 'void_sorcery', 'masterwork', 'golem_craft', 'mana_weaving',
+    'mana_reservoir', 'brilliance', 'pyroclasm', 'void_summoning', 'void_architecture',
+    'void_forging', 'planar_rift', 'deep_delving'
 ]);
 
 // Auto-derive unlocks from the 'research' field on buildings, recipes, and crops.
@@ -1245,7 +1290,7 @@ export const TRADE_VALUES = {
     wood: 1, stone: 1.5, planks: 2.5, food: 1.2, bricks: 3,
     hides: 1.5, leather: 3, iron_ore: 2, iron: 4,
     runite: 6, void_essence: 10, meat: 0.8, wheat: 0.6, berries: 0.5,
-    corn: 0.7, potatoes: 0.6, eggs: 1.5, milk: 2, wool: 2.5,
+    corn: 0.7, potatoes: 0.6, moonbloom: 3, eggs: 1.5, milk: 2, wool: 2.5,
 };
 export const TRADER_MARKUP = 1.4;
 export const TRADER_DISCOUNT = 0.7;
@@ -2013,6 +2058,27 @@ export const STORY_MILESTONES = {
         trigger: 'research_golem_craft',
         text: 'TODO: Write lore text for golem craft research.',
         order: 9,
+    },
+    research_herbalism: {
+        tab: 'world',
+        title: 'Herbalism',
+        trigger: 'research_herbalism',
+        text: 'TODO: Write lore text for herbalism research.',
+        order: 10,
+    },
+    research_void_architecture: {
+        tab: 'world',
+        title: 'Void Architecture',
+        trigger: 'research_void_architecture',
+        text: 'TODO: Write lore text for void architecture research.',
+        order: 11,
+    },
+    research_mana_reservoir: {
+        tab: 'world',
+        title: 'Mana Reservoir',
+        trigger: 'research_mana_reservoir',
+        text: 'TODO: Write lore text for mana reservoir research.',
+        order: 12,
     },
 
     // -----------------------------------------------------------------------

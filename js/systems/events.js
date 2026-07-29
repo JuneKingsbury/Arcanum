@@ -40,7 +40,9 @@ export class EventSystem {
 
             if (Math.random() < chance) {
                 this.triggerEvent(eventKey, game);
-                this.cooldowns[eventKey] = game.tick + eventDef.cooldown;
+                let cd = eventDef.cooldown;
+                if (eventKey === 'caravan' && game.research.isResearched('trade_routes')) cd *= 0.7;
+                this.cooldowns[eventKey] = game.tick + cd;
                 break;
             }
         }

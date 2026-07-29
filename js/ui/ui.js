@@ -286,7 +286,13 @@ export class UI {
         const dayProgress = Math.floor((this.game.timeOfDay / CONFIG.TICKS_PER_DAY) * 24);
         const timeStr = `${String(dayProgress).padStart(2, '0')}:00`;
         const power = this.game.power;
-        const manaStr = power.totalGenerated > 0 ? `Mana:${power.getNetPower()}` : '';
+        let manaStr = '';
+        if (power.totalGenerated > 0) {
+            const crystalCount = this.game.mapIndex.getStructurePositions('mana_crystal').size;
+            const reservoirBonus = this.game.research.isResearched('mana_reservoir') ? 3 : 0;
+            const crystalMax = 4 + (this.game.manaCrystalBonus || 0) + reservoirBonus;
+            manaStr = `Mana:${power.getNetPower()} (${crystalCount}/${crystalMax})`;
+        }
         const pendingTasks = this.game.taskQueue.getPending().length;
 
         const waves = this.game.waves;
@@ -1176,7 +1182,7 @@ export class UI {
                 const canAfford = tamedDef && this.game.resources.has({ food: tamedDef.foodToTame });
                 if (tamedDef?.dangerousTame) {
                     const bestTamer = this.game.colonists.filter(c => c.hp > 0).sort((a, b) => (b.skills.animals || 0) - (a.skills.animals || 0))[0];
-                    const chance = bestTamer ? Math.round(getTameChance(bestTamer, a.type) * 100) : Math.round((tamedDef.baseTameChance || 0.4) * 100);
+                    const chance = bestTamer ? Math.round(getTameChance(bestTamer, a.type, this.game) * 100) : Math.round((tamedDef.baseTameChance || 0.4) * 100);
                     html += `<button ${canAfford ? '' : 'disabled'} onclick="window.game.tameWildAnimal(${a.id})">Tame (${tamedDef.foodToTame} food) — ${chance}%</button>`;
                     html += `<div class="info-row" style="color:#ff6644;font-size:0.85em">⚠ Dangerous! Retaliation: ${tamedDef.retaliationDamage} dmg on failure</div>`;
                 } else {
@@ -1983,7 +1989,8 @@ export class UI {
         html += `<div class="trade-columns" style="display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow-y:auto;">`;
 
         const markupMult = getPedestalEffect(this.game, 'tradeMarkupMult');
-        const effectiveMarkup = TRADER_MARKUP * markupMult;
+        const tradeRoutesMult = this.game.research.isResearched('trade_routes') ? (130 / 140) : 1;
+        const effectiveMarkup = TRADER_MARKUP * markupMult * tradeRoutesMult;
         html += `<div style="flex:1;min-width:140px;"><b style="color:#88ddff;">Trader Sells:</b>`;
         for (const [res, amt] of Object.entries(data.traderResources)) {
             const val = Math.ceil((TRADE_VALUES[res] || 1) * effectiveMarkup);
@@ -1995,18 +2002,19 @@ export class UI {
         }
         html += `</div>`;
 
+        const effectiveDiscount = this.game.research.isResearched('trade_routes') ? 0.75 : TRADER_DISCOUNT;
         html += `<div style="flex:1;min-width:140px;"><b style="color:#ffaa44;">You Offer:</b>`;
         for (const [res, amt] of Object.entries(stock)) {
             if (typeof amt !== 'number' || amt <= 0 || res.startsWith('_')) continue;
             if (!TRADE_VALUES[res]) continue;
-            const val = Math.floor((TRADE_VALUES[res] || 1) * TRADER_DISCOUNT * 10) / 10;
+            const val = Math.floor((TRADE_VALUES[res] || 1) * effectiveDiscount * 10) / 10;
             html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRemoveOffer('${res}',10)" style="padding:0 4px;">-10</button><button onclick="window.game.tradeRemoveOffer('${res}',1)" style="padding:0 4px;">-1</button><button onclick="window.game.tradeOffer('${res}',1)" style="padding:0 4px;">+1</button><button onclick="window.game.tradeOffer('${res}',10)" style="padding:0 4px;margin-left:2px;">+10</button></div>`;
         }
         html += `</div></div>`;
 
         const offer = this._tradeOffer || {};
         const request = this._tradeRequest || {};
-        const offerVal = Object.entries(offer).reduce((sum, [r, n]) => sum + (TRADE_VALUES[r] || 1) * n * TRADER_DISCOUNT, 0);
+        const offerVal = Object.entries(offer).reduce((sum, [r, n]) => sum + (TRADE_VALUES[r] || 1) * n * effectiveDiscount, 0);
         const reqVal = Object.entries(request).reduce((sum, [r, n]) => {
             if (r === '__exclusive') return sum + (TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem]?.tradeValue || 0);
             return sum + (TRADE_VALUES[r] || 1) * n * effectiveMarkup;
