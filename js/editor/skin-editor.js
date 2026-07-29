@@ -1,4 +1,4 @@
-import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS } from '../core/config.js';
+import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES } from '../core/config.js';
 
 const CANVAS_SIZES = [8, 16, 32, 64, 128];
 const STORAGE_PREFIX = 'convocation_skin_editor_';
@@ -20,6 +20,23 @@ const ENTITY_SPECIALS = [
 ];
 
 const VARIANT_COLORS = ['#ffff00', '#00ffff', '#00ff00', '#ff88ff', '#ffaa00', '#88ffaa', '#ff8888', '#aaaaff'];
+
+const ICON_ITEMS = [
+    { key: 'clear', char: '☀', color: '#ffdd44', desc: 'Clear weather icon' },
+    { key: 'rain', char: '🌧', color: '#6699cc', desc: 'Rain weather icon' },
+    { key: 'thunderstorm', char: '⛈', color: '#9966cc', desc: 'Thunderstorm weather icon' },
+    { key: 'snow', char: '❄', color: '#aaddff', desc: 'Snow weather icon' },
+    { key: 'blizzard', char: '❆', color: '#ffffff', desc: 'Blizzard weather icon' },
+    { key: 'heatwave', char: '♨', color: '#ff6633', desc: 'Heat wave weather icon' },
+];
+
+const OVERLAY_ITEMS = [
+    { key: 'progress_bar', char: '▬', color: '#00ff00', desc: 'Progress bar overlay (crafting, building)' },
+    { key: 'health_bar', char: '▬', color: '#ff4444', desc: 'Health bar overlay' },
+    { key: 'beam', char: '/', color: '#ff4444', desc: 'Beam effect (spell link between tiles)' },
+    { key: 'glow', char: '○', color: '#ffffff', desc: 'Glow effect (aura around tiles)' },
+    { key: 'screen_flash', char: '█', color: '#ff0000', desc: 'Screen flash effect (damage, alerts)' },
+];
 
 const EFFECT_ITEMS = [
     { key: 'fire', char: '^', color: '#ff4400', desc: 'Tile on fire' },
@@ -360,7 +377,7 @@ class SkinEditor {
     }
 
     _buildCategoryFilter() {
-        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects'];
+        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects', 'Icons', 'Overlays'];
         const container = document.getElementById('se-category-filter');
         container.innerHTML = categories.map(c =>
             `<button class="bp-cat${c === this.categoryFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
@@ -414,6 +431,9 @@ class SkinEditor {
                 for (const [key, def] of Object.entries(ARMORS)) {
                     items.push({ key, char: def.char || ITEM_CHARS.armor.char, color: def.charColor || ITEM_CHARS.armor.color, desc: `Armor: ${def.name}`, category: 'items' });
                 }
+                for (const [key, def] of Object.entries(HELMETS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.helmet.char, color: def.charColor || ITEM_CHARS.helmet.color, desc: `Helmet: ${def.name}`, category: 'items' });
+                }
                 for (const [key, def] of Object.entries(TOOLS)) {
                     items.push({ key, char: def.char || ITEM_CHARS.tool.char, color: def.charColor || ITEM_CHARS.tool.color, desc: `Tool: ${def.name}`, category: 'items' });
                 }
@@ -445,6 +465,16 @@ class SkinEditor {
             case 'Effects':
                 for (const e of EFFECT_ITEMS) {
                     items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'effects' });
+                }
+                break;
+            case 'Icons':
+                for (const e of ICON_ITEMS) {
+                    items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'icons' });
+                }
+                break;
+            case 'Overlays':
+                for (const e of OVERLAY_ITEMS) {
+                    items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'overlays' });
                 }
                 break;
         }
