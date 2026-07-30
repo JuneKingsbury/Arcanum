@@ -13,9 +13,14 @@ class SpriteEditor {
     constructor() {
         this.canvas = document.getElementById('main-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvasSize = 16;
+        this.canvasWidth = 16;
+        this.canvasHeight = 16;
         this.pixels = new Uint8ClampedArray(16 * 16 * 4);
         this.zoom = 8;
+        Object.defineProperty(this, 'canvasSize', {
+            get() { return Math.max(this.canvasWidth, this.canvasHeight); },
+            set(v) { this.canvasWidth = v; this.canvasHeight = v; }
+        });
         this.panX = 0;
         this.panY = 0;
         this.tool = 'draw';
@@ -23,6 +28,7 @@ class SpriteEditor {
         this.mirrorMode = null;
         this.transparencyLock = false;
         this.showGrid = true;
+        this.gridColor = 'rgba(255,255,255,0.1)';
         this.hoveredPixel = null;
         this.selection = null;
         this._selPixels = null;
@@ -149,7 +155,7 @@ class SpriteEditor {
 
         if (this._shapeStart && this._shapePreview.length > 0) {
             for (const p of this._shapePreview) {
-                if (p.x >= 0 && p.x < this.canvasSize && p.y >= 0 && p.y < this.canvasSize) {
+                if (p.x >= 0 && p.x < this.canvasWidth && p.y >= 0 && p.y < this.canvasHeight) {
                     if (p.r !== undefined) {
                         this._setPixel(p.x, p.y, p.r, p.g, p.b, p.a);
                     } else {
@@ -232,10 +238,11 @@ class SpriteEditor {
 
     resetZoom() {
         const rect = this.canvas.getBoundingClientRect();
-        const maxDim = Math.min(rect.width, rect.height) - 4;
-        this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(maxDim / this.canvasSize)));
-        this.panX = (rect.width - this.canvasSize * this.zoom) / 2;
-        this.panY = (rect.height - this.canvasSize * this.zoom) / 2;
+        const zoomX = (rect.width - 4) / this.canvasWidth;
+        const zoomY = (rect.height - 4) / this.canvasHeight;
+        this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.floor(Math.min(zoomX, zoomY))));
+        this.panX = (rect.width - this.canvasWidth * this.zoom) / 2;
+        this.panY = (rect.height - this.canvasHeight * this.zoom) / 2;
         this._updateStatusBar();
     }
 
@@ -299,26 +306,26 @@ class SpriteEditor {
     }
 
     copySprite() {
-        this._clipboard = { size: this.canvasSize, pixels: new Uint8ClampedArray(this.pixels) };
+        this._clipboard = { w: this.canvasWidth, h: this.canvasHeight, pixels: new Uint8ClampedArray(this.pixels) };
     }
 
     pasteSprite() {
         if (!this._clipboard) return;
         this._pushUndoSnapshot();
-        if (this._clipboard.size !== this.canvasSize) {
+        if (this._clipboard.w !== this.canvasWidth || this._clipboard.h !== this.canvasHeight) {
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this._clipboard.size;
-            tempCanvas.height = this._clipboard.size;
+            tempCanvas.width = this._clipboard.w;
+            tempCanvas.height = this._clipboard.h;
             const tempCtx = tempCanvas.getContext('2d');
-            const imageData = new ImageData(new Uint8ClampedArray(this._clipboard.pixels), this._clipboard.size, this._clipboard.size);
+            const imageData = new ImageData(new Uint8ClampedArray(this._clipboard.pixels), this._clipboard.w, this._clipboard.h);
             tempCtx.putImageData(imageData, 0, 0);
             const destCanvas = document.createElement('canvas');
-            destCanvas.width = this.canvasSize;
-            destCanvas.height = this.canvasSize;
+            destCanvas.width = this.canvasWidth;
+            destCanvas.height = this.canvasHeight;
             const destCtx = destCanvas.getContext('2d');
             destCtx.imageSmoothingEnabled = false;
-            destCtx.drawImage(tempCanvas, 0, 0, this.canvasSize, this.canvasSize);
-            const destData = destCtx.getImageData(0, 0, this.canvasSize, this.canvasSize);
+            destCtx.drawImage(tempCanvas, 0, 0, this.canvasWidth, this.canvasHeight);
+            const destData = destCtx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
             this.pixels = new Uint8ClampedArray(destData.data);
         } else {
             this.pixels = new Uint8ClampedArray(this._clipboard.pixels);
@@ -338,8 +345,8 @@ class SpriteEditor {
                     srcI = (dy * s.w + dx) * 4;
                 } else {
                     const sx = s.x + dx, sy = s.y + dy;
-                    if (sx < 0 || sx >= this.canvasSize || sy < 0 || sy >= this.canvasSize) continue;
-                    srcI = (sy * this.canvasSize + sx) * 4;
+                    if (sx < 0 || sx >= this.canvasWidth || sy < 0 || sy >= this.canvasHeight) continue;
+                    srcI = (sy * this.canvasWidth + sx) * 4;
                 }
                 const dstI = (dy * s.w + dx) * 4;
                 data[dstI] = src[srcI];
@@ -376,7 +383,7 @@ class SpriteEditor {
         for (let dy = 0; dy < s.h; dy++) {
             for (let dx = 0; dx < s.w; dx++) {
                 const tx = s.x + dx, ty = s.y + dy;
-                if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                if (tx < 0 || tx >= this.canvasWidth || ty < 0 || ty >= this.canvasHeight) continue;
                 this._erasePixel(tx, ty);
             }
         }
@@ -405,7 +412,7 @@ class SpriteEditor {
             for (let dy = 0; dy < s.h; dy++) {
                 for (let dx = 0; dx < s.w; dx++) {
                     const tx = s.x + dx, ty = s.y + dy;
-                    if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                    if (tx < 0 || tx >= this.canvasWidth || ty < 0 || ty >= this.canvasHeight) continue;
                     this._setPixel(tx, ty, c.r, c.g, c.b, c.a);
                 }
             }
@@ -443,7 +450,7 @@ class SpriteEditor {
     }
 
     autoSave() {
-        this.projectManager.saveCurrentSprite(this.pixels, this.canvasSize);
+        this.projectManager.saveCurrentSprite(this.pixels, this.canvasWidth, this.canvasHeight);
     }
 
     loadSprite(sprite) {
@@ -452,24 +459,27 @@ class SpriteEditor {
         this._redoStack.length = 0;
         this._strokeSnapshot = null;
 
-        if (sprite.size && sprite.size !== this.canvasSize) {
-            this.canvasSize = sprite.size;
-            this.pixels = new Uint8ClampedArray(sprite.size * sprite.size * 4);
-            document.getElementById('canvas-size-select').value = sprite.size;
+        const w = sprite.w || sprite.size || 16;
+        const h = sprite.h || sprite.size || 16;
+        if (w !== this.canvasWidth || h !== this.canvasHeight) {
+            this.canvasWidth = w;
+            this.canvasHeight = h;
+            this.pixels = new Uint8ClampedArray(w * h * 4);
+            this._updateSizeUI();
         } else {
-            this.pixels = new Uint8ClampedArray(this.canvasSize * this.canvasSize * 4);
+            this.pixels = new Uint8ClampedArray(this.canvasWidth * this.canvasHeight * 4);
         }
 
         if (sprite.data) {
             const img = new Image();
             img.onload = () => {
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.canvasSize;
-                tempCanvas.height = this.canvasSize;
+                tempCanvas.width = this.canvasWidth;
+                tempCanvas.height = this.canvasHeight;
                 const tempCtx = tempCanvas.getContext('2d');
                 tempCtx.imageSmoothingEnabled = false;
-                tempCtx.drawImage(img, 0, 0, this.canvasSize, this.canvasSize);
-                const imageData = tempCtx.getImageData(0, 0, this.canvasSize, this.canvasSize);
+                tempCtx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
+                const imageData = tempCtx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
                 this.pixels = new Uint8ClampedArray(imageData.data);
             };
             img.src = sprite.data;
@@ -479,10 +489,11 @@ class SpriteEditor {
         this.resetZoom();
     }
 
-    setPixelsFromData(data, size) {
-        this.canvasSize = size;
+    setPixelsFromData(data, w, h) {
+        this.canvasWidth = w;
+        this.canvasHeight = h || w;
         this.pixels = new Uint8ClampedArray(data);
-        document.getElementById('canvas-size-select').value = size;
+        this._updateSizeUI();
         this.resetZoom();
         this.autoSave();
     }
@@ -503,7 +514,18 @@ class SpriteEditor {
         document.getElementById('btn-settings').addEventListener('click', () => this.togglePanel('settings-panel'));
 
         document.getElementById('canvas-size-select').addEventListener('change', (e) => {
-            this._setCanvasSize(parseInt(e.target.value));
+            const v = parseInt(e.target.value);
+            this._setCanvasDimensions(v, v);
+        });
+
+        document.getElementById('btn-custom-size').addEventListener('click', () => {
+            const input = prompt('Enter dimensions (WxH):', `${this.canvasWidth}x${this.canvasHeight}`);
+            if (!input) return;
+            const match = input.match(/^(\d+)\s*[x×,]\s*(\d+)$/i);
+            if (!match) return;
+            const w = Math.max(1, Math.min(512, parseInt(match[1])));
+            const h = Math.max(1, Math.min(512, parseInt(match[2])));
+            this._setCanvasDimensions(w, h);
         });
 
         document.getElementById('brush-size').addEventListener('input', (e) => {
@@ -512,6 +534,13 @@ class SpriteEditor {
         });
 
         document.getElementById('btn-grid').addEventListener('click', () => this.toggleGrid());
+        document.getElementById('grid-color').addEventListener('input', (e) => {
+            const hex = e.target.value;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            this.gridColor = `rgba(${r},${g},${b},0.25)`;
+        });
         document.getElementById('btn-mirror').addEventListener('click', () => this.cycleMirror());
         document.getElementById('btn-tlock').addEventListener('click', () => this.toggleTransparencyLock());
 
@@ -521,11 +550,11 @@ class SpriteEditor {
         document.getElementById('btn-outline').addEventListener('click', () => this._generateOutline());
         document.getElementById('btn-replace-color').addEventListener('click', () => this._replaceColor());
         document.getElementById('btn-extract-palette').addEventListener('click', () => {
-            this.colorSystem.extractPalette(this.pixels, this.canvasSize);
+            this.colorSystem.extractPalette(this.pixels);
         });
         document.getElementById('btn-clear').addEventListener('click', () => {
             this._pushUndoSnapshot();
-            this.pixels = new Uint8ClampedArray(this.canvasSize * this.canvasSize * 4);
+            this.pixels = new Uint8ClampedArray(this.canvasWidth * this.canvasHeight * 4);
             this.autoSave();
         });
 
@@ -625,7 +654,7 @@ class SpriteEditor {
     }
 
     _updateStatusBar() {
-        document.getElementById('canvas-info').textContent = `${this.canvasSize}x${this.canvasSize}`;
+        document.getElementById('canvas-info').textContent = `${this.canvasWidth}x${this.canvasHeight}`;
         document.getElementById('zoom-info').textContent = `${this.zoom}x`;
         const sprite = this.projectManager.getSprite();
         document.getElementById('sprite-name').textContent = sprite?.name || 'Untitled';
@@ -638,24 +667,37 @@ class SpriteEditor {
         }
     }
 
-    _setCanvasSize(size) {
-        if (size === this.canvasSize) return;
+    _updateSizeUI() {
+        const sel = document.getElementById('canvas-size-select');
+        if (this.canvasWidth === this.canvasHeight && CANVAS_SIZES.includes(this.canvasWidth)) {
+            sel.value = this.canvasWidth;
+        } else {
+            sel.value = '';
+        }
+    }
+
+    _setCanvasDimensions(newW, newH) {
+        if (newW === this.canvasWidth && newH === this.canvasHeight) return;
         this._pushUndoSnapshot();
         const oldPixels = this.pixels;
-        const oldSize = this.canvasSize;
-        this.canvasSize = size;
-        this.pixels = new Uint8ClampedArray(size * size * 4);
-        const copySize = Math.min(oldSize, size);
-        for (let y = 0; y < copySize; y++) {
-            for (let x = 0; x < copySize; x++) {
-                const oldI = (y * oldSize + x) * 4;
-                const newI = (y * size + x) * 4;
+        const oldW = this.canvasWidth;
+        const oldH = this.canvasHeight;
+        this.canvasWidth = newW;
+        this.canvasHeight = newH;
+        this.pixels = new Uint8ClampedArray(newW * newH * 4);
+        const copyW = Math.min(oldW, newW);
+        const copyH = Math.min(oldH, newH);
+        for (let y = 0; y < copyH; y++) {
+            for (let x = 0; x < copyW; x++) {
+                const oldI = (y * oldW + x) * 4;
+                const newI = (y * newW + x) * 4;
                 this.pixels[newI] = oldPixels[oldI];
                 this.pixels[newI + 1] = oldPixels[oldI + 1];
                 this.pixels[newI + 2] = oldPixels[oldI + 2];
                 this.pixels[newI + 3] = oldPixels[oldI + 3];
             }
         }
+        this._updateSizeUI();
         this.resetZoom();
         this.autoSave();
     }
@@ -663,7 +705,7 @@ class SpriteEditor {
     // --- Pixel Operations ---
 
     _setPixel(x, y, r, g, b, a) {
-        const i = (y * this.canvasSize + x) * 4;
+        const i = (y * this.canvasWidth + x) * 4;
         if (this.transparencyLock && this.pixels[i + 3] === 0) return;
         this.pixels[i] = r;
         this.pixels[i + 1] = g;
@@ -672,12 +714,12 @@ class SpriteEditor {
     }
 
     _getPixel(x, y) {
-        const i = (y * this.canvasSize + x) * 4;
+        const i = (y * this.canvasWidth + x) * 4;
         return { r: this.pixels[i], g: this.pixels[i + 1], b: this.pixels[i + 2], a: this.pixels[i + 3] };
     }
 
     _erasePixel(x, y) {
-        const i = (y * this.canvasSize + x) * 4;
+        const i = (y * this.canvasWidth + x) * 4;
         this.pixels[i] = 0;
         this.pixels[i + 1] = 0;
         this.pixels[i + 2] = 0;
@@ -688,10 +730,10 @@ class SpriteEditor {
 
     _getMirrorPoints(cx, cy) {
         const points = [[cx, cy]];
-        const s = this.canvasSize;
-        if (this.mirrorMode === 'h' || this.mirrorMode === 'both') points.push([s - 1 - cx, cy]);
-        if (this.mirrorMode === 'v' || this.mirrorMode === 'both') points.push([cx, s - 1 - cy]);
-        if (this.mirrorMode === 'both') points.push([s - 1 - cx, s - 1 - cy]);
+        const w = this.canvasWidth, h = this.canvasHeight;
+        if (this.mirrorMode === 'h' || this.mirrorMode === 'both') points.push([w - 1 - cx, cy]);
+        if (this.mirrorMode === 'v' || this.mirrorMode === 'both') points.push([cx, h - 1 - cy]);
+        if (this.mirrorMode === 'both') points.push([w - 1 - cx, h - 1 - cy]);
         return points;
     }
 
@@ -703,7 +745,7 @@ class SpriteEditor {
             for (let dy = -r; dy < bs - r; dy++) {
                 for (let dx = -r; dx < bs - r; dx++) {
                     const px = mx + dx, py = my + dy;
-                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                    if (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight) {
                         this._setPixel(px, py, c.r, c.g, c.b, c.a);
                     }
                 }
@@ -718,7 +760,7 @@ class SpriteEditor {
             for (let dy = -r; dy < bs - r; dy++) {
                 for (let dx = -r; dx < bs - r; dx++) {
                     const px = mx + dx, py = my + dy;
-                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                    if (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight) {
                         this._erasePixel(px, py);
                     }
                 }
@@ -733,7 +775,7 @@ class SpriteEditor {
             for (let dy = -r; dy < bs - r; dy++) {
                 for (let dx = -r; dx < bs - r; dx++) {
                     const px = mx + dx, py = my + dy;
-                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                    if (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight) {
                         this._shiftBrightness(px, py, 20);
                     }
                 }
@@ -748,7 +790,7 @@ class SpriteEditor {
             for (let dy = -r; dy < bs - r; dy++) {
                 for (let dx = -r; dx < bs - r; dx++) {
                     const px = mx + dx, py = my + dy;
-                    if (px >= 0 && px < this.canvasSize && py >= 0 && py < this.canvasSize) {
+                    if (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight) {
                         this._shiftBrightness(px, py, -20);
                     }
                 }
@@ -757,7 +799,7 @@ class SpriteEditor {
     }
 
     _shiftBrightness(x, y, amount) {
-        const i = (y * this.canvasSize + x) * 4;
+        const i = (y * this.canvasWidth + x) * 4;
         if (this.pixels[i + 3] === 0) return;
         this.pixels[i] = Math.max(0, Math.min(255, this.pixels[i] + amount));
         this.pixels[i + 1] = Math.max(0, Math.min(255, this.pixels[i + 1] + amount));
@@ -769,14 +811,14 @@ class SpriteEditor {
         const target = this._getPixel(startX, startY);
         if (target.r === c.r && target.g === c.g && target.b === c.b && target.a === c.a) return;
 
-        const size = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const stack = [[startX, startY]];
         const visited = new Set();
 
         while (stack.length > 0) {
             const [x, y] = stack.pop();
-            if (x < 0 || x >= size || y < 0 || y >= size) continue;
-            const key = y * size + x;
+            if (x < 0 || x >= w || y < 0 || y >= h) continue;
+            const key = y * w + x;
             if (visited.has(key)) continue;
             visited.add(key);
 
@@ -794,14 +836,14 @@ class SpriteEditor {
         const target = this._getPixel(startX, startY);
         if (target.r === c1.r && target.g === c1.g && target.b === c1.b && target.a === c1.a) return;
 
-        const size = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const stack = [[startX, startY]];
         const visited = new Set();
 
         while (stack.length > 0) {
             const [x, y] = stack.pop();
-            if (x < 0 || x >= size || y < 0 || y >= size) continue;
-            const key = y * size + x;
+            if (x < 0 || x >= w || y < 0 || y >= h) continue;
+            const key = y * w + x;
             if (visited.has(key)) continue;
             visited.add(key);
 
@@ -927,12 +969,12 @@ class SpriteEditor {
 
     _flipHorizontal() {
         this._pushUndoSnapshot();
-        const s = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const flipped = new Uint8ClampedArray(this.pixels.length);
-        for (let y = 0; y < s; y++) {
-            for (let x = 0; x < s; x++) {
-                const srcI = (y * s + x) * 4;
-                const dstI = (y * s + (s - 1 - x)) * 4;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const srcI = (y * w + x) * 4;
+                const dstI = (y * w + (w - 1 - x)) * 4;
                 flipped[dstI] = this.pixels[srcI];
                 flipped[dstI + 1] = this.pixels[srcI + 1];
                 flipped[dstI + 2] = this.pixels[srcI + 2];
@@ -945,12 +987,12 @@ class SpriteEditor {
 
     _flipVertical() {
         this._pushUndoSnapshot();
-        const s = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const flipped = new Uint8ClampedArray(this.pixels.length);
-        for (let y = 0; y < s; y++) {
-            for (let x = 0; x < s; x++) {
-                const srcI = (y * s + x) * 4;
-                const dstI = ((s - 1 - y) * s + x) * 4;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const srcI = (y * w + x) * 4;
+                const dstI = ((h - 1 - y) * w + x) * 4;
                 flipped[dstI] = this.pixels[srcI];
                 flipped[dstI + 1] = this.pixels[srcI + 1];
                 flipped[dstI + 2] = this.pixels[srcI + 2];
@@ -963,19 +1005,23 @@ class SpriteEditor {
 
     _rotateCW() {
         this._pushUndoSnapshot();
-        const s = this.canvasSize;
-        const rotated = new Uint8ClampedArray(this.pixels.length);
-        for (let y = 0; y < s; y++) {
-            for (let x = 0; x < s; x++) {
-                const srcI = (y * s + x) * 4;
-                const dstI = (x * s + (s - 1 - y)) * 4;
+        const w = this.canvasWidth, h = this.canvasHeight;
+        const rotated = new Uint8ClampedArray(h * w * 4);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const srcI = (y * w + x) * 4;
+                const dstI = (x * h + (h - 1 - y)) * 4;
                 rotated[dstI] = this.pixels[srcI];
                 rotated[dstI + 1] = this.pixels[srcI + 1];
                 rotated[dstI + 2] = this.pixels[srcI + 2];
                 rotated[dstI + 3] = this.pixels[srcI + 3];
             }
         }
+        this.canvasWidth = h;
+        this.canvasHeight = w;
         this.pixels = rotated;
+        this._updateSizeUI();
+        this.resetZoom();
         this.autoSave();
     }
 
@@ -984,7 +1030,8 @@ class SpriteEditor {
         const fill = this.colorSystem.color;
         if (target.r === fill.r && target.g === fill.g && target.b === fill.b && target.a === fill.a) return;
         this._pushUndoSnapshot();
-        for (let i = 0; i < this.canvasSize * this.canvasSize * 4; i += 4) {
+        const total = this.canvasWidth * this.canvasHeight * 4;
+        for (let i = 0; i < total; i += 4) {
             if (this.pixels[i] === target.r && this.pixels[i + 1] === target.g &&
                 this.pixels[i + 2] === target.b && this.pixels[i + 3] === target.a) {
                 this.pixels[i] = fill.r;
@@ -997,15 +1044,15 @@ class SpriteEditor {
     }
 
     _generateOutline() {
-        const size = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const hasPixel = (x, y) => {
-            if (x < 0 || x >= size || y < 0 || y >= size) return false;
-            return this.pixels[(y * size + x) * 4 + 3] > 0;
+            if (x < 0 || x >= w || y < 0 || y >= h) return false;
+            return this.pixels[(y * w + x) * 4 + 3] > 0;
         };
         this._pushUndoSnapshot();
         const outlinePixels = [];
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < size; x++) {
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
                 if (hasPixel(x, y)) continue;
                 if (hasPixel(x - 1, y) || hasPixel(x + 1, y) || hasPixel(x, y - 1) || hasPixel(x, y + 1)) {
                     outlinePixels.push([x, y]);
@@ -1033,8 +1080,8 @@ class SpriteEditor {
         for (let dy = 0; dy < s.h; dy++) {
             for (let dx = 0; dx < s.w; dx++) {
                 const sx = s.x + dx, sy = s.y + dy;
-                if (sx < 0 || sx >= this.canvasSize || sy < 0 || sy >= this.canvasSize) continue;
-                const srcI = (sy * this.canvasSize + sx) * 4;
+                if (sx < 0 || sx >= this.canvasWidth || sy < 0 || sy >= this.canvasHeight) continue;
+                const srcI = (sy * this.canvasWidth + sx) * 4;
                 const dstI = (dy * s.w + dx) * 4;
                 this._selPixels[dstI] = this.pixels[srcI];
                 this._selPixels[dstI + 1] = this.pixels[srcI + 1];
@@ -1054,10 +1101,10 @@ class SpriteEditor {
         for (let dy = 0; dy < s.h; dy++) {
             for (let dx = 0; dx < s.w; dx++) {
                 const tx = s.x + dx, ty = s.y + dy;
-                if (tx < 0 || tx >= this.canvasSize || ty < 0 || ty >= this.canvasSize) continue;
+                if (tx < 0 || tx >= this.canvasWidth || ty < 0 || ty >= this.canvasHeight) continue;
                 const srcI = (dy * s.w + dx) * 4;
                 if (this._selPixels[srcI + 3] === 0) continue;
-                const dstI = (ty * this.canvasSize + tx) * 4;
+                const dstI = (ty * this.canvasWidth + tx) * 4;
                 this.pixels[dstI] = this._selPixels[srcI];
                 this.pixels[dstI + 1] = this._selPixels[srcI + 1];
                 this.pixels[dstI + 2] = this._selPixels[srcI + 2];
@@ -1103,41 +1150,41 @@ class SpriteEditor {
     }
 
     _renderPreview() {
-        const size = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const ctx = this.previewCtx;
 
         if (this.tilePreview) {
-            const tileSize = size * 3;
-            if (this.previewCanvas.width !== tileSize || this.previewCanvas.height !== tileSize) {
-                this.previewCanvas.width = tileSize;
-                this.previewCanvas.height = tileSize;
+            const tw = w * 3, th = h * 3;
+            if (this.previewCanvas.width !== tw || this.previewCanvas.height !== th) {
+                this.previewCanvas.width = tw;
+                this.previewCanvas.height = th;
             }
-            ctx.clearRect(0, 0, tileSize, tileSize);
+            ctx.clearRect(0, 0, tw, th);
             const singleCanvas = document.createElement('canvas');
-            singleCanvas.width = size;
-            singleCanvas.height = size;
+            singleCanvas.width = w;
+            singleCanvas.height = h;
             const sCtx = singleCanvas.getContext('2d');
-            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), size, size);
+            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
             sCtx.putImageData(imageData, 0, 0);
             for (let ty = 0; ty < 3; ty++) {
                 for (let tx = 0; tx < 3; tx++) {
-                    ctx.drawImage(singleCanvas, tx * size, ty * size);
+                    ctx.drawImage(singleCanvas, tx * w, ty * h);
                 }
             }
         } else {
-            if (this.previewCanvas.width !== size || this.previewCanvas.height !== size) {
-                this.previewCanvas.width = size;
-                this.previewCanvas.height = size;
+            if (this.previewCanvas.width !== w || this.previewCanvas.height !== h) {
+                this.previewCanvas.width = w;
+                this.previewCanvas.height = h;
             }
-            ctx.clearRect(0, 0, size, size);
-            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), size, size);
+            ctx.clearRect(0, 0, w, h);
+            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
             ctx.putImageData(imageData, 0, 0);
         }
     }
 
     _render() {
         const ctx = this.ctx;
-        const size = this.canvasSize;
+        const w = this.canvasWidth, h = this.canvasHeight;
         const z = this.zoom;
         const cw = this.canvas.width;
         const ch = this.canvas.height;
@@ -1147,20 +1194,18 @@ class SpriteEditor {
         ctx.fillStyle = '#1a1a2e';
         ctx.fillRect(0, 0, cw, ch);
 
-        const gridW = size * z;
-        const gridH = size * z;
+        const gridW = w * z;
+        const gridH = h * z;
 
+        const rox = Math.round(ox), roy = Math.round(oy);
         ctx.save();
         ctx.beginPath();
-        ctx.rect(ox, oy, gridW, gridH);
+        ctx.rect(rox, roy, gridW, gridH);
         ctx.clip();
-        const checkSize = Math.max(1, Math.floor(z / 2));
-        for (let y = 0; y < gridH; y += checkSize) {
-            for (let x = 0; x < gridW; x += checkSize) {
-                const cx = Math.floor(x / checkSize);
-                const cy = Math.floor(y / checkSize);
-                ctx.fillStyle = (cx + cy) % 2 === 0 ? CHECKERBOARD_LIGHT : CHECKERBOARD_DARK;
-                ctx.fillRect(ox + x, oy + y, checkSize, checkSize);
+        for (let py = 0; py < h; py++) {
+            for (let px = 0; px < w; px++) {
+                ctx.fillStyle = (px + py) % 2 === 0 ? CHECKERBOARD_LIGHT : CHECKERBOARD_DARK;
+                ctx.fillRect(rox + px * z, roy + py * z, z, z);
             }
         }
         ctx.restore();
@@ -1169,36 +1214,38 @@ class SpriteEditor {
             ctx.save();
             ctx.globalAlpha = this.refOpacity;
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(this.refImage, ox, oy, size * z, size * z);
+            ctx.drawImage(this.refImage, ox, oy, gridW, gridH);
             ctx.restore();
         }
 
-        for (let py = 0; py < size; py++) {
-            for (let px = 0; px < size; px++) {
-                const i = (py * size + px) * 4;
-                const a = this.pixels[i + 3];
-                if (a === 0) continue;
-                ctx.fillStyle = `rgba(${this.pixels[i]},${this.pixels[i + 1]},${this.pixels[i + 2]},${a / 255})`;
-                ctx.fillRect(ox + px * z, oy + py * z, z, z);
-            }
+        const pixelImageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
+        if (!this._pixelCanvas || this._pixelCanvas.width !== w || this._pixelCanvas.height !== h) {
+            this._pixelCanvas = document.createElement('canvas');
+            this._pixelCanvas.width = w;
+            this._pixelCanvas.height = h;
         }
+        this._pixelCanvas.getContext('2d').putImageData(pixelImageData, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(this._pixelCanvas, 0, 0, w, h, rox, roy, gridW, gridH);
 
         if (this.showGrid && z >= 4) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.strokeStyle = this.gridColor;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            for (let i = 0; i <= size; i++) {
-                ctx.moveTo(ox + i * z + 0.5, oy);
-                ctx.lineTo(ox + i * z + 0.5, oy + gridH);
-                ctx.moveTo(ox, oy + i * z + 0.5);
-                ctx.lineTo(ox + gridW, oy + i * z + 0.5);
+            for (let i = 0; i <= w; i++) {
+                ctx.moveTo(rox + i * z + 0.5, roy);
+                ctx.lineTo(rox + i * z + 0.5, roy + gridH);
+            }
+            for (let i = 0; i <= h; i++) {
+                ctx.moveTo(rox, roy + i * z + 0.5);
+                ctx.lineTo(rox + gridW, roy + i * z + 0.5);
             }
             ctx.stroke();
         }
 
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(ox - 0.5, oy - 0.5, gridW + 1, gridH + 1);
+        ctx.strokeRect(rox - 0.5, roy - 0.5, gridW + 1, gridH + 1);
 
         if (this._selPixels && this.selection) {
             const s = this.selection;
@@ -1209,21 +1256,21 @@ class SpriteEditor {
                     if (a === 0) continue;
                     const px = s.x + dx, py = s.y + dy;
                     ctx.fillStyle = `rgba(${this._selPixels[i]},${this._selPixels[i + 1]},${this._selPixels[i + 2]},${a / 255})`;
-                    ctx.fillRect(ox + px * z, oy + py * z, z, z);
+                    ctx.fillRect(rox + px * z, roy + py * z, z, z);
                 }
             }
         }
 
         if (this._shapePreview && this._shapePreview.length > 0) {
             for (const p of this._shapePreview) {
-                if (p.x >= 0 && p.x < size && p.y >= 0 && p.y < size) {
+                if (p.x >= 0 && p.x < w && p.y >= 0 && p.y < h) {
                     if (p.r !== undefined) {
                         ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.a / 255})`;
                     } else {
                         const c = this.colorSystem.color;
                         ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${c.a / 255})`;
                     }
-                    ctx.fillRect(ox + p.x * z, oy + p.y * z, z, z);
+                    ctx.fillRect(rox + p.x * z, roy + p.y * z, z, z);
                 }
             }
         }
@@ -1233,7 +1280,7 @@ class SpriteEditor {
             ctx.strokeStyle = 'rgba(0,200,255,0.8)';
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 4]);
-            ctx.strokeRect(ox + s.x * z, oy + s.y * z, s.w * z, s.h * z);
+            ctx.strokeRect(rox + s.x * z, roy + s.y * z, s.w * z, s.h * z);
             ctx.setLineDash([]);
         }
 
@@ -1244,9 +1291,9 @@ class SpriteEditor {
             ctx.strokeStyle = 'rgba(255,255,255,0.6)';
             ctx.lineWidth = 2;
             if (bs === 1) {
-                ctx.strokeRect(ox + x * z + 1, oy + y * z + 1, z - 2, z - 2);
+                ctx.strokeRect(rox + x * z + 1, roy + y * z + 1, z - 2, z - 2);
             } else {
-                ctx.strokeRect(ox + (x - r) * z + 1, oy + (y - r) * z + 1, bs * z - 2, bs * z - 2);
+                ctx.strokeRect(rox + (x - r) * z + 1, roy + (y - r) * z + 1, bs * z - 2, bs * z - 2);
             }
         }
     }
@@ -1385,7 +1432,7 @@ class SheetPicker {
                 const gy = Math.floor(imgY / this.gridSize) * this.gridSize;
                 this.selection = { x: gx, y: gy, w: this.gridSize, h: this.gridSize };
             } else {
-                this.selection = { x: Math.floor(imgX), y: Math.floor(imgY), w: this.editor.canvasSize, h: this.editor.canvasSize };
+                this.selection = { x: Math.floor(imgX), y: Math.floor(imgY), w: this.editor.canvasWidth, h: this.editor.canvasHeight };
             }
             this._updateSelectionEl();
         }
@@ -1430,15 +1477,15 @@ class SheetPicker {
         const ctx = tempCanvas.getContext('2d');
         ctx.drawImage(this.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
 
-        const destSize = this.editor.canvasSize;
+        const destW = this.editor.canvasWidth, destH = this.editor.canvasHeight;
         const destCanvas = document.createElement('canvas');
-        destCanvas.width = destSize;
-        destCanvas.height = destSize;
+        destCanvas.width = destW;
+        destCanvas.height = destH;
         const destCtx = destCanvas.getContext('2d');
         destCtx.imageSmoothingEnabled = false;
-        destCtx.drawImage(tempCanvas, 0, 0, destSize, destSize);
-        const imageData = destCtx.getImageData(0, 0, destSize, destSize);
-        this.editor.setPixelsFromData(imageData.data, destSize);
+        destCtx.drawImage(tempCanvas, 0, 0, destW, destH);
+        const imageData = destCtx.getImageData(0, 0, destW, destH);
+        this.editor.setPixelsFromData(imageData.data, destW, destH);
         this.close();
     }
 }

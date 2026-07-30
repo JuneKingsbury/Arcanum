@@ -258,10 +258,12 @@ html, body {
 
 #color-primary-large {
     background: #ffffff;
+    cursor: pointer;
 }
 
 #color-secondary-large {
     background: #000000;
+    cursor: pointer;
 }
 
 #btn-swap-colors {

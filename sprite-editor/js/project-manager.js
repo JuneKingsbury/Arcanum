@@ -57,20 +57,22 @@ export class ProjectManager {
         return proj.sprites[this.currentSpriteId];
     }
 
-    saveCurrentSprite(pixels, canvasSize) {
+    saveCurrentSprite(pixels, canvasWidth, canvasHeight) {
         const proj = this.getProject();
         if (!proj || !this.currentSpriteId) return;
 
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvasSize;
-        tempCanvas.height = canvasSize;
+        tempCanvas.width = canvasWidth;
+        tempCanvas.height = canvasHeight;
         const ctx = tempCanvas.getContext('2d');
-        const imageData = new ImageData(new Uint8ClampedArray(pixels), canvasSize, canvasSize);
+        const imageData = new ImageData(new Uint8ClampedArray(pixels), canvasWidth, canvasHeight);
         ctx.putImageData(imageData, 0, 0);
         const data = tempCanvas.toDataURL('image/png');
 
         proj.sprites[this.currentSpriteId].data = data;
-        proj.sprites[this.currentSpriteId].size = canvasSize;
+        proj.sprites[this.currentSpriteId].w = canvasWidth;
+        proj.sprites[this.currentSpriteId].h = canvasHeight;
+        proj.sprites[this.currentSpriteId].size = Math.max(canvasWidth, canvasHeight);
         proj.lastEdited = this.currentSpriteId;
         this._save();
     }
@@ -86,12 +88,14 @@ export class ProjectManager {
         this.renderGallery();
     }
 
-    addSprite(name, size) {
+    addSprite(name, w, h) {
         const proj = this.getProject();
         if (!proj) return;
         const id = 'spr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
         const count = Object.keys(proj.sprites).length + 1;
-        proj.sprites[id] = { name: name || `Sprite ${count}`, size: size || this.editor.canvasSize, data: null };
+        const sw = w || this.editor.canvasWidth;
+        const sh = h || this.editor.canvasHeight;
+        proj.sprites[id] = { name: name || `Sprite ${count}`, w: sw, h: sh, size: Math.max(sw, sh), data: null };
         this._save();
         this.selectSprite(id);
     }
@@ -142,7 +146,7 @@ export class ProjectManager {
             const filename = `${sprite.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.png`;
             const base64 = sprite.data.split(',')[1];
             zip.file(filename, base64, { base64: true });
-            manifest.sprites[id] = { name: sprite.name, size: sprite.size, file: filename };
+            manifest.sprites[id] = { name: sprite.name, w: sprite.w || sprite.size, h: sprite.h || sprite.size, size: sprite.size, file: filename };
         }
 
         zip.file('manifest.json', JSON.stringify(manifest, null, 2));
@@ -172,6 +176,8 @@ export class ProjectManager {
             const spriteId = 'spr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
             proj.sprites[spriteId] = {
                 name: info.name,
+                w: info.w || info.size,
+                h: info.h || info.size,
                 size: info.size,
                 data: `data:image/png;base64,${base64}`
             };
@@ -196,19 +202,23 @@ export class ProjectManager {
         reader.onload = () => {
             const img = new Image();
             img.onload = () => {
-                const size = Math.min(128, Math.max(8, Math.max(img.width, img.height)));
+                const maxDim = Math.max(img.width, img.height);
+                const clamped = Math.min(128, Math.max(8, maxDim));
                 const rounded = [8, 16, 32, 64, 128].reduce((prev, curr) =>
-                    Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
+                    Math.abs(curr - clamped) < Math.abs(prev - clamped) ? curr : prev
                 );
-                this.addSprite(file.name.replace(/\.[^.]+$/, ''), rounded);
+                const scale = rounded / maxDim;
+                const w = Math.max(1, Math.round(img.width * scale));
+                const h = Math.max(1, Math.round(img.height * scale));
+                this.addSprite(file.name.replace(/\.[^.]+$/, ''), w, h);
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = rounded;
-                tempCanvas.height = rounded;
+                tempCanvas.width = w;
+                tempCanvas.height = h;
                 const ctx = tempCanvas.getContext('2d');
                 ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(img, 0, 0, rounded, rounded);
-                const imageData = ctx.getImageData(0, 0, rounded, rounded);
-                this.editor.setPixelsFromData(imageData.data, rounded);
+                ctx.drawImage(img, 0, 0, w, h);
+                const imageData = ctx.getImageData(0, 0, w, h);
+                this.editor.setPixelsFromData(imageData.data, w, h);
             };
             img.src = reader.result;
         };
@@ -227,8 +237,8 @@ export class ProjectManager {
             thumb.dataset.id = id;
 
             const canvas = document.createElement('canvas');
-            canvas.width = sprite.size;
-            canvas.height = sprite.size;
+            canvas.width = sprite.w || sprite.size;
+            canvas.height = sprite.h || sprite.size;
             if (sprite.data) {
                 const img = new Image();
                 img.onload = () => {
@@ -264,17 +274,18 @@ export class ProjectManager {
         this.editor.autoSave();
         const sprite = this.getSprite();
         if (!sprite || !sprite.data) return;
-        const outputSize = sprite.size * scale;
+        const outW = (sprite.w || sprite.size) * scale;
+        const outH = (sprite.h || sprite.size) * scale;
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = outputSize;
-            canvas.height = outputSize;
+            canvas.width = outW;
+            canvas.height = outH;
             const ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(img, 0, 0, outputSize, outputSize);
+            ctx.drawImage(img, 0, 0, outW, outH);
             const link = document.createElement('a');
-            link.download = `${sprite.name || 'sprite'}_${outputSize}x${outputSize}.png`;
+            link.download = `${sprite.name || 'sprite'}_${outW}x${outH}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         };
@@ -283,7 +294,7 @@ export class ProjectManager {
 
     _bindUI() {
         document.getElementById('btn-new-sprite').addEventListener('click', () => {
-            this.addSprite(null, this.editor.canvasSize);
+            this.addSprite(null, this.editor.canvasWidth, this.editor.canvasHeight);
         });
 
         document.getElementById('btn-delete-sprite').addEventListener('click', () => {

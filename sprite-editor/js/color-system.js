@@ -45,6 +45,28 @@ export class ColorSystem {
         document.getElementById('btn-darker').addEventListener('click', () => this.shiftLightness(-10));
         document.getElementById('btn-swap-colors').addEventListener('click', () => this.swap());
 
+        document.getElementById('color-primary-large').addEventListener('click', () => {
+            const picker = document.getElementById('picker-primary');
+            picker.value = this._rgbToHex(this.color.r, this.color.g, this.color.b);
+            picker.click();
+        });
+        document.getElementById('picker-primary').addEventListener('input', (e) => {
+            this._setFromHex(e.target.value);
+        });
+
+        document.getElementById('color-secondary-large').addEventListener('click', () => {
+            const picker = document.getElementById('picker-secondary');
+            picker.value = this._rgbToHex(this.secondaryColor.r, this.secondaryColor.g, this.secondaryColor.b);
+            picker.click();
+        });
+        document.getElementById('picker-secondary').addEventListener('input', (e) => {
+            const hex = e.target.value;
+            this.secondaryColor.r = parseInt(hex.slice(1, 3), 16);
+            this.secondaryColor.g = parseInt(hex.slice(3, 5), 16);
+            this.secondaryColor.b = parseInt(hex.slice(5, 7), 16);
+            this.syncUI();
+        });
+
         document.getElementById('color-swatch-btn').addEventListener('click', () => {
             this.editor.togglePanel('color-panel');
         });
@@ -109,6 +131,10 @@ export class ColorSystem {
         this.syncUI();
     }
 
+    _rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+    }
+
     syncUI(skipHSL) {
         const { r, g, b, a } = this.color;
         const hex = '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
@@ -165,9 +191,9 @@ export class ColorSystem {
         this._renderRecentColors();
     }
 
-    extractPalette(pixels, canvasSize) {
+    extractPalette(pixels) {
         const colorSet = new Map();
-        for (let i = 0; i < canvasSize * canvasSize * 4; i += 4) {
+        for (let i = 0; i < pixels.length; i += 4) {
             if (pixels[i + 3] === 0) continue;
             const key = `${pixels[i]},${pixels[i + 1]},${pixels[i + 2]},${pixels[i + 3]}`;
             if (!colorSet.has(key)) {

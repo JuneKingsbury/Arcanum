@@ -99,9 +99,11 @@
             <div class="sheet-content">
                 <div id="color-controls">
                     <div id="color-swatches-row">
-                        <div id="color-primary-large" title="Primary color" aria-label="Primary color"></div>
+                        <div id="color-primary-large" title="Click to pick primary color" aria-label="Primary color" role="button" tabindex="0"></div>
+                        <input type="color" id="picker-primary" style="display:none" aria-hidden="true">
                         <button id="btn-swap-colors" title="Swap colors" aria-label="Swap primary and secondary colors">&#8644;</button>
-                        <div id="color-secondary-large" title="Secondary color (right-click or long-press to set)" aria-label="Secondary color"></div>
+                        <div id="color-secondary-large" title="Click to pick secondary color" aria-label="Secondary color" role="button" tabindex="0"></div>
+                        <input type="color" id="picker-secondary" style="display:none" aria-hidden="true">
                     </div>
                     <div class="slider-group">
                         <label for="hsl-h">H</label>
@@ -163,6 +165,7 @@
                             <option value="64">64x64</option>
                             <option value="128">128x128</option>
                         </select>
+                        <button id="btn-custom-size" aria-label="Set custom canvas dimensions" style="height:36px;padding:0 10px;border:none;border-radius:6px;background:#2a2a4a;color:#ccc;font-size:12px;cursor:pointer;white-space:nowrap;">Custom...</button>
                     </div>
                     <div class="settings-row">
                         <label for="brush-size">Brush</label>
@@ -175,6 +178,7 @@
                     <div class="settings-row">
                         <label>Grid</label>
                         <button id="btn-grid" class="toggle-btn active" aria-label="Toggle grid" aria-pressed="true">On</button>
+                        <input type="color" id="grid-color" value="#ffffff" aria-label="Grid line color" style="width:36px;height:36px;border:none;border-radius:6px;padding:2px;cursor:pointer;background:#2a2a4a;">
                     </div>
                     <div class="settings-row">
                         <label>Mirror</label>

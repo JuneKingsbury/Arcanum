@@ -227,7 +227,7 @@ export class InputHandler {
         if (useTouchOffset) clientY += this.touchOffset;
         const x = Math.floor((e.clientX - rect.left - this.editor.panX) / this.editor.zoom);
         const y = Math.floor((clientY - rect.top - this.editor.panY) / this.editor.zoom);
-        if (x < 0 || x >= this.editor.canvasSize || y < 0 || y >= this.editor.canvasSize) return null;
+        if (x < 0 || x >= this.editor.canvasWidth || y < 0 || y >= this.editor.canvasHeight) return null;
         return { x, y };
     }
 
