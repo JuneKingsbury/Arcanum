@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0d0d1a">
-    <title>Sprite Editor</title>
+    <title>MarsPixels</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/sprite-editor.css">
 </head>
@@ -16,6 +16,7 @@
             <span id="sprite-name">Untitled</span>
             <span id="canvas-info">16x16</span>
             <span id="zoom-info">8x</span>
+            <span id="tool-info">Draw</span>
             <span id="cursor-info"></span>
         </header>
 
@@ -84,6 +85,9 @@
                 <button id="btn-pan" class="action-btn" title="Pan Mode" aria-label="Toggle pan mode" aria-pressed="false">
                     <svg viewBox="0 0 24 24"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg>
                 </button>
+                <button id="btn-layers" class="action-btn" title="Layers" aria-label="Open layers panel">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
                 <button id="btn-sprites" class="action-btn" title="Sprites" aria-label="Open sprites panel">
                     <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
                 </button>
@@ -150,6 +154,26 @@
             </div>
         </div>
 
+        <!-- Layers Panel (bottom sheet) -->
+        <div id="layers-panel" class="bottom-sheet" role="dialog" aria-label="Layers">
+            <div class="sheet-handle"></div>
+            <div class="sheet-content">
+                <div id="layers-header">
+                    <span class="layers-title">Layers</span>
+                    <button id="btn-add-layer" title="New layer" aria-label="Add new layer">+</button>
+                    <button id="btn-duplicate-layer" title="Duplicate layer" aria-label="Duplicate active layer">&#x29C9;</button>
+                    <button id="btn-merge-layer" title="Merge down" aria-label="Merge active layer down">&#x21E9;</button>
+                    <button id="btn-delete-layer" title="Delete layer" aria-label="Delete active layer" class="danger-btn">&#x2715;</button>
+                </div>
+                <div id="layer-opacity-row" class="settings-row">
+                    <label for="layer-opacity">Opacity</label>
+                    <input type="range" id="layer-opacity" min="0" max="100" value="100" aria-label="Layer opacity">
+                    <span id="layer-opacity-val">100%</span>
+                </div>
+                <div id="layers-list" role="list" aria-label="Layer stack"></div>
+            </div>
+        </div>
+
         <!-- Settings Panel (bottom sheet) -->
         <div id="settings-panel" class="bottom-sheet" role="dialog" aria-label="Settings">
             <div class="sheet-handle"></div>
@@ -211,14 +235,13 @@
                     </div>
                 </div>
                 <div class="settings-section">
-                    <h3>File</h3>
+                    <h3>Export</h3>
                     <div class="settings-row buttons-row">
-                        <button id="btn-save-png" aria-label="Save as PNG">Save PNG</button>
-                        <button id="btn-export-zip" aria-label="Export project as ZIP">Export ZIP</button>
-                        <button id="btn-import-zip" aria-label="Import ZIP project">Import ZIP</button>
+                        <button id="btn-save-png" aria-label="Export as flattened PNG">Export PNG</button>
+                        <button id="btn-export-zip" aria-label="Export project as ZIP with layers">Export ZIP</button>
                     </div>
                     <div class="settings-row buttons-row">
-                        <button id="btn-save-png-scaled" aria-label="Save scaled PNG">Save Scaled</button>
+                        <button id="btn-save-png-scaled" aria-label="Export scaled PNG">Export Scaled</button>
                         <select id="export-scale-select" aria-label="Export scale factor" style="height:36px;background:#222;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px;padding:0 6px;">
                             <option value="2">2x</option>
                             <option value="4">4x</option>
@@ -227,7 +250,11 @@
                             <option value="32">32x</option>
                         </select>
                     </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Import</h3>
                     <div class="settings-row buttons-row">
+                        <button id="btn-import-zip" aria-label="Import ZIP project">Import ZIP</button>
                         <button id="btn-import-image" aria-label="Import image file">Import Image</button>
                         <button id="btn-import-sheet" aria-label="Import from spritesheet">Spritesheet</button>
                     </div>
@@ -248,6 +275,76 @@
                         <span id="ref-opacity-val">30%</span>
                     </div>
                     <input type="file" id="file-ref-image" accept="image/*" style="display:none">
+                </div>
+                <div class="settings-section">
+                    <div class="settings-row buttons-row">
+                        <button id="btn-help" aria-label="Open help">Help</button>
+                        <button id="btn-credits" aria-label="Open credits">Credits</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal" hidden>
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Help</h3>
+                    <button id="help-modal-close" aria-label="Close help">&times;</button>
+                </div>
+                <div class="modal-body help-body">
+                    <h4>Tools</h4>
+                    <dl class="help-list">
+                        <dt>Draw</dt><dd>Place pixels with the current color. Hold and drag to paint continuously.</dd>
+                        <dt>Erase</dt><dd>Remove pixels, making them transparent.</dd>
+                        <dt>Fill</dt><dd>Flood-fill a contiguous area of the same color with the current color.</dd>
+                        <dt>Dither</dt><dd>Fill an area with a checkerboard dither pattern using the primary and secondary colors.</dd>
+                        <dt>Pick</dt><dd>Sample a color from the canvas and set it as the current color.</dd>
+                        <dt>Select</dt><dd>Draw a rectangle to select a region. Drag to move it. Use the toolbar buttons to fill or delete the selection.</dd>
+                        <dt>Line</dt><dd>Click and drag to draw a straight line between two points.</dd>
+                        <dt>Circle</dt><dd>Click and drag to draw a circle outline from center to edge.</dd>
+                        <dt>Gradient</dt><dd>Click and drag to create a linear gradient between the primary and secondary colors.</dd>
+                        <dt>Lighten</dt><dd>Increase the lightness of pixels you paint over.</dd>
+                        <dt>Darken</dt><dd>Decrease the lightness of pixels you paint over.</dd>
+                    </dl>
+                    <h4>Navigation</h4>
+                    <dl class="help-list">
+                        <dt>Pan</dt><dd>Two-finger drag on touch, or enable Pan Mode button for one-finger panning.</dd>
+                        <dt>Zoom</dt><dd>Pinch to zoom on touch. Scroll wheel on desktop. Touch Offset slider adjusts the cursor distance above your finger.</dd>
+                    </dl>
+                    <h4>Layers</h4>
+                    <dl class="help-list">
+                        <dt>Add / Duplicate</dt><dd>Create a new blank layer or copy the active one.</dd>
+                        <dt>Merge Down</dt><dd>Combine the active layer into the one below it.</dd>
+                        <dt>Reorder</dt><dd>Use the arrow buttons or drag layers in the list.</dd>
+                        <dt>Opacity</dt><dd>Control how transparent a layer appears in the composite.</dd>
+                    </dl>
+                    <h4>Settings</h4>
+                    <dl class="help-list">
+                        <dt>Mirror</dt><dd>Cycles through horizontal, vertical, and both-axis mirroring for symmetrical drawing.</dd>
+                        <dt>Lock Alpha</dt><dd>Prevents drawing on fully transparent pixels, so you only paint within existing shapes.</dd>
+                        <dt>Grid</dt><dd>Toggles a per-pixel grid overlay. Click the color swatch next to it to change the grid color.</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credits Modal -->
+        <div id="credits-modal" class="modal" hidden>
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Credits</h3>
+                    <button id="credits-modal-close" aria-label="Close credits">&times;</button>
+                </div>
+                <div class="modal-body credits-body">
+                    <p><strong>MarsPixels</strong></p>
+                    <p>A standalone, mobile-friendly pixel art editor built as a PWA.</p>
+                    <p>Extracted and redesigned from the Arcanum game's skin editor dev tool.</p>
+                    <br>
+                    <p><strong>Built with</strong></p>
+                    <p>Vanilla JavaScript (ES Modules), Canvas 2D API, Pointer Events API, and JSZip for project export.</p>
                 </div>
             </div>
         </div>

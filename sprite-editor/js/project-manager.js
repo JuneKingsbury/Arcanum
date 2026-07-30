@@ -57,7 +57,7 @@ export class ProjectManager {
         return proj.sprites[this.currentSpriteId];
     }
 
-    saveCurrentSprite(pixels, canvasWidth, canvasHeight) {
+    saveCurrentSprite(pixels, canvasWidth, canvasHeight, layers, activeLayerIndex) {
         const proj = this.getProject();
         if (!proj || !this.currentSpriteId) return;
 
@@ -65,14 +65,52 @@ export class ProjectManager {
         tempCanvas.width = canvasWidth;
         tempCanvas.height = canvasHeight;
         const ctx = tempCanvas.getContext('2d');
-        const imageData = new ImageData(new Uint8ClampedArray(pixels), canvasWidth, canvasHeight);
-        ctx.putImageData(imageData, 0, 0);
+
+        if (layers && layers.length > 1) {
+            const tmpLayer = document.createElement('canvas');
+            tmpLayer.width = canvasWidth;
+            tmpLayer.height = canvasHeight;
+            const tmpCtx = tmpLayer.getContext('2d');
+            for (const l of layers) {
+                if (!l.visible) continue;
+                tmpCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+                tmpCtx.putImageData(new ImageData(new Uint8ClampedArray(l.pixels), canvasWidth, canvasHeight), 0, 0);
+                ctx.globalAlpha = l.opacity;
+                ctx.drawImage(tmpLayer, 0, 0);
+            }
+            ctx.globalAlpha = 1;
+        } else {
+            const imageData = new ImageData(new Uint8ClampedArray(pixels), canvasWidth, canvasHeight);
+            ctx.putImageData(imageData, 0, 0);
+        }
         const data = tempCanvas.toDataURL('image/png');
 
-        proj.sprites[this.currentSpriteId].data = data;
-        proj.sprites[this.currentSpriteId].w = canvasWidth;
-        proj.sprites[this.currentSpriteId].h = canvasHeight;
-        proj.sprites[this.currentSpriteId].size = Math.max(canvasWidth, canvasHeight);
+        const sprite = proj.sprites[this.currentSpriteId];
+        sprite.data = data;
+        sprite.w = canvasWidth;
+        sprite.h = canvasHeight;
+        sprite.size = Math.max(canvasWidth, canvasHeight);
+
+        if (layers && layers.length > 1) {
+            sprite.layers = layers.map(l => {
+                const lCanvas = document.createElement('canvas');
+                lCanvas.width = canvasWidth;
+                lCanvas.height = canvasHeight;
+                const lCtx = lCanvas.getContext('2d');
+                lCtx.putImageData(new ImageData(new Uint8ClampedArray(l.pixels), canvasWidth, canvasHeight), 0, 0);
+                return {
+                    name: l.name,
+                    opacity: l.opacity,
+                    visible: l.visible,
+                    data: lCanvas.toDataURL('image/png')
+                };
+            });
+            sprite.activeLayer = activeLayerIndex;
+        } else {
+            delete sprite.layers;
+            delete sprite.activeLayer;
+        }
+
         proj.lastEdited = this.currentSpriteId;
         this._save();
     }
@@ -143,10 +181,32 @@ export class ProjectManager {
 
         for (const [id, sprite] of Object.entries(proj.sprites)) {
             if (!sprite.data) continue;
-            const filename = `${sprite.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.png`;
+            const safeName = sprite.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const filename = `${safeName}.png`;
             const base64 = sprite.data.split(',')[1];
             zip.file(filename, base64, { base64: true });
-            manifest.sprites[id] = { name: sprite.name, w: sprite.w || sprite.size, h: sprite.h || sprite.size, size: sprite.size, file: filename };
+
+            const entry = { name: sprite.name, w: sprite.w || sprite.size, h: sprite.h || sprite.size, size: sprite.size, file: filename };
+
+            if (sprite.layers && sprite.layers.length > 1) {
+                entry.layers = [];
+                entry.activeLayer = sprite.activeLayer || 0;
+                for (let li = 0; li < sprite.layers.length; li++) {
+                    const layer = sprite.layers[li];
+                    const layerFile = `${safeName}_layer${li}.png`;
+                    if (layer.data) {
+                        zip.file(layerFile, layer.data.split(',')[1], { base64: true });
+                    }
+                    entry.layers.push({
+                        name: layer.name,
+                        opacity: layer.opacity,
+                        visible: layer.visible,
+                        file: layerFile
+                    });
+                }
+            }
+
+            manifest.sprites[id] = entry;
         }
 
         zip.file('manifest.json', JSON.stringify(manifest, null, 2));
@@ -174,13 +234,30 @@ export class ProjectManager {
             if (!imgFile) continue;
             const base64 = await imgFile.async('base64');
             const spriteId = 'spr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-            proj.sprites[spriteId] = {
+            const spriteObj = {
                 name: info.name,
                 w: info.w || info.size,
                 h: info.h || info.size,
                 size: info.size,
                 data: `data:image/png;base64,${base64}`
             };
+
+            if (info.layers && info.layers.length > 1) {
+                spriteObj.layers = [];
+                spriteObj.activeLayer = info.activeLayer || 0;
+                for (const layerInfo of info.layers) {
+                    const layerFile = zip.file(layerInfo.file);
+                    const layerData = layerFile ? `data:image/png;base64,${await layerFile.async('base64')}` : null;
+                    spriteObj.layers.push({
+                        name: layerInfo.name,
+                        opacity: layerInfo.opacity !== undefined ? layerInfo.opacity : 1,
+                        visible: layerInfo.visible !== undefined ? layerInfo.visible : true,
+                        data: layerData
+                    });
+                }
+            }
+
+            proj.sprites[spriteId] = spriteObj;
         }
 
         if (Object.keys(proj.sprites).length === 0) {

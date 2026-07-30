@@ -1,7 +1,7 @@
 {
-    "name": "Sprite Editor",
-    "short_name": "Sprites",
-    "description": "Mobile-friendly pixel art sprite editor",
+    "name": "MarsPixels",
+    "short_name": "MarsPixels",
+    "description": "Mobile-friendly pixel art editor",
     "start_url": "./index.html",
     "display": "standalone",
     "orientation": "any",

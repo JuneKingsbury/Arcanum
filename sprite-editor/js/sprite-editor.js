@@ -15,7 +15,12 @@ class SpriteEditor {
         this.ctx = this.canvas.getContext('2d');
         this.canvasWidth = 16;
         this.canvasHeight = 16;
-        this.pixels = new Uint8ClampedArray(16 * 16 * 4);
+        this.layers = [{ name: 'Layer 1', pixels: new Uint8ClampedArray(16 * 16 * 4), opacity: 1, visible: true }];
+        this.activeLayerIndex = 0;
+        Object.defineProperty(this, 'pixels', {
+            get() { return this.layers[this.activeLayerIndex].pixels; },
+            set(v) { this.layers[this.activeLayerIndex].pixels = v; }
+        });
         this.zoom = 8;
         Object.defineProperty(this, 'canvasSize', {
             get() { return Math.max(this.canvasWidth, this.canvasHeight); },
@@ -71,7 +76,7 @@ class SpriteEditor {
     // --- Public API for InputHandler ---
 
     beginStroke() {
-        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this._strokeSnapshot = this._snapshotLayers();
     }
 
     endStroke() {
@@ -82,7 +87,7 @@ class SpriteEditor {
 
     cancelStroke() {
         if (this._strokeSnapshot) {
-            this.pixels = this._strokeSnapshot;
+            this._restoreSnapshot(this._strokeSnapshot);
             this._strokeSnapshot = null;
         }
     }
@@ -256,6 +261,8 @@ class SpriteEditor {
             btn.classList.toggle('active', btn.dataset.tool === tool);
             btn.setAttribute('aria-pressed', btn.dataset.tool === tool ? 'true' : 'false');
         });
+        const toolNames = { draw: 'Draw', erase: 'Erase', fill: 'Fill', dither: 'Dither', pick: 'Pick', select: 'Select', line: 'Line', circle: 'Circle', gradient: 'Gradient', lighten: 'Lighten', darken: 'Darken' };
+        document.getElementById('tool-info').textContent = toolNames[tool] || tool;
         this._updateSelectionUI();
     }
 
@@ -291,16 +298,16 @@ class SpriteEditor {
 
     undo() {
         if (this._undoStack.length === 0) return;
-        this._redoStack.push(new Uint8ClampedArray(this.pixels));
-        this.pixels = this._undoStack.pop();
+        this._redoStack.push(this._snapshotLayers());
+        this._restoreSnapshot(this._undoStack.pop());
         this.autoSave();
         this._updateUndoRedoState();
     }
 
     redo() {
         if (this._redoStack.length === 0) return;
-        this._undoStack.push(new Uint8ClampedArray(this.pixels));
-        this.pixels = this._redoStack.pop();
+        this._undoStack.push(this._snapshotLayers());
+        this._restoreSnapshot(this._redoStack.pop());
         this.autoSave();
         this._updateUndoRedoState();
     }
@@ -362,7 +369,7 @@ class SpriteEditor {
         if (!this._regionClipboard) return;
         this._commitSelection();
         const clip = this._regionClipboard;
-        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this._strokeSnapshot = this._snapshotLayers();
         this.selection = { x: 0, y: 0, w: clip.w, h: clip.h };
         this._selPixels = new Uint8ClampedArray(clip.pixels);
         this.setTool('select');
@@ -379,7 +386,7 @@ class SpriteEditor {
             return;
         }
         const s = this.selection;
-        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this._strokeSnapshot = this._snapshotLayers();
         for (let dy = 0; dy < s.h; dy++) {
             for (let dx = 0; dx < s.w; dx++) {
                 const tx = s.x + dx, ty = s.y + dy;
@@ -397,7 +404,7 @@ class SpriteEditor {
         if (!this.selection) return;
         const s = this.selection;
         const c = this.colorSystem.color;
-        this._strokeSnapshot = new Uint8ClampedArray(this.pixels);
+        this._strokeSnapshot = this._snapshotLayers();
         if (this._selPixels) {
             for (let dy = 0; dy < s.h; dy++) {
                 for (let dx = 0; dx < s.w; dx++) {
@@ -450,7 +457,7 @@ class SpriteEditor {
     }
 
     autoSave() {
-        this.projectManager.saveCurrentSprite(this.pixels, this.canvasWidth, this.canvasHeight);
+        this.projectManager.saveCurrentSprite(this.pixels, this.canvasWidth, this.canvasHeight, this.layers, this.activeLayerIndex);
     }
 
     loadSprite(sprite) {
@@ -461,16 +468,46 @@ class SpriteEditor {
 
         const w = sprite.w || sprite.size || 16;
         const h = sprite.h || sprite.size || 16;
-        if (w !== this.canvasWidth || h !== this.canvasHeight) {
-            this.canvasWidth = w;
-            this.canvasHeight = h;
-            this.pixels = new Uint8ClampedArray(w * h * 4);
-            this._updateSizeUI();
+        this.canvasWidth = w;
+        this.canvasHeight = h;
+
+        if (sprite.layers && sprite.layers.length > 0) {
+            this.layers = sprite.layers.map(l => ({
+                name: l.name,
+                pixels: new Uint8ClampedArray(w * h * 4),
+                opacity: l.opacity !== undefined ? l.opacity : 1,
+                visible: l.visible !== undefined ? l.visible : true
+            }));
+            this.activeLayerIndex = Math.min(sprite.activeLayer || 0, this.layers.length - 1);
         } else {
-            this.pixels = new Uint8ClampedArray(this.canvasWidth * this.canvasHeight * 4);
+            this.layers = [{ name: 'Layer 1', pixels: new Uint8ClampedArray(w * h * 4), opacity: 1, visible: true }];
+            this.activeLayerIndex = 0;
         }
 
-        if (sprite.data) {
+        this._updateSizeUI();
+
+        if (sprite.layers && sprite.layers.length > 0) {
+            let loaded = 0;
+            const total = sprite.layers.filter(l => l.data).length;
+            for (let li = 0; li < sprite.layers.length; li++) {
+                const layerData = sprite.layers[li];
+                if (!layerData.data) { loaded++; continue; }
+                const img = new Image();
+                img.onload = ((idx) => () => {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.imageSmoothingEnabled = false;
+                    tempCtx.drawImage(img, 0, 0, w, h);
+                    const imageData = tempCtx.getImageData(0, 0, w, h);
+                    this.layers[idx].pixels = new Uint8ClampedArray(imageData.data);
+                    loaded++;
+                    if (loaded === total) this._renderLayersList();
+                })(li);
+                img.src = layerData.data;
+            }
+        } else if (sprite.data) {
             const img = new Image();
             img.onload = () => {
                 const tempCanvas = document.createElement('canvas');
@@ -485,6 +522,7 @@ class SpriteEditor {
             img.src = sprite.data;
         }
 
+        this._renderLayersList();
         this._updateStatusBar();
         this.resetZoom();
     }
@@ -624,6 +662,39 @@ class SpriteEditor {
             e.target.value = '';
         });
 
+        document.getElementById('btn-layers').addEventListener('click', () => {
+            this._renderLayersList();
+            this.togglePanel('layers-panel');
+        });
+        document.getElementById('btn-add-layer').addEventListener('click', () => this._addLayer());
+        document.getElementById('btn-duplicate-layer').addEventListener('click', () => this._duplicateLayer());
+        document.getElementById('btn-merge-layer').addEventListener('click', () => this._mergeDown());
+        document.getElementById('btn-delete-layer').addEventListener('click', () => this._deleteLayer());
+        document.getElementById('layer-opacity').addEventListener('input', (e) => {
+            this._setLayerOpacity(parseInt(e.target.value));
+            document.getElementById('layer-opacity-val').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('btn-help').addEventListener('click', () => {
+            document.getElementById('help-modal').hidden = false;
+        });
+        document.getElementById('help-modal-close').addEventListener('click', () => {
+            document.getElementById('help-modal').hidden = true;
+        });
+        document.getElementById('help-modal').querySelector('.modal-backdrop').addEventListener('click', () => {
+            document.getElementById('help-modal').hidden = true;
+        });
+
+        document.getElementById('btn-credits').addEventListener('click', () => {
+            document.getElementById('credits-modal').hidden = false;
+        });
+        document.getElementById('credits-modal-close').addEventListener('click', () => {
+            document.getElementById('credits-modal').hidden = true;
+        });
+        document.getElementById('credits-modal').querySelector('.modal-backdrop').addEventListener('click', () => {
+            document.getElementById('credits-modal').hidden = true;
+        });
+
         const backdrop = document.createElement('div');
         backdrop.className = 'sheet-backdrop';
         backdrop.addEventListener('click', () => this.closePanel());
@@ -679,27 +750,232 @@ class SpriteEditor {
     _setCanvasDimensions(newW, newH) {
         if (newW === this.canvasWidth && newH === this.canvasHeight) return;
         this._pushUndoSnapshot();
-        const oldPixels = this.pixels;
         const oldW = this.canvasWidth;
         const oldH = this.canvasHeight;
-        this.canvasWidth = newW;
-        this.canvasHeight = newH;
-        this.pixels = new Uint8ClampedArray(newW * newH * 4);
         const copyW = Math.min(oldW, newW);
         const copyH = Math.min(oldH, newH);
-        for (let y = 0; y < copyH; y++) {
-            for (let x = 0; x < copyW; x++) {
-                const oldI = (y * oldW + x) * 4;
-                const newI = (y * newW + x) * 4;
-                this.pixels[newI] = oldPixels[oldI];
-                this.pixels[newI + 1] = oldPixels[oldI + 1];
-                this.pixels[newI + 2] = oldPixels[oldI + 2];
-                this.pixels[newI + 3] = oldPixels[oldI + 3];
+        for (const layer of this.layers) {
+            const oldPixels = layer.pixels;
+            layer.pixels = new Uint8ClampedArray(newW * newH * 4);
+            for (let y = 0; y < copyH; y++) {
+                for (let x = 0; x < copyW; x++) {
+                    const oldI = (y * oldW + x) * 4;
+                    const newI = (y * newW + x) * 4;
+                    layer.pixels[newI] = oldPixels[oldI];
+                    layer.pixels[newI + 1] = oldPixels[oldI + 1];
+                    layer.pixels[newI + 2] = oldPixels[oldI + 2];
+                    layer.pixels[newI + 3] = oldPixels[oldI + 3];
+                }
             }
         }
+        this.canvasWidth = newW;
+        this.canvasHeight = newH;
         this._updateSizeUI();
         this.resetZoom();
         this.autoSave();
+    }
+
+    // --- Layer Management ---
+
+    _renderLayersList() {
+        const list = document.getElementById('layers-list');
+        if (!list) return;
+        list.innerHTML = '';
+        for (let i = this.layers.length - 1; i >= 0; i--) {
+            const layer = this.layers[i];
+            const item = document.createElement('div');
+            item.className = 'layer-item' + (i === this.activeLayerIndex ? ' active' : '');
+            item.dataset.index = i;
+            item.draggable = true;
+
+            const visBtn = document.createElement('button');
+            visBtn.className = 'layer-item-visibility' + (layer.visible ? '' : ' hidden-layer');
+            visBtn.textContent = layer.visible ? '👁' : '—';
+            visBtn.addEventListener('click', (e) => { e.stopPropagation(); this._toggleLayerVisibility(i); });
+
+            const thumb = document.createElement('canvas');
+            thumb.className = 'layer-item-thumb';
+            thumb.width = this.canvasWidth;
+            thumb.height = this.canvasHeight;
+            const tCtx = thumb.getContext('2d');
+            tCtx.putImageData(new ImageData(new Uint8ClampedArray(layer.pixels), this.canvasWidth, this.canvasHeight), 0, 0);
+
+            const name = document.createElement('span');
+            name.className = 'layer-item-name';
+            name.textContent = layer.name;
+            name.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                const newName = prompt('Rename layer:', layer.name);
+                if (newName) { layer.name = newName; this._renderLayersList(); }
+            });
+
+            const reorder = document.createElement('div');
+            reorder.className = 'layer-item-reorder';
+            const upBtn = document.createElement('button');
+            upBtn.textContent = '▲';
+            upBtn.addEventListener('click', (e) => { e.stopPropagation(); this._moveLayerUp(i); });
+            const downBtn = document.createElement('button');
+            downBtn.textContent = '▼';
+            downBtn.addEventListener('click', (e) => { e.stopPropagation(); this._moveLayerDown(i); });
+            reorder.appendChild(upBtn);
+            reorder.appendChild(downBtn);
+
+            item.appendChild(visBtn);
+            item.appendChild(thumb);
+            item.appendChild(name);
+            item.appendChild(reorder);
+
+            item.addEventListener('click', () => this._setActiveLayer(i));
+
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', i.toString());
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+            item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                item.classList.remove('drag-over');
+                const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                const toIdx = i;
+                if (fromIdx !== toIdx) this._reorderLayer(fromIdx, toIdx);
+            });
+
+            list.appendChild(item);
+        }
+
+        const opacitySlider = document.getElementById('layer-opacity');
+        const opacityVal = document.getElementById('layer-opacity-val');
+        if (opacitySlider) {
+            opacitySlider.value = Math.round(this.layers[this.activeLayerIndex].opacity * 100);
+            opacityVal.textContent = opacitySlider.value + '%';
+        }
+    }
+
+    _setActiveLayer(idx) {
+        if (idx < 0 || idx >= this.layers.length) return;
+        this.activeLayerIndex = idx;
+        this._renderLayersList();
+    }
+
+    _addLayer() {
+        this._pushUndoSnapshot();
+        const w = this.canvasWidth, h = this.canvasHeight;
+        const name = 'Layer ' + (this.layers.length + 1);
+        this.layers.splice(this.activeLayerIndex + 1, 0, {
+            name, pixels: new Uint8ClampedArray(w * h * 4), opacity: 1, visible: true
+        });
+        this.activeLayerIndex = this.activeLayerIndex + 1;
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _duplicateLayer() {
+        this._pushUndoSnapshot();
+        const src = this.layers[this.activeLayerIndex];
+        this.layers.splice(this.activeLayerIndex + 1, 0, {
+            name: src.name + ' copy',
+            pixels: new Uint8ClampedArray(src.pixels),
+            opacity: src.opacity,
+            visible: src.visible
+        });
+        this.activeLayerIndex = this.activeLayerIndex + 1;
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _deleteLayer() {
+        if (this.layers.length <= 1) return;
+        this._pushUndoSnapshot();
+        this.layers.splice(this.activeLayerIndex, 1);
+        if (this.activeLayerIndex >= this.layers.length) {
+            this.activeLayerIndex = this.layers.length - 1;
+        }
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _mergeDown() {
+        if (this.activeLayerIndex <= 0) return;
+        this._pushUndoSnapshot();
+        const top = this.layers[this.activeLayerIndex];
+        const bot = this.layers[this.activeLayerIndex - 1];
+        const w = this.canvasWidth, h = this.canvasHeight;
+
+        const merged = document.createElement('canvas');
+        merged.width = w;
+        merged.height = h;
+        const ctx = merged.getContext('2d');
+
+        const botData = new ImageData(new Uint8ClampedArray(bot.pixels), w, h);
+        ctx.putImageData(botData, 0, 0);
+
+        const topCanvas = document.createElement('canvas');
+        topCanvas.width = w;
+        topCanvas.height = h;
+        const topCtx = topCanvas.getContext('2d');
+        topCtx.putImageData(new ImageData(new Uint8ClampedArray(top.pixels), w, h), 0, 0);
+        ctx.globalAlpha = top.opacity;
+        ctx.drawImage(topCanvas, 0, 0);
+
+        bot.pixels = new Uint8ClampedArray(ctx.getImageData(0, 0, w, h).data);
+        this.layers.splice(this.activeLayerIndex, 1);
+        this.activeLayerIndex = this.activeLayerIndex - 1;
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _moveLayerUp(idx) {
+        if (idx >= this.layers.length - 1) return;
+        this._pushUndoSnapshot();
+        const tmp = this.layers[idx];
+        this.layers[idx] = this.layers[idx + 1];
+        this.layers[idx + 1] = tmp;
+        if (this.activeLayerIndex === idx) this.activeLayerIndex = idx + 1;
+        else if (this.activeLayerIndex === idx + 1) this.activeLayerIndex = idx;
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _moveLayerDown(idx) {
+        if (idx <= 0) return;
+        this._pushUndoSnapshot();
+        const tmp = this.layers[idx];
+        this.layers[idx] = this.layers[idx - 1];
+        this.layers[idx - 1] = tmp;
+        if (this.activeLayerIndex === idx) this.activeLayerIndex = idx - 1;
+        else if (this.activeLayerIndex === idx - 1) this.activeLayerIndex = idx;
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _reorderLayer(fromIdx, toIdx) {
+        this._pushUndoSnapshot();
+        const layer = this.layers.splice(fromIdx, 1)[0];
+        this.layers.splice(toIdx, 0, layer);
+        if (this.activeLayerIndex === fromIdx) {
+            this.activeLayerIndex = toIdx;
+        } else if (fromIdx < this.activeLayerIndex && toIdx >= this.activeLayerIndex) {
+            this.activeLayerIndex--;
+        } else if (fromIdx > this.activeLayerIndex && toIdx <= this.activeLayerIndex) {
+            this.activeLayerIndex++;
+        }
+        this._renderLayersList();
+        this.autoSave();
+    }
+
+    _toggleLayerVisibility(idx) {
+        this.layers[idx].visible = !this.layers[idx].visible;
+        this._renderLayersList();
+    }
+
+    _setLayerOpacity(val) {
+        this.layers[this.activeLayerIndex].opacity = val / 100;
+        this._renderLayersList();
     }
 
     // --- Pixel Operations ---
@@ -1006,20 +1282,22 @@ class SpriteEditor {
     _rotateCW() {
         this._pushUndoSnapshot();
         const w = this.canvasWidth, h = this.canvasHeight;
-        const rotated = new Uint8ClampedArray(h * w * 4);
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                const srcI = (y * w + x) * 4;
-                const dstI = (x * h + (h - 1 - y)) * 4;
-                rotated[dstI] = this.pixels[srcI];
-                rotated[dstI + 1] = this.pixels[srcI + 1];
-                rotated[dstI + 2] = this.pixels[srcI + 2];
-                rotated[dstI + 3] = this.pixels[srcI + 3];
+        for (const layer of this.layers) {
+            const rotated = new Uint8ClampedArray(h * w * 4);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const srcI = (y * w + x) * 4;
+                    const dstI = (x * h + (h - 1 - y)) * 4;
+                    rotated[dstI] = layer.pixels[srcI];
+                    rotated[dstI + 1] = layer.pixels[srcI + 1];
+                    rotated[dstI + 2] = layer.pixels[srcI + 2];
+                    rotated[dstI + 3] = layer.pixels[srcI + 3];
+                }
             }
+            layer.pixels = rotated;
         }
         this.canvasWidth = h;
         this.canvasHeight = w;
-        this.pixels = rotated;
         this._updateSizeUI();
         this.resetZoom();
         this.autoSave();
@@ -1121,8 +1399,9 @@ class SpriteEditor {
     _pushUndo() {
         if (!this._strokeSnapshot) return;
         let changed = false;
-        for (let i = 0; i < this._strokeSnapshot.length; i++) {
-            if (this._strokeSnapshot[i] !== this.pixels[i]) { changed = true; break; }
+        const snapPixels = this._strokeSnapshot.layers[this._strokeSnapshot.activeLayerIndex].pixels;
+        for (let i = 0; i < snapPixels.length; i++) {
+            if (snapPixels[i] !== this.pixels[i]) { changed = true; break; }
         }
         if (!changed) { this._strokeSnapshot = null; return; }
         this._undoStack.push(this._strokeSnapshot);
@@ -1132,10 +1411,37 @@ class SpriteEditor {
     }
 
     _pushUndoSnapshot() {
-        this._undoStack.push(new Uint8ClampedArray(this.pixels));
+        this._undoStack.push(this._snapshotLayers());
         if (this._undoStack.length > MAX_UNDO) this._undoStack.shift();
         this._redoStack.length = 0;
         this._updateUndoRedoState();
+    }
+
+    _snapshotLayers() {
+        return {
+            layers: this.layers.map(l => ({
+                name: l.name,
+                pixels: new Uint8ClampedArray(l.pixels),
+                opacity: l.opacity,
+                visible: l.visible
+            })),
+            activeLayerIndex: this.activeLayerIndex
+        };
+    }
+
+    _restoreSnapshot(snapshot) {
+        if (snapshot.layers) {
+            this.layers = snapshot.layers.map(l => ({
+                name: l.name,
+                pixels: new Uint8ClampedArray(l.pixels),
+                opacity: l.opacity,
+                visible: l.visible
+            }));
+            this.activeLayerIndex = snapshot.activeLayerIndex;
+            this._renderLayersList();
+        } else {
+            this.pixels = snapshot;
+        }
     }
 
     // --- Rendering ---
@@ -1153,6 +1459,8 @@ class SpriteEditor {
         const w = this.canvasWidth, h = this.canvasHeight;
         const ctx = this.previewCtx;
 
+        const composited = this._getCompositedCanvas(w, h);
+
         if (this.tilePreview) {
             const tw = w * 3, th = h * 3;
             if (this.previewCanvas.width !== tw || this.previewCanvas.height !== th) {
@@ -1160,15 +1468,9 @@ class SpriteEditor {
                 this.previewCanvas.height = th;
             }
             ctx.clearRect(0, 0, tw, th);
-            const singleCanvas = document.createElement('canvas');
-            singleCanvas.width = w;
-            singleCanvas.height = h;
-            const sCtx = singleCanvas.getContext('2d');
-            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
-            sCtx.putImageData(imageData, 0, 0);
             for (let ty = 0; ty < 3; ty++) {
                 for (let tx = 0; tx < 3; tx++) {
-                    ctx.drawImage(singleCanvas, tx * w, ty * h);
+                    ctx.drawImage(composited, tx * w, ty * h);
                 }
             }
         } else {
@@ -1177,9 +1479,33 @@ class SpriteEditor {
                 this.previewCanvas.height = h;
             }
             ctx.clearRect(0, 0, w, h);
-            const imageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
-            ctx.putImageData(imageData, 0, 0);
+            ctx.drawImage(composited, 0, 0);
         }
+    }
+
+    _getCompositedCanvas(w, h) {
+        if (!this._compCanvas || this._compCanvas.width !== w || this._compCanvas.height !== h) {
+            this._compCanvas = document.createElement('canvas');
+            this._compCanvas.width = w;
+            this._compCanvas.height = h;
+        }
+        const cCtx = this._compCanvas.getContext('2d');
+        cCtx.clearRect(0, 0, w, h);
+        if (!this._compTmp || this._compTmp.width !== w || this._compTmp.height !== h) {
+            this._compTmp = document.createElement('canvas');
+            this._compTmp.width = w;
+            this._compTmp.height = h;
+        }
+        const tmpCtx = this._compTmp.getContext('2d');
+        for (const layer of this.layers) {
+            if (!layer.visible) continue;
+            tmpCtx.clearRect(0, 0, w, h);
+            tmpCtx.putImageData(new ImageData(new Uint8ClampedArray(layer.pixels), w, h), 0, 0);
+            cCtx.globalAlpha = layer.opacity;
+            cCtx.drawImage(this._compTmp, 0, 0);
+        }
+        cCtx.globalAlpha = 1;
+        return this._compCanvas;
     }
 
     _render() {
@@ -1218,13 +1544,28 @@ class SpriteEditor {
             ctx.restore();
         }
 
-        const pixelImageData = new ImageData(new Uint8ClampedArray(this.pixels), w, h);
         if (!this._pixelCanvas || this._pixelCanvas.width !== w || this._pixelCanvas.height !== h) {
             this._pixelCanvas = document.createElement('canvas');
             this._pixelCanvas.width = w;
             this._pixelCanvas.height = h;
         }
-        this._pixelCanvas.getContext('2d').putImageData(pixelImageData, 0, 0);
+        const pCtx = this._pixelCanvas.getContext('2d');
+        pCtx.clearRect(0, 0, w, h);
+        for (const layer of this.layers) {
+            if (!layer.visible) continue;
+            const layerImageData = new ImageData(new Uint8ClampedArray(layer.pixels), w, h);
+            if (!this._layerTmp || this._layerTmp.width !== w || this._layerTmp.height !== h) {
+                this._layerTmp = document.createElement('canvas');
+                this._layerTmp.width = w;
+                this._layerTmp.height = h;
+            }
+            const tmpCtx = this._layerTmp.getContext('2d');
+            tmpCtx.clearRect(0, 0, w, h);
+            tmpCtx.putImageData(layerImageData, 0, 0);
+            pCtx.globalAlpha = layer.opacity;
+            pCtx.drawImage(this._layerTmp, 0, 0);
+        }
+        pCtx.globalAlpha = 1;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(this._pixelCanvas, 0, 0, w, h, rox, roy, gridW, gridH);
 
