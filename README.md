@@ -638,10 +638,12 @@ R  Raider          E  Void Enemy      V  Void Nexus
 | P | Priority panel |
 | C | Craft panel |
 | R | Research panel |
-| T | Taming panel |
 | I | Inventory panel |
+| V | Arcane panel |
+| J | Story panel |
 | , | Settings panel |
 | [ / ] | Cycle colonist selection |
+| / | Reset minimap size |
 
 ### Mode-Specific
 - **Build mode**: Tab/Shift+Tab to cycle categories, 1-9/0 to select items. X to toggle deconstruct mode.
