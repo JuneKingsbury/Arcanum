@@ -280,7 +280,10 @@ export class UI {
         const r = this.game.resources.stockpile;
         const season = this.game.weather.getSeasonDisplay();
         const weather = this.game.weather.getWeatherDisplay();
-        const temp = Math.round(this.game.weather.temperature);
+        const tempC = Math.round(this.game.weather.temperature);
+        const useF = this.game.settings.temperatureUnit === 'F';
+        const temp = useF ? Math.round(tempC * 9 / 5 + 32) : tempC;
+        const tempUnit = useF ? 'F' : 'C';
         const speed = this.game.paused ? 'PAUSED' : `${this.game.speed}x`;
         const aliveColonists = this.game.colonists.filter(c => c.hp > 0);
         const alive = aliveColonists.length;
@@ -312,7 +315,7 @@ export class UI {
             (manaStr ? `<span class="res" style="color:${power.hasPower() ? '#aa44ff' : '#ff6666'}">${manaStr}</span>` : '') +
             `<span class="sep">|</span>` +
             `<span class="info">${season}</span>` +
-            `<span class="info status-extra">${this._getWeatherIcon()} ${weather} ${temp}°</span>` +
+            `<span class="info status-extra">${this._getWeatherIcon()} ${weather} ${temp}°${tempUnit}</span>` +
             `<span class="info">${timeStr}</span>` +
             `<span class="sep status-extra">|</span>` +
             `<span class="info status-extra">Pop:${alive}/${cap}</span>` +
@@ -1811,6 +1814,11 @@ export class UI {
         html += `<label for="set-ui-font-size">UI Font Size: <span id="ui-font-size-val">${uiSize}px</span></label>`;
         html += `<input type="range" id="set-ui-font-size" min="8" max="20" value="${uiSize}" style="width:80px" oninput="document.getElementById('ui-font-size-val').textContent=this.value+'px';window.setUIFontSize(this.value)">`;
         html += `</div>`;
+        html += `<div class="settings-row"><label for="set-temp-unit">Temperature unit:</label><select id="set-temp-unit" onchange="window.game.settings.temperatureUnit=this.value" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">`;
+        for (const [val, label] of [['F','Fahrenheit (°F)'],['C','Celsius (°C)']]) {
+            html += `<option value="${val}"${s.temperatureUnit === val ? ' selected' : ''}>${label}</option>`;
+        }
+        html += `</select></div>`;
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Audio</div>`;

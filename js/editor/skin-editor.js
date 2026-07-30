@@ -171,6 +171,18 @@ class SkinEditor {
         this._refImage = null; // HTMLImageElement
         this._showRefImage = false;
 
+        // Spritesheet picker state
+        this._sheetImage = null;
+        this._sheetPickerOpen = false;
+        this._sheetPanX = 0;
+        this._sheetPanY = 0;
+        this._sheetZoom = 1;
+        this._sheetDragging = false;
+        this._sheetDragStart = null;
+        this._sheetPanStart = null;
+        this._sheetAnimFrame = null;
+        this._sheetSnapToGrid = false;
+
         // Secondary color (used by gradient + dither tools)
         this._secondaryColor = { r: 0, g: 0, b: 0, a: 255 };
 
@@ -248,6 +260,8 @@ class SkinEditor {
             <button id="se-toggle-tile" title="Tile Preview — show sprite repeated in a 3x3 grid to check seamless tiling">Tile</button>
             <button id="se-toggle-ref" title="Reference Image — load a PNG to overlay as a tracing guide&#10;Click to toggle on/off, loads file on first click">Ref</button>
             <input type="file" id="se-ref-file" accept="image/*" style="display:none">
+            <button id="se-sheet-pick" title="Spritesheet Picker — upload a spritesheet and pick a sprite to import">Sheet</button>
+            <input type="file" id="se-sheet-file" accept="image/*" style="display:none">
             <span class="bp-sep"></span>
             <button id="se-sel-delete" title="Delete Selection — erase all pixels in selection&#10;Shortcut: Delete/Backspace">SelDel</button>
             <button id="se-sel-fill" title="Fill Selection — fill selection with current color&#10;Shortcut: F (while selection active)">SelFill</button>
@@ -606,6 +620,10 @@ class SkinEditor {
         document.getElementById('se-toggle-ref').addEventListener('click', () => this._toggleRefImage());
         document.getElementById('se-ref-file').addEventListener('change', (e) => this._loadRefImage(e));
 
+        // Spritesheet picker
+        document.getElementById('se-sheet-pick').addEventListener('click', () => this._openSheetPicker());
+        document.getElementById('se-sheet-file').addEventListener('change', (e) => this._loadSheetImage(e));
+
         // Custom palette
         document.getElementById('se-custom-palette').addEventListener('mousedown', (e) => {
             const slot = e.target.closest('.se-palette-slot');
@@ -910,6 +928,10 @@ class SkinEditor {
 
     _onKeyDown(e) {
         if (this.container.style.display === 'none') return;
+        if (this._sheetPickerOpen) {
+            if (e.key === 'Escape') this._closeSheetPicker();
+            return;
+        }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -2177,6 +2199,267 @@ class SkinEditor {
             img.src = reader.result;
         };
         reader.readAsDataURL(file);
+    }
+
+    // --- Spritesheet Picker ---
+    _openSheetPicker() {
+        if (!this.activeObject) {
+            document.getElementById('se-status').textContent = 'Select an object from the palette before importing from a spritesheet.';
+            return;
+        }
+        document.getElementById('se-sheet-file').click();
+    }
+
+    _loadSheetImage(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                this._sheetImage = img;
+                this._showSheetPicker();
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    _showSheetPicker() {
+        const existing = document.getElementById('se-sheet-picker');
+        if (existing) existing.remove();
+
+        this._sheetPickerOpen = true;
+
+        const modal = document.createElement('div');
+        modal.id = 'se-sheet-picker';
+        modal.innerHTML = `
+            <div class="se-sheet-picker-content">
+                <h3>Spritesheet Picker</h3>
+                <div class="se-sheet-info">
+                    <span id="se-sheet-status">Drag the sheet to position a sprite under the selection box</span>
+                </div>
+                <div class="se-sheet-viewport">
+                    <canvas id="se-sheet-canvas"></canvas>
+                </div>
+                <div class="se-sheet-controls">
+                    <button id="se-sheet-zoom-in" title="Zoom in">+</button>
+                    <button id="se-sheet-zoom-out" title="Zoom out">-</button>
+                    <button id="se-sheet-fit" title="Fit sheet to viewport">Fit</button>
+                    <span class="bp-sep"></span>
+                    <button id="se-sheet-snap" title="Snap to grid (align to canvasSize boundaries)">Snap Grid</button>
+                    <span class="bp-sep"></span>
+                    <button id="se-sheet-import">Import Selection</button>
+                    <button id="se-sheet-cancel">Cancel</button>
+                </div>
+            </div>
+        `;
+        this.container.appendChild(modal);
+
+        const viewport = modal.querySelector('.se-sheet-viewport');
+        const canvas = document.getElementById('se-sheet-canvas');
+        const rect = viewport.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        const fitZoom = Math.min(
+            (rect.width * 0.8) / this._sheetImage.width,
+            (rect.height * 0.8) / this._sheetImage.height
+        );
+        this._sheetZoom = Math.max(1, Math.round(fitZoom));
+        this._sheetPanX = (canvas.width - this._sheetImage.width * this._sheetZoom) / 2;
+        this._sheetPanY = (canvas.height - this._sheetImage.height * this._sheetZoom) / 2;
+        this._sheetSnapToGrid = false;
+
+        canvas.addEventListener('mousedown', (e) => this._sheetDragStartHandler(e));
+        window.addEventListener('mousemove', this._sheetDragMoveRef = (e) => this._sheetDragMoveHandler(e));
+        window.addEventListener('mouseup', this._sheetDragEndRef = () => this._sheetDragEndHandler());
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this._sheetPickerZoom(e.deltaY < 0 ? 1 : -1);
+        }, { passive: false });
+
+        document.getElementById('se-sheet-zoom-in').addEventListener('click', () => this._sheetPickerZoom(1));
+        document.getElementById('se-sheet-zoom-out').addEventListener('click', () => this._sheetPickerZoom(-1));
+        document.getElementById('se-sheet-fit').addEventListener('click', () => this._sheetPickerFit());
+        document.getElementById('se-sheet-snap').addEventListener('click', () => this._sheetToggleSnap());
+        document.getElementById('se-sheet-import').addEventListener('click', () => this._sheetPickerImport());
+        document.getElementById('se-sheet-cancel').addEventListener('click', () => this._closeSheetPicker());
+
+        this._sheetAnimFrame = requestAnimationFrame(() => this._renderSheetPicker());
+    }
+
+    _renderSheetPicker() {
+        const canvas = document.getElementById('se-sheet-canvas');
+        if (!canvas || !this._sheetPickerOpen) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.fillStyle = '#0a0a14';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.imageSmoothingEnabled = false;
+        const imgW = this._sheetImage.width * this._sheetZoom;
+        const imgH = this._sheetImage.height * this._sheetZoom;
+        ctx.drawImage(this._sheetImage, this._sheetPanX, this._sheetPanY, imgW, imgH);
+
+        if (this._sheetSnapToGrid) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            const gridPx = this.canvasSize * this._sheetZoom;
+            const startX = ((this._sheetPanX % gridPx) + gridPx) % gridPx;
+            for (let x = startX; x < w; x += gridPx) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            const startY = ((this._sheetPanY % gridPx) + gridPx) % gridPx;
+            for (let y = startY; y < h; y += gridPx) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+        }
+
+        const selSize = this.canvasSize * this._sheetZoom;
+        const selX = (w - selSize) / 2;
+        const selY = (h - selSize) / 2;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, w, selY);
+        ctx.fillRect(0, selY + selSize, w, h - selY - selSize);
+        ctx.fillRect(0, selY, selX, selSize);
+        ctx.fillRect(selX + selSize, selY, w - selX - selSize, selSize);
+
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(selX, selY, selSize, selSize);
+
+        const srcX = Math.round((selX - this._sheetPanX) / this._sheetZoom);
+        const srcY = Math.round((selY - this._sheetPanY) / this._sheetZoom);
+        const statusEl = document.getElementById('se-sheet-status');
+        if (statusEl) {
+            statusEl.textContent = `Sheet: ${this._sheetImage.width}x${this._sheetImage.height} | Selection at (${srcX}, ${srcY}) | Zoom: ${this._sheetZoom}x`;
+        }
+
+        this._sheetAnimFrame = requestAnimationFrame(() => this._renderSheetPicker());
+    }
+
+    _sheetDragStartHandler(e) {
+        if (e.button !== 0) return;
+        this._sheetDragging = true;
+        this._sheetDragStart = { x: e.clientX, y: e.clientY };
+        this._sheetPanStart = { x: this._sheetPanX, y: this._sheetPanY };
+    }
+
+    _sheetDragMoveHandler(e) {
+        if (!this._sheetDragging) return;
+        this._sheetPanX = this._sheetPanStart.x + (e.clientX - this._sheetDragStart.x);
+        this._sheetPanY = this._sheetPanStart.y + (e.clientY - this._sheetDragStart.y);
+    }
+
+    _sheetDragEndHandler() {
+        if (!this._sheetDragging) return;
+        this._sheetDragging = false;
+        if (this._sheetSnapToGrid) this._sheetSnapPan();
+    }
+
+    _sheetSnapPan() {
+        const canvas = document.getElementById('se-sheet-canvas');
+        if (!canvas) return;
+        const selX = (canvas.width - this.canvasSize * this._sheetZoom) / 2;
+        const selY = (canvas.height - this.canvasSize * this._sheetZoom) / 2;
+        const gridPx = this.canvasSize * this._sheetZoom;
+        const offsetX = (this._sheetPanX - selX) % gridPx;
+        const offsetY = (this._sheetPanY - selY) % gridPx;
+        const snapX = Math.abs(offsetX) < gridPx / 2 ? -offsetX : (offsetX > 0 ? gridPx - offsetX : -(gridPx + offsetX));
+        const snapY = Math.abs(offsetY) < gridPx / 2 ? -offsetY : (offsetY > 0 ? gridPx - offsetY : -(gridPx + offsetY));
+        this._sheetPanX += snapX;
+        this._sheetPanY += snapY;
+    }
+
+    _sheetPickerZoom(delta) {
+        const canvas = document.getElementById('se-sheet-canvas');
+        if (!canvas) return;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+
+        const oldZoom = this._sheetZoom;
+        let newZoom = oldZoom + delta;
+        newZoom = Math.max(1, Math.min(32, newZoom));
+        if (newZoom === oldZoom) return;
+
+        const imgX = (cx - this._sheetPanX) / oldZoom;
+        const imgY = (cy - this._sheetPanY) / oldZoom;
+        this._sheetZoom = newZoom;
+        this._sheetPanX = cx - imgX * newZoom;
+        this._sheetPanY = cy - imgY * newZoom;
+    }
+
+    _sheetPickerFit() {
+        const canvas = document.getElementById('se-sheet-canvas');
+        if (!canvas) return;
+        const fitZoom = Math.min(
+            (canvas.width * 0.8) / this._sheetImage.width,
+            (canvas.height * 0.8) / this._sheetImage.height
+        );
+        this._sheetZoom = Math.max(1, Math.round(fitZoom));
+        this._sheetPanX = (canvas.width - this._sheetImage.width * this._sheetZoom) / 2;
+        this._sheetPanY = (canvas.height - this._sheetImage.height * this._sheetZoom) / 2;
+    }
+
+    _sheetToggleSnap() {
+        this._sheetSnapToGrid = !this._sheetSnapToGrid;
+        const btn = document.getElementById('se-sheet-snap');
+        if (btn) btn.classList.toggle('active', this._sheetSnapToGrid);
+        if (this._sheetSnapToGrid) this._sheetSnapPan();
+    }
+
+    _sheetPickerImport() {
+        if (!this._sheetImage) return;
+        const canvas = document.getElementById('se-sheet-canvas');
+        if (!canvas) return;
+
+        const selSize = this.canvasSize * this._sheetZoom;
+        const selX = (canvas.width - selSize) / 2;
+        const selY = (canvas.height - selSize) / 2;
+
+        const srcX = (selX - this._sheetPanX) / this._sheetZoom;
+        const srcY = (selY - this._sheetPanY) / this._sheetZoom;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvasSize;
+        tempCanvas.height = this.canvasSize;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = false;
+        tempCtx.drawImage(
+            this._sheetImage,
+            srcX, srcY, this.canvasSize, this.canvasSize,
+            0, 0, this.canvasSize, this.canvasSize
+        );
+
+        const imageData = tempCtx.getImageData(0, 0, this.canvasSize, this.canvasSize);
+        this._pushUndoSnapshot();
+        this.pixels = new Uint8ClampedArray(imageData.data);
+        this._autoSave();
+        this._closeSheetPicker();
+        document.getElementById('se-status').textContent =
+            `Imported ${this.canvasSize}x${this.canvasSize} region from spritesheet at (${Math.round(srcX)}, ${Math.round(srcY)})`;
+    }
+
+    _closeSheetPicker() {
+        if (this._sheetAnimFrame) {
+            cancelAnimationFrame(this._sheetAnimFrame);
+            this._sheetAnimFrame = null;
+        }
+        if (this._sheetDragMoveRef) {
+            window.removeEventListener('mousemove', this._sheetDragMoveRef);
+            window.removeEventListener('mouseup', this._sheetDragEndRef);
+            this._sheetDragMoveRef = null;
+            this._sheetDragEndRef = null;
+        }
+        const modal = document.getElementById('se-sheet-picker');
+        if (modal) modal.remove();
+        this._sheetPickerOpen = false;
+        this._sheetDragging = false;
     }
 
     // --- Colonist Variants ---

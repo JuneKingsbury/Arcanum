@@ -76,6 +76,7 @@ class Game {
             layoutMode: 'auto',
             musicVolume: 70,
             sfxVolume: 80,
+            temperatureUnit: 'F',
         };
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
@@ -1763,6 +1764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-colorblind').value = 'none';
         document.getElementById('start-notif-dur').value = '100';
         document.getElementById('start-layout-mode').value = 'auto';
+        document.getElementById('start-temp-unit').value = 'F';
         document.getElementById('start-music-vol').value = 70;
         document.getElementById('start-music-vol-val').textContent = '70';
         document.getElementById('start-sfx-vol').value = 80;
@@ -1833,6 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             layoutMode: document.getElementById('start-layout-mode').value,
             musicVolume: parseInt(document.getElementById('start-music-vol').value) || 70,
             sfxVolume: parseInt(document.getElementById('start-sfx-vol').value) || 80,
+            temperatureUnit: document.getElementById('start-temp-unit').value || 'F',
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);

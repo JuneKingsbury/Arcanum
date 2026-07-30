@@ -77,6 +77,13 @@
                     <label for="start-ui-font-size">UI Font Size: <span id="start-ui-font-val">12px</span></label>
                     <input type="range" id="start-ui-font-size" min="8" max="20" value="12" style="width:80px" oninput="document.getElementById('start-ui-font-val').textContent=this.value+'px'">
                 </div>
+                <div class="settings-row">
+                    <label for="start-temp-unit">Temperature unit:</label>
+                    <select id="start-temp-unit" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;font-family:inherit;font-size:11px;border-radius:3px;">
+                        <option value="F" selected>Fahrenheit (&deg;F)</option>
+                        <option value="C">Celsius (&deg;C)</option>
+                    </select>
+                </div>
             </div>
             <div class="settings-section">
                 <div class="settings-section-title">Audio</div>
@@ -222,7 +229,7 @@
             </tr>
             <tr>
                 <td style="padding:4px 8px 4px 0;"><button id="start-skin-editor" style="width:100%;padding:6px 10px;">Skin</button></td>
-                <td style="padding:4px 0; color:#aaa; font-size:11px;">Pixel art editor for custom tile sprites</td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Pixel art editor for custom game sprites</td>
             </tr>
             <tr>
                 <td style="padding:4px 8px 4px 0;"><button id="start-realm-editor" style="width:100%;padding:6px 10px;">Realm</button></td>
@@ -230,7 +237,7 @@
             </tr>
             <tr>
                 <td style="padding:4px 8px 4px 0;"><button id="start-entity-editor" style="width:100%;padding:6px 10px;">Entity</button></td>
-                <td style="padding:4px 0; color:#aaa; font-size:11px;">Define animals and creatures with taming behaviors</td>
+                <td style="padding:4px 0; color:#aaa; font-size:11px;">Define animals and creatures with roles and behaviors</td>
             </tr>
             <tr>
                 <td style="padding:4px 8px 4px 0;"><button id="start-equipment-editor" style="width:100%;padding:6px 10px;">Equipment</button></td>
