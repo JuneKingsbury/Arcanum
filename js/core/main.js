@@ -536,7 +536,7 @@ class Game {
         tile.pedestalArtifact = null;
         tile.pedestalInactive = false;
         this.resources.addArtifact(key);
-        this.notifications.push({ text: `Retrieved ${ARTIFACTS[key].name} from pedestal`, tick: this.tick, type: 'success' });
+        this.notifications.push({ text: `Retrieved ${ARTIFACTS[key]?.name || key} from pedestal`, tick: this.tick, type: 'success' });
         this.ui.showTileInfo(tile, x, y);
     }
 

@@ -707,6 +707,90 @@ export const ARTIFACTS = {
         name: 'Tome of Shared Wisdom',
         pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.1 },
     },
+    crystal_aegis: {
+        name: 'Crystal Aegis',
+        damageReduction: 0.2,
+        combat: { damageReduction: 0.15 },
+        expedition: { damageReduction: 0.2 },
+    },
+    runite_hammer: {
+        name: 'Runite Hammer',
+        workSpeedBonus: 0.35,
+        pedestal: { radius: 5, manaCost: 2, workSpeedBonus: 0.2 },
+    },
+    staff_of_regrowth: {
+        name: 'Staff of Regrowth',
+        spellDamageBonus: 0.2,
+        pedestal: { radius: 6, manaCost: 2, blightImmunity: true },
+    },
+    mycelium_crown: {
+        name: 'Mycelium Crown',
+        workSpeedBonus: 0.15,
+        pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.15 },
+        expedition: { trapDamageMult: 0.6 },
+    },
+    living_bark_armor: {
+        name: 'Living Bark Armor',
+        damageReduction: 0.25,
+        combat: { damageReduction: 0.2 },
+        expedition: { damageReduction: 0.25 },
+    },
+    heartwood_staff: {
+        name: 'Heartwood Staff',
+        spellDamageBonus: 0.3,
+        pedestal: { radius: 7, manaCost: 3, skillGrowthBonus: 0.1 },
+    },
+    scholars_spectacles: {
+        name: "Scholar's Spectacles",
+        workSpeedBonus: 0.2,
+        pedestal: { radius: 'global', manaCost: 2, skillGrowthBonus: 0.1 },
+    },
+    arcane_amplifier: {
+        name: 'Arcane Amplifier',
+        spellDamageBonus: 0.35,
+        expedition: { partyDamageMult: 1.1 },
+    },
+    staff_of_distortion: {
+        name: 'Staff of Distortion',
+        spellDamageBonus: 0.4,
+        combat: { targetPriority: -5 },
+        expedition: { partyDamageMult: 1.2, trapDamageMult: 1.3 },
+    },
+    void_blade: {
+        name: 'Void Blade',
+        combat: { targetPriority: 5, damageReduction: 0.1 },
+        expedition: { partyDamageMult: 1.25 },
+    },
+    dimensional_orb: {
+        name: 'Dimensional Orb',
+        expedition: { durationMult: 0.6, rareEncounterMult: 2.5 },
+        pedestal: { radius: 'global', manaCost: 3, wandererChanceMult: 1.3 },
+    },
+    shard_of_oblivion: {
+        name: 'Shard of Oblivion',
+        expedition: { partyDamageMult: 1.4, trapDamageMult: 1.5 },
+        combat: { targetPriority: 5 },
+    },
+    voidheart: {
+        name: 'Voidheart',
+        spellDamageBonus: 0.5,
+        moveSpeedBonus: 0.2,
+        pedestal: { radius: 'global', manaCost: 4, damageBonusMult: 1.2 },
+    },
+    armor_of_the_abyss: {
+        name: 'Armor of the Abyss',
+        damageReduction: 0.35,
+        combat: { damageReduction: 0.3, targetPriority: 10 },
+        expedition: { damageReduction: 0.35 },
+    },
+    amulet_of_fortune: {
+        name: 'Amulet of Fortune',
+        pedestal: { radius: 'global', manaCost: 1, skillGrowthBonus: 0.2 },
+    },
+    merchants_ring: {
+        name: "Merchant's Ring",
+        pedestal: { radius: 'global', manaCost: 1, tradeMarkupMult: 0.9 },
+    },
 };
 
 // To add a potion: add entry here + a recipe. Colonists auto-use potions from stockpile when conditions are met.
@@ -2065,6 +2149,60 @@ export const STORY_MILESTONES = {
         title: 'Mana Reservoir',
         trigger: 'research_mana_reservoir',
         text: 'TODO: Write lore text for mana reservoir research.',
+    },
+    research_alchemy: {
+        tab: 'world',
+        title: 'Alchemy',
+        trigger: 'research_alchemy',
+        text: 'TODO: Write lore text for alchemy research.',
+    },
+    research_trade_routes: {
+        tab: 'world',
+        title: 'Trade Routes',
+        trigger: 'research_trade_routes',
+        text: 'TODO: Write lore text for trade routes research.',
+    },
+    research_arcane_infusion: {
+        tab: 'world',
+        title: 'Arcane Infusion',
+        trigger: 'research_arcane_infusion',
+        text: 'TODO: Write lore text for arcane infusion research.',
+    },
+    research_warding: {
+        tab: 'world',
+        title: 'Warding',
+        trigger: 'research_warding',
+        text: 'TODO: Write lore text for warding research.',
+    },
+    research_void_forging: {
+        tab: 'world',
+        title: 'Void Forging',
+        trigger: 'research_void_forging',
+        text: 'TODO: Write lore text for void forging research.',
+    },
+    research_masterwork: {
+        tab: 'world',
+        title: 'Masterwork',
+        trigger: 'research_masterwork',
+        text: 'TODO: Write lore text for masterwork research.',
+    },
+    research_advanced_arcana: {
+        tab: 'world',
+        title: 'Advanced Arcana',
+        trigger: 'research_advanced_arcana',
+        text: 'TODO: Write lore text for advanced arcana research.',
+    },
+    research_mana_weaving: {
+        tab: 'world',
+        title: 'Mana Weaving',
+        trigger: 'research_mana_weaving',
+        text: 'TODO: Write lore text for mana weaving research.',
+    },
+    research_void_sorcery: {
+        tab: 'world',
+        title: 'Void Sorcery',
+        trigger: 'research_void_sorcery',
+        text: 'TODO: Write lore text for void sorcery research.',
     },
 
     // -----------------------------------------------------------------------
