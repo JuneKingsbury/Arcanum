@@ -1388,7 +1388,7 @@ function updateAutoRepair(game) {
 const CHAR_RATIO = 0.6;
 const LINE_HEIGHT = 1.15;
 const MIN_FONT = 5;
-const MAX_FONT = 24;
+const MAX_FONT = 48;
 const ZOOM_STEP = 2;
 
 let currentZoomFont = null;
