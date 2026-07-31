@@ -137,6 +137,11 @@ export function renderCreditsHTML() {
     <div style="color:#ccc; margin-bottom:8px;"><b>Built With</b></div>
     <div style="color:#aaa; margin-bottom:4px;">Vanilla JavaScript, HTML5 Canvas</div>
     <div style="color:#aaa; margin-bottom:20px;">jszip for skin ZIP file handling</div>
+    <div style="color:#ccc; margin-bottom:8px;"><b>Sprites <i>(16x16_tiny_world.skin.zip)</i></b></div>
+    <div style="color:#aaa; margin-bottom:4px;"><a style="color:#aaa;" href="https://merchant-shade.itch.io/16x16-mini-world-sprites">Mini World</a> by Shade</div>
+    <div style="color:#aaa; margin-bottom:4px;"><a style="color:#aaa;" href="https://merchant-shade.itch.io/16x16-puny-world">Puny World</a> by Shade</div>
+    <div style="color:#aaa; margin-bottom:4px;"><a style="color:#aaa;" href="https://merchant-shade.itch.io/16x16-puny-dungeon">Puny Dungeon</a> by Shade</div>
+    <div style="color:#aaa; margin-bottom:4px;"><a style="color:#aaa;" href="https://glionox.itch.io/items16">16x16 Items</a> by Glionox</div>
     <div style="color:#666; font-size:10px; margin-top:20px;">Version 0.1 — July 2026</div>
 </div>`;
 }
