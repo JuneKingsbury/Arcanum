@@ -11,13 +11,14 @@ Convocation is a browser-based colony management game inspired by Rimworld and D
 
 When you start a new game, you'll have a handful of colonists and basic resources on a procedurally generated map. Your first priorities should be:
 
-1. **Gather resources** — Designate trees for chopping (G mode) and rocks for mining.
-2. **Build shelter** — Use Build mode (B) to create walls and doors. Enclosed rooms with beds give mood bonuses.
-3. **Plant crops** — Use Farm Zone mode (Z) to designate fields. Wheat and berries are reliable starter crops.
-4. **Set up cooking** — Build a Cauldron and cook raw food into meals for mood bonuses.
-5. **Research** — Build an Arcanum and assign colonists to study. Research unlocks the rest of the game.
+1. **Gather resources** - Designate trees for chopping (G mode) and rocks for mining.
+2. **Build shelter** - Use Build mode (B) to create walls and doors. Enclosed rooms with beds give mood bonuses.
+3. **Plant crops** - Use Farm Zone mode (Z) to designate fields. Wheat and berries are reliable starter crops.
+4. **Set up cooking** - Build a Cauldron and cook raw food into meals for mood bonuses.
+5. **Start production** - Build a Workbench to start crafting new materials, weapons, and tools.
+6. **Research** - Build a research desk and assign colonists to study. Research unlocks the rest of the game.
 
-Use the in-game Glossary (accessible from Settings) for quick reference. The Inventory panel (I) is tabbed into Resources, Equipment, Consumables, and Animals for easy browsing. Beds auto-assign to new colonists and newly built beds find the nearest homeless colonist automatically.
+Use the in-game Glossary (accessible from Settings) for quick reference. Beds auto-assign to new colonists and newly built beds find the nearest homeless colonist automatically.
 
 ---
 
@@ -38,32 +39,32 @@ Hunger and Rest decay over time. When critical (<20), colonists interrupt work t
 | Stressed | 20-39 | 0.7x |
 | Breaking | <20 | Refuses work |
 
-Thoughts are temporary modifiers from events — good meals, nice rooms, and deaths all leave impressions that fade over time.
+Thoughts are temporary modifiers from events - good meals, nice rooms, and deaths all leave impressions that fade over time.
 
 ### Traits
 Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early Bird, Green Thumb, Iron Stomach, Socialite, Loner, Optimist, Pessimist, Tough, Pyromaniac, or Gourmand. These subtly alter behavior and mood.
 
 ### Controlling Colonists
-- **Drafting** — Take direct control. Drafted colonists move where you right-click. Select multiple with click-drag and use Draft All for quick combat response. They pulse red on the map.
-- **Rally Point** — Right-click with multiple drafted colonists to send them in spread formation. A red flag (⚑) marks the spot.
-- **Guard Mode** — A middle ground between full automation and drafting. Toggle the Guard button to make a colonist patrol their current position and proactively engage threats within 10 tiles. They still eat and sleep when critical, but skip all work tasks. No ongoing player input needed.
-- **Fleeing** — Colonists automatically disengage from combat when HP drops below 20, retreating until the threat is 8+ tiles away.
+- **Drafting** - Take direct control. Drafted colonists move where you right-click. Select multiple with click-drag and use Draft All for quick combat response. They pulse red on the map.
+- **Rally Point** - Right-click with multiple drafted colonists to send them in spread formation. A red flag (⚑) marks the spot.
+- **Guard Mode** - A middle ground between full automation and drafting. Toggle the Guard button to make a colonist patrol their current position and proactively engage threats within 10 tiles. They still eat and sleep when critical, but skip all work tasks. No ongoing player input needed.
+- **Fleeing** - Colonists automatically disengage from combat when HP drops below 20, retreating until the threat is 8+ tiles away.
 
 ### Equipment
 Colonists have 5 gear slots, displayed in a person-shaped grid:
 
-- **Melee Weapon** — Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
-- **Ranged Weapon** — Bows and crossbows fire projectiles at enemies from a distance. Colonists stay at range instead of closing to melee. Short Bow (7 dmg, range 5) → Hunting Bow (10, range 6) → Iron Crossbow (14, range 7) → Runic Crossbow (18, range 8) → Void Longbow (22, range 10).
-- **Magic Weapon** — Wands and staves provide spell amplification and attack at range. Wooden Wand (range 5, +30% spell dmg), Crystal Staff (range 6, +20%), Runic Wand (range 7, +50%), Void Staff (range 8, +40%). Best for dedicated spellcasters.
-- **Armor** — Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
-- **Helmet** — Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (10%) → Runic Helm (14%) → Void Crown (18%, +spell dmg).
-- **Tool** — Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
-  - **Pickaxe** — Mining speed (1.25x / 1.45x / 1.7x)
-  - **Axe** — Chopping speed (1.25x / 1.45x / 1.7x)
-  - **Sickle** — Farming speed (1.25x / 1.45x / 1.7x)
-  - **Hammer** — Crafting speed (1.25x / 1.45x / 1.7x)
-  - **Mattock** — Mining + Chopping (1.15x / 1.3x / 1.5x) — multi-purpose but weaker than specialists
-- **Artifact** — Special items with unique effects. Can be equipped for personal bonuses or placed on Artifact Pedestals for area-of-effect colony buffs. See the Artifacts section below.
+- **Melee Weapon** - Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
+- **Ranged Weapon** - Bows and crossbows fire projectiles at enemies from a distance. Colonists stay at range instead of closing to melee. Short Bow (7 dmg, range 5) → Hunting Bow (10, range 6) → Iron Crossbow (14, range 7) → Runic Crossbow (18, range 8) → Void Longbow (22, range 10).
+- **Magic Weapon** - Wands and staves provide spell amplification and attack at range. Wooden Wand (range 5, +30% spell dmg), Crystal Staff (range 6, +20%), Runic Wand (range 7, +50%), Void Staff (range 8, +40%). Best for dedicated spellcasters.
+- **Armor** - Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
+- **Helmet** - Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (10%) → Runic Helm (14%) → Void Crown (18%, +spell dmg).
+- **Tool** - Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
+  - **Pickaxe** - Mining speed (1.25x / 1.45x / 1.7x)
+  - **Axe** - Chopping speed (1.25x / 1.45x / 1.7x)
+  - **Sickle** - Farming speed (1.25x / 1.45x / 1.7x)
+  - **Hammer** - Crafting speed (1.25x / 1.45x / 1.7x)
+  - **Mattock** - Mining + Chopping (1.15x / 1.3x / 1.5x) - multi-purpose but weaker than specialists
+- **Artifact** - Special items with unique effects. Can be equipped for personal bonuses or placed on Artifact Pedestals for area-of-effect colony buffs. See the Artifacts section below.
 
 ### Equipment Stat Reference
 
@@ -200,7 +201,7 @@ When equipment is crafted, a quality roll occurs based on the crafter's skill le
 | Superior | 1.20x | "Superior" | Rare, requires high skill |
 
 ### Salvage
-Click the ♻ icon on equipment in inventory to salvage it, recovering 50% of the recipe's crafting materials (rounded down, minimum 1 per resource type). Better than discarding — you always get something back.
+Click the ♻ icon on equipment in inventory to salvage it, recovering 50% of the recipe's crafting materials (rounded down, minimum 1 per resource type). Better than discarding - you always get something back.
 
 Use "Auto-equip Best" to quickly gear up a colonist with the best available items from storage.
 
@@ -217,17 +218,17 @@ Colonists learn spells by studying Spell Tomes at the Arcanum. Equip a tome, ass
 Each colonist has a personal mana pool (base 20 + bonuses from magic skill levels across all schools). Spells consume mana and go on cooldown. Mana regenerates over time. You can disable auto-casting for specific spells to conserve mana.
 
 ### The Six Schools
-- **Evocation** — Combat magic (Magic Missile, Fireball, Chain Lightning, Smite). Your primary offensive magic — ranged and melee burst.
-- **Enchantment** — Work buffs (Haste, Animate Golem). Makes colonists faster and more productive.
-- **Abjuration** — Defense and healing (Heal, Shield, Mass Heal). Keeps your colony alive.
-- **Conjuration** — Summoning and movement (Summon Familiar, Warp, Blink).
-- **Transmutation** — Terrain manipulation (Circle of Growth, Raise Mountain, Level Field). Reshape the map itself.
-- **Divination** — Probability manipulation (Foresight, Fair Winds, Merchant's Omen, Ward of Calamity, Fortunate Discovery). Influence weather, events, and raid timing.
+- **Evocation** - Combat magic (Magic Missile, Fireball, Chain Lightning, Smite). Your primary offensive magic - ranged and melee burst.
+- **Enchantment** - Work buffs (Haste, Animate Golem). Makes colonists faster and more productive.
+- **Abjuration** - Defense and healing (Heal, Shield, Mass Heal). Keeps your colony alive.
+- **Conjuration** - Summoning and movement (Summon Familiar, Warp, Blink).
+- **Transmutation** - Terrain manipulation (Circle of Growth, Raise Mountain, Level Field). Reshape the map itself.
+- **Divination** - Probability manipulation (Foresight, Fair Winds, Merchant's Omen, Ward of Calamity, Fortunate Discovery). Influence weather, events, and raid timing.
 
 ### Potions
 Brewed at the Cauldron and auto-consumed by colonists:
-- **Health Potion** — Auto-used when HP drops below 50%. Heals 50 HP. (3 berries + 2 wheat)
-- **Speed Potion** — Auto-used when working. +50% move, +30% work for 100 ticks. (2 corn + 2 potatoes + 1 berries)
+- **Health Potion** - Auto-used when HP drops below 50%. Heals 50 HP. (3 berries + 2 wheat)
+- **Speed Potion** - Auto-used when working. +50% move, +30% work for 100 ticks. (2 corn + 2 potatoes + 1 berries)
 
 ---
 
@@ -259,9 +260,9 @@ Some artifacts modify combat behavior (target priority, auto-revive, damage redu
 Certain artifacts (Ward of the Sentinel) break after triggering their effect. Broken artifacts provide no bonuses until repaired at an Anvil (requires Runeforging research, costs 1 runite). Colonists auto-queue repair tasks when broken artifacts are detected.
 
 ### Sources
-- **Expeditions** — Dimension-specific rare drops (Compass of Greed from Crystal Caves, Cloak of Shadows from Shadow Realm, etc.). Map Fragments drop in all dimensions.
-- **Traders** — Exclusive items like Seedkeeper's Locket, Hourglass of Diligence, Lodestone of Prosperity, and Haggler's Coin.
-- **Crafting** — Ward of the Sentinel (Void Forging research).
+- **Expeditions** - Dimension-specific rare drops (Compass of Greed from Crystal Caves, Cloak of Shadows from Shadow Realm, etc.). Map Fragments drop in all dimensions.
+- **Traders** - Exclusive items like Seedkeeper's Locket, Hourglass of Diligence, Lodestone of Prosperity, and Haggler's Coin.
+- **Crafting** - Ward of the Sentinel (Void Forging research).
 
 ---
 
@@ -270,46 +271,46 @@ Certain artifacts (Ward of the Sentinel) break after triggering their effect. Br
 Press B to enter Build mode. Buildings are organized into 5 tabs (cycle with Tab/Shift+Tab):
 
 ### Walls & Floors
-- **Wall** (█) — Blocks movement. 50-90 HP by material. Forms rooms when enclosing an area with doors.
-- **Floor** (·) — Cosmetic. Wood, stone, or brick. Makes rooms nicer.
-- **Door** (+) — Allows colonist passage. Blocks enemies. Room boundary.
-- **Fence** (|) — Lighter wall alternative (20 HP).
+- **Wall** (█) - Blocks movement. 50-90 HP by material. Forms rooms when enclosing an area with doors.
+- **Floor** (·) - Cosmetic. Wood, stone, or brick. Makes rooms nicer.
+- **Door** (+) - Allows colonist passage. Blocks enemies. Room boundary.
+- **Fence** (|) - Lighter wall alternative (20 HP).
 
 ### Furniture
-- **Bed** (B) — Assign colonists for "slept in bed" mood bonus.
-- **Torch** (i) — Light and warmth. Drag-placeable.
+- **Bed** (B) - Assign colonists for "slept in bed" mood bonus.
+- **Torch** (i) - Light and warmth. Drag-placeable.
 
 ### Production
-- **Workbench** (C) — Crafting station for weapons, tools, planks, bricks.
-- **Cauldron** (F) — Cooking and potion brewing.
-- **Food Chest** (S) — Each reduces food spoilage by 15% (stacks to 60%).
-- **Anvil** (⌂) — Repair broken artifacts. Requires Runeforging research.
+- **Workbench** (C) - Crafting station for weapons, tools, planks, bricks.
+- **Cauldron** (F) - Cooking and potion brewing.
+- **Food Chest** (S) - Each reduces food spoilage by 15% (stacks to 60%).
+- **Anvil** (⌂) - Repair broken artifacts. Requires Runeforging research.
 
 ### Defense
-- **Void Wall** (▓) — 120 HP reinforced wall. Requires Void Forging.
-- **Void Door** (▒) — 80 HP reinforced door. Requires Void Forging.
-- **Void Turret** (Y) — 20 damage, range 5. Consumes 5 mana. Requires Void Forging.
+- **Void Wall** (▓) - 120 HP reinforced wall. Requires Void Forging.
+- **Void Door** (▒) - 80 HP reinforced door. Requires Void Forging.
+- **Void Turret** (Y) - 20 damage, range 5. Consumes 5 mana. Requires Void Forging.
 
 ### Arcane
-- **Arcanum** (R) — Research station. Colonists study here to unlock the tech tree and progress spell tomes.
-- **Beast Circle** (A) — Required for taming creatures.
-- **Mana Crystal** (W) — Generates 10 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
-- **Glowstone** (L) — Mana-powered light, radius 5. Consumes 2 mana.
-- **Enchanting Table** (P) — 2x crafting speed. Consumes 4 mana.
-- **Ember Ward** (H) — Warms radius 4 in winter. Consumes 3 mana.
-- **Arcane Sentinel** (X) — Auto-attacks enemies in range 4. Consumes 3 mana.
-- **Ice Box** (I) — Reduces food spoilage by 40% (stacks with chests, max 90%). Consumes 1 mana.
-- **Rift Gate** (Ω) — Portal to alternate dimensions. Consumes 6 mana.
-- **Artifact Pedestal** (◆) — Place an artifact for area-of-effect buffs. Mana cost varies (1-3).
-- **Golem Forge** (Ğ) — Craft golems. Requires Golem Craft research.
-- **Forge Core** (⚒) — Center of the Great Forge multi-block structure.
-- **Ritual Core** (◎) — Center of the Ritual Circle multi-block structure.
+- **Arcanum** (R) - Research station. Colonists study here to unlock the tech tree and progress spell tomes.
+- **Beast Circle** (A) - Required for taming creatures.
+- **Mana Crystal** (W) - Generates 10 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
+- **Glowstone** (L) - Mana-powered light, radius 5. Consumes 2 mana.
+- **Enchanting Table** (P) - 2x crafting speed. Consumes 4 mana.
+- **Ember Ward** (H) - Warms radius 4 in winter. Consumes 3 mana.
+- **Arcane Sentinel** (X) - Auto-attacks enemies in range 4. Consumes 3 mana.
+- **Ice Box** (I) - Reduces food spoilage by 40% (stacks with chests, max 90%). Consumes 1 mana.
+- **Rift Gate** (Ω) - Portal to alternate dimensions. Consumes 6 mana.
+- **Artifact Pedestal** (◆) - Place an artifact for area-of-effect buffs. Mana cost varies (1-3).
+- **Golem Forge** (Ğ) - Craft golems. Requires Golem Craft research.
+- **Forge Core** (⚒) - Center of the Great Forge multi-block structure.
+- **Ritual Core** (◎) - Center of the Ritual Circle multi-block structure.
 
 ### Rooms
 Enclose an area with walls/fences and at least one door to form a room (max 100 tiles). Colonists sleeping in rooms get a mood bonus.
 
 ### Complex Structures (Multi-Block)
-Late-game buildings that provide powerful bonuses when a specific pattern of tiles surrounds a core piece. Build the core from the Arcane tab, then assemble the pattern around it. Activation is automatic when complete — the core's info panel shows what's missing.
+Late-game buildings that provide powerful bonuses when a specific pattern of tiles surrounds a core piece. Build the core from the Arcane tab, then assemble the pattern around it. Activation is automatic when complete - the core's info panel shows what's missing.
 
 #### Great Forge
 **Effect:** 2.5x equipment crafting speed for colonists working within 3 tiles.
@@ -354,48 +355,48 @@ Growth is boosted by rain (1.3x) and summer (1.5x). No outdoor growth in winter 
 
 ### Food Preservation
 All food rots over time. Faster-rotting items (milk, berries) decay first. Combat spoilage with:
-- **Food Chests** — -15% each (max 60%)
-- **Ice Boxes** — -40% each (max 90% combined with chests, requires mana)
-- **Season** — Winter slows rot 0.5x; summer accelerates 1.5x
+- **Food Chests** - -15% each (max 60%)
+- **Ice Boxes** - -40% each (max 90% combined with chests, requires mana)
+- **Season** - Winter slows rot 0.5x; summer accelerates 1.5x
 
 Use the lock icon in the Inventory to reserve specific foodstuffs from cooking (for alchemy recipes, etc.).
 
 ### Cooking
-Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a mood bonus; raw food gives a penalty. Set an Auto-Cook target (use the +/- buttons) to keep food levels topped up automatically. Use x5 for bulk crafting, or toggle the ⟳ repeat button on any recipe to auto-queue it continuously. Set a stock target number to maintain a specific quantity — crafting stops when you have enough.
+Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a mood bonus; raw food gives a penalty. Set an Auto-Cook target (use the +/- buttons) to keep food levels topped up automatically. Use x5 for bulk crafting, or toggle the ⟳ repeat button on any recipe to auto-queue it continuously. Set a stock target number to maintain a specific quantity - crafting stops when you have enough.
 
 ---
 
 ## Wildlife & Taming
 
 ### Wild Animals
-- **Deer** (d) — Passive, flees. 3 meat + 2 hides when hunted.
-- **Rabbit** (r) — Passive, fast. 1 meat.
-- **Wolf** (w) — Hostile at night/winter. 2 meat + 1 hide. Tameable (dangerous).
-- **Okapi** (k) — Passive. 3 meat + 3 hides when hunted. Pack animal when tamed.
-- **Tapir** (t) — Passive. 2 meat + 2 hides when hunted. Happiness aura when tamed.
-- **Chicken** (c) — Passive. Produces eggs when tamed.
+- **Deer** (d) - Passive, flees. 3 meat + 2 hides when hunted.
+- **Rabbit** (r) - Passive, fast. 1 meat.
+- **Wolf** (w) - Hostile at night/winter. 2 meat + 1 hide. Tameable (dangerous).
+- **Okapi** (k) - Passive. 3 meat + 3 hides when hunted. Pack animal when tamed.
+- **Tapir** (t) - Passive. 2 meat + 2 hides when hunted. Happiness aura when tamed.
+- **Chicken** (c) - Passive. Produces eggs when tamed.
 
 Click an animal and press Hunt to create a hunting task. Medium and large animals drop hides, which can be tanned into leather for armor crafting.
 
 ### Beast Binding
 Requires Beast Binding research + Beast Circle. Tamed animals fill different roles:
-- **Production** — Chickens produce eggs over time.
-- **Pack Animals** — Okapi speed up expeditions by 25% each.
-- **Aura** — Tapirs boost mood for colonists within 4 tiles.
-- **Guards** — Tamed wolves patrol near colonists and attack threats.
+- **Production** - Chickens produce eggs over time.
+- **Pack Animals** - Okapi speed up expeditions by 25% each.
+- **Aura** - Tapirs boost mood for colonists within 4 tiles.
+- **Guards** - Tamed wolves patrol near colonists and attack threats.
 
 ### Wolf Taming (Dangerous)
 Wolves are a special case. The taming UI shows your success chance and warns about retaliation:
 - **Base chance**: 40% + 6% per animal skill level (guaranteed at skill 10)
 - **On failure**: The wolf bites for 12 damage and flees. Your colonist gets a mood penalty.
-- **On success**: The wolf becomes a guard animal — following colonists, engaging hostiles in range, and retreating when HP is low.
+- **On success**: The wolf becomes a guard animal - following colonists, engaging hostiles in range, and retreating when HP is low.
 
 ---
 
 ## Combat & Defense
 
 ### How Combat Works
-Combat is either melee (1-tile) or ranged (bows, crossbows, wands). Damage = base + weapon bonus. Colonists auto-defend when attacked and engage threats within their weapon's range. Ranged weapon holders fire projectiles and stay at distance; melee fighters close the gap. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning, Smite) also attack automatically — Smite is a melee-range burst for close encounters.
+Combat is either melee (1-tile) or ranged (bows, crossbows, wands). Damage = base + weapon bonus. Colonists auto-defend when attacked and engage threats within their weapon's range. Ranged weapon holders fire projectiles and stay at distance; melee fighters close the gap. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning, Smite) also attack automatically - Smite is a melee-range burst for close encounters.
 
 ### Raids
 Raiders attack periodically (disabled in Peaceful Mode), scaling with both colony wealth and time elapsed. Early raids are gentle (1 raider after the first season), with full raid strength ramping up over 3 in-game years. This gives new colonies breathing room to establish defenses. Individual raiders flee when their HP drops below 30%. If 65% of the raiding party is dead or fleeing, the rest rout. A safety timeout ensures raiders eventually leave in stalemates.
@@ -414,7 +415,7 @@ For ongoing defense without micromanagement: assign colonists to Guard mode. The
 
 ## Golems
 
-Golems are animated stone workers — tireless, moodless, and specialized. They never eat, sleep, or count against your population cap.
+Golems are animated stone workers - tireless, moodless, and specialized. They never eat, sleep, or count against your population cap.
 
 ### Crafting Golems
 Research Golem Craft, build a Golem Forge, then click it to see available types:
@@ -423,7 +424,7 @@ Research Golem Craft, build a Golem Forge, then click it to see available types:
 |---|---|---|---|---|
 | Farmer | Farming | 6 | 150 | 10 stone, 3 runite, 2 void essence |
 | Miner | Building/Mining | 6 | 180 | 12 stone, 4 runite, 2 void essence |
-| Combat | Fighting | — | 250 | 15 stone, 5 runite, 4 void essence |
+| Combat | Fighting | - | 250 | 15 stone, 5 runite, 4 void essence |
 | Hauler | Hauling | 8 | 120 | 8 stone, 2 runite, 1 void essence |
 
 ### Limitations
@@ -433,17 +434,17 @@ Golems cannot be drafted, cannot equip items or learn spells, and have fixed ski
 
 ## Exploration (Alternate Dimensions)
 
-Build a Rift Gate after researching Planar Rift to send expeditions to other dimensions. This is one of the richest parts of the game — you can watch your colonists' journey unfold in real-time through the expedition event log.
+Build a Rift Gate after researching Planar Rift to send expeditions to other dimensions. This is one of the richest parts of the game - you can watch your colonists' journey unfold in real-time through the expedition event log.
 
 ### Sending an Expedition
 Click the Rift Gate, choose a dimension, select colonists (up to 5) and optional pack animals (up to 2), set a difficulty level, then launch. A party strength indicator (Easy/Fair/Tough/Dangerous/Suicidal) updates in real-time as you select members and adjust difficulty, helping you gauge survivability. The party walks to the gate and enters the dimension. While exploring, colonists are removed from your workforce.
 
 ### Difficulty Levels
-Before launching, choose a difficulty from 1 (Normal) to 5 (Suicidal). Higher difficulty means tougher enemies, more encounters, and deadlier traps — but significantly more loot and dramatically higher chances for rare drops:
+Before launching, choose a difficulty from 1 (Normal) to 5 (Suicidal). Higher difficulty means tougher enemies, more encounters, and deadlier traps - but significantly more loot and dramatically higher chances for rare drops:
 
 | Level | Name | Loot Bonus | Rare Finds | Enemy Scaling |
 |---|---|---|---|---|
-| 1 | Normal | — | — | Standard |
+| 1 | Normal | - | - | Standard |
 | 2 | Dangerous | +50% | +50% | +30% HP, +20% dmg |
 | 3 | Perilous | +100% | +150% | +70% HP, +50% dmg |
 | 4 | Deadly | +200% | +300% | +120% HP, +80% dmg |
@@ -451,12 +452,12 @@ Before launching, choose a difficulty from 1 (Normal) to 5 (Suicidal). Higher di
 
 ### The Live Event Log
 Click the Rift Gate while an expedition is active to see a scrolling, color-coded log of everything happening to your party:
-- **Blue** — Status updates (entering dimension, returning)
-- **Orange** — Combat events (attacks, misses, round-by-round fighting)
-- **Red** — Danger (traps triggered, colonists defeated)
-- **Green** — Victories and successful returns
-- **Yellow** — Loot discovered (items found, caches opened)
-- **Grey** — Ambient observations (flavor text unique to each dimension)
+- **Blue** - Status updates (entering dimension, returning)
+- **Orange** - Combat events (attacks, misses, round-by-round fighting)
+- **Red** - Danger (traps triggered, colonists defeated)
+- **Green** - Victories and successful returns
+- **Yellow** - Loot discovered (items found, caches opened)
+- **Grey** - Ambient observations (flavor text unique to each dimension)
 
 The panel also shows each party member's current HP and enemy counts during combat.
 
@@ -465,24 +466,24 @@ Unlike surface combat, expedition fights play out round-by-round over multiple t
 
 ### Between Encounters
 As your party explores, small events occur randomly:
-- **Traps** — Spike traps, arcane wards, poison needles. Deal damage to a random party member.
-- **Discoveries** — Hidden caches, supply stashes, gems pried from walls. Bonus loot.
-- **Ambient** — Flavor text specific to each dimension that brings the environment to life.
-- **Rare Events** — Low-chance special encounters unique to each dimension with bonus loot rewards.
+- **Traps** - Spike traps, arcane wards, poison needles. Deal damage to a random party member.
+- **Discoveries** - Hidden caches, supply stashes, gems pried from walls. Bonus loot.
+- **Ambient** - Flavor text specific to each dimension that brings the environment to life.
+- **Rare Events** - Low-chance special encounters unique to each dimension with bonus loot rewards.
 
 ### Dimensions
 
 | Dimension | Difficulty | Duration | Loot | Rare Encounters | Research |
 |---|---|---|---|---|---|
-| Crystal Caves | 1 | 220-380 | Stone, Runite | Resonating chambers, dwarven caches | — |
-| Verdant Depths | 1 | 150-280 | Wood, Wheat, Berries | Fertile seed caches, druid herb stashes | — |
+| Crystal Caves | 1 | 220-380 | Stone, Runite | Resonating chambers, dwarven caches | - |
+| Verdant Depths | 1 | 150-280 | Wood, Wheat, Berries | Fertile seed caches, druid herb stashes | - |
 | Arcane Library | 1 | 180-320 | Spell Tomes, Runite | Headmaster vaults, enchanting caches | Arcane Studies |
 | Shadow Realm | 2 | 400-650 | Void Essence, Runite | Collapsing void crystals, sealed reliquaries | Deep Delving |
 
 Each dimension has unique ambient text, trap descriptions, discovery messages, and rare encounters that can only happen there.
 
 ### Pack Animals & Survival
-Tamed okapi (max 2 per expedition) reduce expedition duration by 25% each (stacks, minimum 50% of base). They appear as a separate line behind the party in the expedition visualization. Defeated colonists return at 1 HP — there's no permadeath. If the entire party falls, you still keep any loot found during the exploration (random discoveries and encounters), but miss the completion bonus for finishing the expedition.
+Tamed okapi (max 2 per expedition) reduce expedition duration by 25% each (stacks, minimum 50% of base). They appear as a separate line behind the party in the expedition visualization. Defeated colonists return at 1 HP - there's no permadeath. If the entire party falls, you still keep any loot found during the exploration (random discoveries and encounters), but miss the completion bonus for finishing the expedition.
 
 ---
 
@@ -495,31 +496,31 @@ When a Trade Caravan arrives, you can barter any of your resources for theirs th
 - You sell resources at **70% of base value** (trader discount).
 - You buy resources at **140% of base value** (trader markup).
 - Your total offer value must meet or exceed what you're requesting.
-- You can make **multiple trades** per visit — the trader stays until dismissed.
+- You can make **multiple trades** per visit - the trader stays until dismissed.
 
 ### Exclusive Items
 Some items can only be obtained through trade:
-- **Amulet of Fortune** — Artifact, +20% XP gain.
-- **Enchanted Blade** — Weapon, 18 damage + 15% spell damage.
-- **Wanderer's Cloak** — Armor, -15% damage + 20% move speed.
-- **Seedkeeper's Locket** — Artifact, blight immunity radius (pedestal).
-- **Hourglass of Diligence** — Artifact, work speed bonus (equipped/pedestal).
-- **Lodestone of Prosperity** — Artifact, +50% wanderer chance (global pedestal).
-- **Haggler's Coin** — Artifact, -15% trade markup (global pedestal).
-- **Crystal Capacitor** — Consumable. Permanently increases mana crystal build limit by 1. Also rarely found in Shadow Realm and Arcane Library expeditions.
+- **Amulet of Fortune** - Artifact, +20% XP gain.
+- **Enchanted Blade** - Weapon, 18 damage + 15% spell damage.
+- **Wanderer's Cloak** - Armor, -15% damage + 20% move speed.
+- **Seedkeeper's Locket** - Artifact, blight immunity radius (pedestal).
+- **Hourglass of Diligence** - Artifact, work speed bonus (equipped/pedestal).
+- **Lodestone of Prosperity** - Artifact, +50% wanderer chance (global pedestal).
+- **Haggler's Coin** - Artifact, -15% trade markup (global pedestal).
+- **Crystal Capacitor** - Consumable. Permanently increases mana crystal build limit by 1. Also rarely found in Shadow Realm and Arcane Library expeditions.
 
 ---
 
 ## Research Tree
 
-Build an Arcanum and assign colonists to study. Select one research topic at a time from the Research panel — all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
+Build an Arcanum and assign colonists to study. Select one research topic at a time from the Research panel - all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
 
 | Research | Requires | Unlocks |
 |---|---|---|
-| Runecraft | — | Etched Axe. Unlocks Runeforging & Warding |
-| Druidcraft | — | Corn, Potatoes. Unlocks Beast Binding |
-| Ley Channeling | — | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
-| Alchemy | — | +2 bonus food per cooked meal |
+| Runecraft | - | Etched Axe. Unlocks Runeforging & Warding |
+| Druidcraft | - | Corn, Potatoes. Unlocks Beast Binding |
+| Ley Channeling | - | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
+| Alchemy | - | +2 bonus food per cooked meal |
 | Mana Weaving | Ley Channeling | Mana-Weave Robe, Enchanted Glaive |
 | Masterwork | Runeforging | Runic Greatsword, Great Forge |
 | Runeforging | Runecraft | Runic Blade, Runic Pick, Runic Pickaxe, Runic Plate, Boots of Haste |
@@ -574,25 +575,25 @@ Plan your mana budget before expanding your arcane infrastructure.
 
 Random events keep things interesting:
 
-- **Wanderer** — A new colonist wants to join (more likely when mood is high). Accept or reject.
-- **Trade Caravan** — A merchant arrives for bartering. See the Trading section above.
-- **Crop Blight** — Destroys ~40% of growing crops. Summer/autumn.
-- **Mineral Windfall** — New stone deposits appear at the map edge.
-- **Fire** — Spreads to adjacent tiles. Colonists auto-extinguish. Rain helps.
-- **Cold Snap** — All outdoor crops die instantly. Winter only.
-- **Animal Migration** — Deer pass through (hunting opportunity).
-- **Inspiration** — A random colonist gets +25 mood.
+- **Wanderer** - A new colonist wants to join (more likely when mood is high). Accept or reject.
+- **Trade Caravan** - A merchant arrives for bartering. See the Trading section above.
+- **Crop Blight** - Destroys ~40% of growing crops. Summer/autumn.
+- **Mineral Windfall** - New stone deposits appear at the map edge.
+- **Fire** - Spreads to adjacent tiles. Colonists auto-extinguish. Rain helps.
+- **Cold Snap** - All outdoor crops die instantly. Winter only.
+- **Animal Migration** - Deer pass through (hunting opportunity).
+- **Inspiration** - A random colonist gets +25 mood.
 
 ---
 
 ## The Map
 
 ### Terrain Types
-- **.** Grass — Normal speed.
-- **,** Dirt — Normal speed.
-- **#** Rock — Slow (4x move cost). Can't build on it.
-- **▲** Tall Rock — Impassable. Natural chokepoints.
-- **~** Water — Slow (3x move cost). Can't build on it.
+- **.** Grass - Normal speed.
+- **,** Dirt - Normal speed.
+- **#** Rock - Slow (4x move cost). Can't build on it.
+- **▲** Tall Rock - Impassable. Natural chokepoints.
+- **~** Water - Slow (3x move cost). Can't build on it.
 
 ### Map Generation
 Each map is procedurally generated with: dirt patches, rock formations (with stone/iron ore/runite deposits), mountain ranges (impassable spines), forests, a winding river, and ancient ruins (pre-built structures you can repair). Resource deposits spawn tiered: ~50% stone, ~30% iron ore, ~20% runite.
@@ -651,12 +652,12 @@ R  Raider          E  Void Enemy      V  Void Nexus
 - **Zone mode**: 1-9 to select crop type.
 
 ### Mouse
-- **Left-click** — Select colonist/animal/tile. Drag to box-select.
-- **Right-click** — Move drafted colonists / set rally point.
-- **Left-drag (build)** — Place structures in a line or area.
-- **Right-drag (build)** — Deconstruct.
-- **Middle-drag** — Pan camera.
-- **Hover** — Tile tooltip with terrain and structure info.
+- **Left-click** - Select colonist/animal/tile. Drag to box-select.
+- **Right-click** - Move drafted colonists / set rally point.
+- **Left-drag (build)** - Place structures in a line or area.
+- **Right-drag (build)** - Deconstruct.
+- **Middle-drag** - Pan camera.
+- **Hover** - Tile tooltip with terrain and structure info.
 
 ---
 
@@ -667,15 +668,15 @@ The top bar shows colony resources and mana at a glance. Speed controls ([<] [||
 
 ### Inventory Panel (I)
 Tabbed into four categories for easy navigation:
-- **Resources** — Raw materials with quantities and food preservation info.
-- **Equipment** — Weapons, armor, tools, and artifacts in storage. Each item shows an ASCII icon (or sprite if skin is active).
-- **Consumables** — Potions, spell tomes, and usable items (Crystal Capacitor, etc.) with a Use button for one-time consumables.
-- **Animals** — Tamed creatures and their roles.
+- **Resources** - Raw materials with quantities and food preservation info.
+- **Equipment** - Weapons, armor, tools, and artifacts in storage. Each item shows an ASCII icon (or sprite if skin is active).
+- **Consumables** - Potions, spell tomes, and usable items (Crystal Capacitor, etc.) with a Use button for one-time consumables.
+- **Animals** - Tamed creatures and their roles.
 
 ### Glossary
 Accessible from Settings during gameplay or from the start screen. Features:
 - **Tabbed sections** matching this guide's topics for quick navigation.
-- **Search bar** that filters across all sections — type "mana" to see every building, spell, and system that involves mana.
+- **Search bar** that filters across all sections - type "mana" to see every building, spell, and system that involves mana.
 
 ---
 
@@ -684,7 +685,7 @@ Accessible from Settings during gameplay or from the start screen. Features:
 Convocation supports visual skins that replace ASCII characters with pixel-art sprites. Switch skins at any time from the start screen settings or the in-game settings panel.
 
 ### How Skins Work
-A skin is a collection of PNG sprites organized by category (buildings, terrain, resources, entities, floors, effects). The game looks for skins as `.skin.zip` files in the `skins/` folder — any ZIP placed there is automatically detected and appears in the dropdown.
+A skin is a collection of PNG sprites organized by category (buildings, terrain, resources, entities, floors, effects). The game looks for skins as `.skin.zip` files in the `skins/` folder - any ZIP placed there is automatically detected and appears in the dropdown.
 
 When a skin is active, the renderer draws sprites instead of ASCII characters. Any object without a sprite gracefully falls back to its ASCII representation, so partial skins work fine.
 
@@ -694,19 +695,19 @@ Skins can include multiple colonist sprites (`colonist_1.png`, `colonist_2.png`,
 ### Using the Skin Editor
 Launch from the start screen. The editor is a full pixel-art painting tool:
 
-- **Canvas sizes** — 8x8 through 128x128 pixels
-- **Tools** — Draw, Erase, Fill (flood-fill), Pick Color (eyedropper)
-- **Transparency** — Erase to transparent; checkerboard background shows alpha. Transparent pixels let floors/terrain show through in-game.
-- **Zoom/Pan** — Scroll wheel to zoom, middle-click drag to pan, +/-/0 keys
-- **Undo/Redo** — Ctrl+Z / Ctrl+Y (up to 50 levels)
-- **Copy/Paste** — Copy a sprite and paste it as a starting point for another object (C/V keys)
-- **Object palette** — Browse all game objects by category; select one to paint its sprite
-- **Colonist variants** — Add as many numbered variants as you want; remove with the ✕ button
-- **Auto-save** — Work is saved to browser storage after every stroke; switching objects preserves progress
+- **Canvas sizes** - 8x8 through 128x128 pixels
+- **Tools** - Draw, Erase, Fill (flood-fill), Pick Color (eyedropper)
+- **Transparency** - Erase to transparent; checkerboard background shows alpha. Transparent pixels let floors/terrain show through in-game.
+- **Zoom/Pan** - Scroll wheel to zoom, middle-click drag to pan, +/-/0 keys
+- **Undo/Redo** - Ctrl+Z / Ctrl+Y (up to 50 levels)
+- **Copy/Paste** - Copy a sprite and paste it as a starting point for another object (C/V keys)
+- **Object palette** - Browse all game objects by category; select one to paint its sprite
+- **Colonist variants** - Add as many numbered variants as you want; remove with the ✕ button
+- **Auto-save** - Work is saved to browser storage after every stroke; switching objects preserves progress
 
 ### Exporting & Importing
-- **Export .zip** — Downloads your skin as a single `.skin.zip` file. Drop it in the `skins/` folder to use it.
-- **Import .zip** — Load an existing `.skin.zip` into the editor to modify sprites and re-export.
+- **Export .zip** - Downloads your skin as a single `.skin.zip` file. Drop it in the `skins/` folder to use it.
+- **Import .zip** - Load an existing `.skin.zip` into the editor to modify sprites and re-export.
 
 ### Skin File Structure
 ```
