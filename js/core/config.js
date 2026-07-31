@@ -247,7 +247,10 @@ export const COLONIST_CONFIG = {
     deathMoodPenalty: -40,           // mood penalty other colonists get when someone dies
     deathMoodDuration: 2000,         // how long grief lasts (ticks)
     nameColors: ['#ffff00', '#00ffff', '#00ff00'], // cycling colors for colonist names
-    magicBiasChance: 0.3,           // probability a new colonist gets a magic school bias
+    magicBiasChance: 0.3,            // probability a new colonist gets a magic school bias
+    baseHealthRegen: 0.03,           // health recovered per tick
+    healthRegenWhileIdle: 2.0,       // multiplier to health regen when colonist is idle
+    healthRegenWhileSleeping: 3.0,   // multiplier to health regen when sleeping
 };
 
 // To add a magic school: add entry here. Colonists auto-get it, info panel shows it, spells reference it.
@@ -731,9 +734,9 @@ export const ARTIFACTS = {
     },
     living_bark_armor: {
         name: 'Living Bark Armor',
-        damageReduction: 0.25,
-        combat: { damageReduction: 0.2 },
-        expedition: { damageReduction: 0.25 },
+        damageReduction: 0.25, healthRegen: 0.07,
+        combat: { damageReduction: 0.2, healthRegen: 0.05 },
+        expedition: { damageReduction: 0.25, healthRegen: 0.07 },
     },
     heartwood_staff: {
         name: 'Heartwood Staff',
@@ -803,7 +806,7 @@ export const POTIONS = {
         hpThreshold: 0.4,             // fraction of maxHp
         effect: 'heal',
         healAmount: 50,               // HP restored
-        cooldown: 200,                // ticks between uses
+        cooldown: 30,                // ticks between uses
     },
     speed_potion: {
         name: 'Speed Potion',

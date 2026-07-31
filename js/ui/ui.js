@@ -642,6 +642,7 @@ export class UI {
             hpOnKill: { label: 'HP on Kill', fmt: v => `+${v}` },
             thornsDamage: { label: 'Thorns', fmt: v => `${v}` },
             spellDamageBonus: { label: 'Spell Dmg', fmt: v => `+${Math.round(v * 100)}%` },
+            healthRegen: { label: 'Health Regen', fmt: v => `+${v}/tick` },
             manaRegen: { label: 'Mana Regen', fmt: v => `+${v}/tick` },
             spellCostReduction: { label: 'Spell Cost', fmt: v => `-${Math.round(v * 100)}%` },
             tomeStudySpeed: { label: 'Tome Speed', fmt: v => `${v}x` },
@@ -699,6 +700,8 @@ export class UI {
         }
         if (art.combat) {
             const parts = [];
+            if (art.combat.healthRegen > 0) parts.push('heals you over time');
+            if (art.combat.healthRegen < 0) parts.push('hurts you over time');
             if (art.combat.targetPriority > 0) parts.push('draws enemy fire');
             if (art.combat.targetPriority < 0) parts.push('enemies avoid you');
             if (art.combat.damageReduction) parts.push(`-${Math.round(art.combat.damageReduction * 100)}% dmg taken`);

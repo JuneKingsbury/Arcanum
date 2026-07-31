@@ -48,7 +48,7 @@ export class CombatSystem {
                 if (entry.minRaidLevel && raidLevel < entry.minRaidLevel) continue;
                 const [minCount, maxCount] = entry.count;
                 const count = minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
-                for (let i = 0; i < count && spawned < numRaiders + 3; i++) {
+                for (let i = 0; i < count && spawned < numRaiders; i++) {
                     const pos = getEdgePosition(edge, spawned);
                     const entity = createRaidEntity(entry.entity, pos.x, pos.y, raidLevel, raidType.scaling);
                     if (entity) {

@@ -131,6 +131,7 @@ export function updateColonist(colonist, game) {
 
     tryUsePotions(colonist, game);
     tickPotionEffects(colonist, game);
+    updateHealth(colonist);
     updateMana(colonist);
     tryAutocastSpells(colonist, game);
 
@@ -163,6 +164,9 @@ export function updateColonist(colonist, game) {
         if (colonist.thoughts && colonist.thoughts.some(t => t.text === 'Freezing outside')) {
             game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.freezingChar, color: COMBAT_VISUALS.freezingColor, ttl: COMBAT_VISUALS.freezingTtl });
         }
+        if (colonist.maxHp > 0 && colonist.hp < colonist.maxHp && colonist.hp > 0) {
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.healTickChar, color: COMBAT_VISUALS.healTickColor, ttl: COMBAT_VISUALS.healTickTtl });
+        }
         if (colonist.maxMana > 0 && colonist.mana < colonist.maxMana && colonist.mana > 0) {
             game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.manaRegenChar, color: COMBAT_VISUALS.manaRegenColor, ttl: COMBAT_VISUALS.manaRegenTtl });
         }
@@ -189,6 +193,15 @@ function updateNeeds(colonist, game) {
             }
         }
     }
+}
+
+function updateHealth(colonist) {
+    if (colonist.hp >= colonist.maxHp) return;
+    let regen = COLONIST_CONFIG.baseHealthRegen;
+    regen += getEquipmentStat(colonist, 'healthRegen');
+    if (colonist.state === 'sleeping') regen *= COLONIST_CONFIG.healthRegenWhileSleeping;
+    else if (colonist.state === 'idle') regen *= COLONIST_CONFIG.healthRegenWhileIdle;
+    colonist.hp = Math.min(colonist.maxHp, colonist.hp + regen);
 }
 
 function updateMana(colonist) {
