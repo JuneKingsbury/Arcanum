@@ -911,7 +911,7 @@ export class UI {
     _buildSlotSelect(colonist, slot) {
         const overlayStyle = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
         const SLOT_CONFIG = {
-            weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => { const cd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown; return `${w.damage} dmg (${(w.damage / cd).toFixed(1)}/t)`; } },
+            weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => { const cd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown; return `${w.damage}d (${(w.damage / cd).toFixed(1)} dps)`; } },
             armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => getItemStatLines(a).join(', ') },
             helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => getItemStatLines(h).join(', ') },
             tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => getItemStatLines(t).join(', ') },
@@ -1039,7 +1039,7 @@ export class UI {
             const baseCd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
             const dpt = (w.damage / baseCd).toFixed(1);
             let tip = w.description ? `${w.description} ` : '';
-            tip += `${w.damage} dmg, ${dpt}/t (cd ${baseCd})`;
+            tip += `${w.damage}d (${dpt} dps)`;
             if (w.ranged) tip += `, range ${w.range}`;
             const extras = getItemStatLines({ ...w, damage: undefined, ranged: undefined, range: undefined });
             if (extras.length) tip += `, ${extras.join(', ')}`;
@@ -1187,7 +1187,7 @@ export class UI {
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${label}</div>`;
             html += `<div class="info-row">HP: ${r.hp}/${r.maxHp}</div>`;
-            html += `<div class="info-row">Damage: ${r.weapon?.name ? r.weapon.name + ' ' : ''}(${r.damage} dmg, ${(r.damage / (r.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)}/tick)</div>`;
+            html += `<div class="info-row">Damage: ${r.weapon?.name ? r.weapon.name + ' ' : ''}${r.damage}d (${(r.damage / (r.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)} dps)</div>`;
             html += `<div class="info-row">State: ${r.fleeing ? 'Fleeing' : 'Attacking'}</div>`;
             if (r.roles && r.roles.length > 0) html += getRoleInfoHtml(r);
             html += `</div>`;
@@ -1264,7 +1264,7 @@ export class UI {
             html += `<div style="border-bottom:1px solid #444;margin-bottom:6px;padding-bottom:6px;">`;
             html += `<div class="info-header" style="color:${color};">${name}</div>`;
             html += `<div class="info-row">HP: ${s.hp}/${s.maxHp}</div>`;
-            html += `<div class="info-row">Damage: ${s.damage} (${(s.damage / (s.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)}/tick)</div>`;
+            html += `<div class="info-row">Damage: ${s.damage}d (${(s.damage / (s.attackCooldown || COLONIST_CONFIG.baseAttackCooldown)).toFixed(1)} dps)</div>`;
             if (s.roles && s.roles.length > 0) {
                 html += getRoleInfoHtml(s);
             } else {
@@ -1773,7 +1773,8 @@ export class UI {
             html += '<div class="info-row" style="color:#cc8888;margin-bottom:4px;"><b>Weapons:</b></div>';
             weapons.forEach((w, i) => {
                 const extras = getItemStatLines({ ...w, damage: undefined });
-                let stats = `Dmg: ${w.damage}`;
+                const cd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown;
+                let stats = `${w.damage}d (${(w.damage / cd).toFixed(1)} dps)`;
                 if (extras.length) stats += `, ${extras.join(', ')}`;
                 html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(w)}">${this._itemIcon(w.key, 'weapon')}${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${w.name.replace(/'/g, "\\\\'")}?')){window.game.discardWeapon(${i})}">♻</button></div>`;
             });
@@ -2353,12 +2354,12 @@ function getWeaponTooltip(colonist) {
     const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
     const baseDpt = (w.damage / baseCd).toFixed(1);
     let tip = w.description ? `${w.description} ` : '';
-    tip += `${w.damage} dmg`;
+    tip += `${w.damage}d`;
     if (baseCd !== effCd) {
         const effDpt = (w.damage / effCd).toFixed(1);
-        tip += `, base ${baseDpt}/t → ${effDpt}/t (cd ${baseCd}→${effCd})`;
+        tip += `, ${baseDpt} dps → ${effDpt} dps`;
     } else {
-        tip += `, ${baseDpt}/t (cd ${baseCd})`;
+        tip += ` (${baseDpt} dps)`;
     }
     if (w.ranged) tip += `, range ${w.range}`;
     const extras = getItemStatLines({ ...w, damage: undefined, ranged: undefined, range: undefined });
