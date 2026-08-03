@@ -1,5 +1,28 @@
 import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES, EQUIPMENT_OVERLAY_OFFSETS } from '../core/config.js';
 
+const MATERIAL_ITEMS = [
+    { key: 'wood', char: '≡', color: '#8b6b3a', desc: 'Wood resource' },
+    { key: 'stone', char: '○', color: '#999999', desc: 'Stone resource' },
+    { key: 'planks', char: '=', color: '#cc9944', desc: 'Planks (crafted from wood)' },
+    { key: 'bricks', char: '#', color: '#b2463c', desc: 'Bricks (crafted from stone)' },
+    { key: 'iron_ore', char: '●', color: '#887766', desc: 'Raw iron ore' },
+    { key: 'iron', char: '■', color: '#aaaaaa', desc: 'Smelted iron' },
+    { key: 'runite', char: '◆', color: '#44ccff', desc: 'Runite (magical metal)' },
+    { key: 'leather', char: '~', color: '#8b5e3c', desc: 'Leather (tanned from hides)' },
+    { key: 'hides', char: '~', color: '#6b4e2c', desc: 'Raw animal hides' },
+    { key: 'wool', char: '○', color: '#eeeecc', desc: 'Wool (from sheep)' },
+    { key: 'void_essence', char: '✦', color: '#9933ff', desc: 'Void essence (from nexus waves)' },
+    { key: 'food', char: '♦', color: '#88cc44', desc: 'Cooked food' },
+    { key: 'meat', char: '♦', color: '#cc5544', desc: 'Raw meat' },
+    { key: 'wheat', char: '|', color: '#ddaa33', desc: 'Wheat (farm crop)' },
+    { key: 'berries', char: '●', color: '#cc3366', desc: 'Berries (farm crop)' },
+    { key: 'corn', char: '|', color: '#eebb33', desc: 'Corn (farm crop)' },
+    { key: 'potatoes', char: '●', color: '#bb8844', desc: 'Potatoes (farm crop)' },
+    { key: 'moonbloom', char: '❀', color: '#aaccff', desc: 'Moonbloom (rare crop)' },
+    { key: 'eggs', char: '○', color: '#ffffcc', desc: 'Eggs (from chickens)' },
+    { key: 'milk', char: '○', color: '#ffffff', desc: 'Milk (from cows)' },
+];
+
 const CANVAS_SIZES = [8, 16, 32, 64, 128];
 const STORAGE_PREFIX = 'convocation_skin_editor_';
 const CHECKERBOARD_LIGHT = '#3a3a3a';
@@ -9,6 +32,8 @@ const MAX_ZOOM = 64;
 
 const ENTITY_SPECIALS = [
     { key: 'colonist_drafted', char: '@', color: '#ff4444', desc: 'Colonist in combat mode' },
+    { key: 'colonist_sleeping', char: '@', color: '#6688cc', desc: 'Colonist sleeping in bed' },
+    { key: 'colonist_sleeping_ground', char: '@', color: '#445588', desc: 'Colonist sleeping on ground (no bed)' },
     { key: 'golem', char: 'G', color: '#cc8833', desc: 'Default golem sprite' },
     { key: 'farmer_golem', char: 'G', color: '#55aa33', desc: 'Farmer Golem' },
     { key: 'miner_golem', char: 'G', color: '#888888', desc: 'Miner Golem' },
@@ -392,7 +417,7 @@ class SkinEditor {
     }
 
     _buildCategoryFilter() {
-        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Floors', 'Farms', 'Effects', 'Icons', 'Overlays', 'Equipment Worn'];
+        const categories = ['Buildings', 'Terrain', 'Resources', 'Entities', 'Items', 'Materials', 'Floors', 'Farms', 'Effects', 'Icons', 'Overlays', 'Equipment Worn'];
         const container = document.getElementById('se-category-filter');
         container.innerHTML = categories.map(c =>
             `<button class="bp-cat${c === this.categoryFilter ? ' active' : ''}" data-cat="${c}">${c}</button>`
@@ -460,6 +485,11 @@ class SkinEditor {
                 }
                 for (const [key, def] of Object.entries(SPELL_TOMES)) {
                     items.push({ key, char: def.char || ITEM_CHARS.tome.char, color: def.charColor || ITEM_CHARS.tome.color, desc: `Tome: ${def.name}`, category: 'items' });
+                }
+                break;
+            case 'Materials':
+                for (const item of MATERIAL_ITEMS) {
+                    items.push({ key: item.key, char: item.char, color: item.color, desc: item.desc, category: 'materials' });
                 }
                 break;
             case 'Floors':

@@ -27,7 +27,7 @@ export class OverlayRenderer {
         const ch = charHeight;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        if (game.input && game.input.mode === 'build') {
+        if (game.input && (game.input.mode === 'build' || game.input.mode === 'zone')) {
             this._renderBuildGrid(ctx, cw, ch, this.canvas.width, this.canvas.height);
         }
 
@@ -78,14 +78,18 @@ export class OverlayRenderer {
 
     _renderBuildGrid(ctx, cw, ch, canvasWidth, canvasHeight) {
         ctx.save();
+        ctx.translate(1, 1);
         ctx.strokeStyle = RENDER_CONFIG.buildGridColor;
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
         ctx.beginPath();
-        for (let x = 0; x <= canvasWidth; x += cw) {
+        for (let i = 0; i <= Math.ceil(canvasWidth / cw); i++) {
+            const x = Math.round(i * cw);
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvasHeight);
         }
-        for (let y = 0; y <= canvasHeight; y += ch) {
+        for (let i = 0; i <= Math.ceil(canvasHeight / ch); i++) {
+            const y = Math.round(i * ch);
             ctx.moveTo(0, y);
             ctx.lineTo(canvasWidth, y);
         }

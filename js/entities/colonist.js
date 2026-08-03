@@ -252,10 +252,11 @@ function checkCriticalAlerts(colonist, game) {
     if (!colonist._alertFlags) colonist._alertFlags = {};
     const flags = colonist._alertFlags;
 
-    if (colonist.needs.hunger < 30 && !flags.hunger) {
+    const hasFood = game.resources.stockpile.food > 0 || game.resources.getFoodstuffTotal() > 0;
+    if (colonist.needs.hunger < 30 && !flags.hunger && !hasFood) {
         flags.hunger = true;
-        game.notifications.push({ text: `${colonist.name} is getting hungry!`, tick: game.tick, type: 'warning' });
-    } else if (colonist.needs.hunger >= 40) {
+        game.notifications.push({ text: `${colonist.name} is hungry and there's no food!`, tick: game.tick, type: 'warning' });
+    } else if (colonist.needs.hunger >= 40 || hasFood) {
         flags.hunger = false;
     }
 
@@ -1153,6 +1154,16 @@ function updateDrafted(colonist, game) {
     if (!colonist.drafted) {
         colonist.state = 'idle';
         return;
+    }
+    const threat = findNearestHostile(colonist, game);
+    if (threat) {
+        const dist = manhattanDist(colonist.x, colonist.y, threat.x, threat.y);
+        const wpnRange = colonist.weapon && colonist.weapon.ranged ? colonist.weapon.range : 0;
+        const autoEngageDist = Math.max(COLONIST_CONFIG.fightEngageDistance, wpnRange);
+        if (dist <= autoEngageDist) {
+            colonist.state = 'fighting';
+            return;
+        }
     }
     if (colonist.moveCooldown > 0) {
         colonist.moveCooldown--;

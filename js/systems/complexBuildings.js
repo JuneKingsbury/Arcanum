@@ -43,7 +43,7 @@ export function getComplexStructureAt(game, x, y) {
 export function getCraftSpeedBonus(game, colonist) {
     if (!game.activeComplexStructures) return 1;
     for (const s of game.activeComplexStructures) {
-        if (s.effect.craftSpeedMult && s.effect.craftCategory) {
+        if (s.effect.craftSpeedMult && (s.effect.craftCategory || s.effect.craftCategories)) {
             const dist = Math.abs(colonist.x - s.x) + Math.abs(colonist.y - s.y);
             if (dist <= 3) return s.effect.craftSpeedMult;
         }

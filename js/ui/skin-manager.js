@@ -83,10 +83,14 @@ export class SkinManager {
         return this._sprites.get('items:' + itemKey) || null;
     }
 
+    getMaterialSprite(materialKey) {
+        return this._sprites.get('materials:' + materialKey) || null;
+    }
+
     getItemSpriteDataURL(itemKey) {
         if (!this._itemDataURLCache) this._itemDataURLCache = new Map();
         if (this._itemDataURLCache.has(itemKey)) return this._itemDataURLCache.get(itemKey);
-        const sprite = this.getItemSprite(itemKey);
+        const sprite = this.getItemSprite(itemKey) || this.getMaterialSprite(itemKey);
         if (!sprite) { this._itemDataURLCache.set(itemKey, null); return null; }
         const c = document.createElement('canvas');
         c.width = sprite.width || sprite.naturalWidth || 16;
@@ -109,6 +113,10 @@ export class SkinManager {
             if (s) return s;
         }
         return this._sprites.get('entities:colonist') || null;
+    }
+
+    getColonistSleepingSprite() {
+        return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
     getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey) {

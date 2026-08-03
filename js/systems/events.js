@@ -240,11 +240,16 @@ export class EventSystem {
         if (!this.pendingEvent || this.pendingEvent.type !== 'trade') return false;
         const data = this.pendingEvent.data;
 
+        const markupMult = getPedestalEffect(game, 'tradeMarkupMult');
+        const tradeRoutesMult = game.research.isResearched('trade_routes') ? (130 / 140) : 1;
+        const effectiveMarkup = TRADER_MARKUP * markupMult * tradeRoutesMult;
+        const effectiveDiscount = game.research.isResearched('trade_routes') ? 0.75 : TRADER_DISCOUNT;
+
         let offerValue = 0;
         for (const [res, amt] of Object.entries(offering)) {
             if (amt <= 0) continue;
             if ((game.resources.stockpile[res] || 0) < amt) return false;
-            offerValue += (TRADE_VALUES[res] || 1) * amt * TRADER_DISCOUNT;
+            offerValue += (TRADE_VALUES[res] || 1) * amt * effectiveDiscount;
         }
 
         let requestValue = 0;
@@ -255,7 +260,7 @@ export class EventSystem {
                 requestValue += TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem].tradeValue;
             } else {
                 if ((data.traderResources[res] || 0) < amt) return false;
-                requestValue += (TRADE_VALUES[res] || 1) * amt * TRADER_MARKUP;
+                requestValue += (TRADE_VALUES[res] || 1) * amt * effectiveMarkup;
             }
         }
 

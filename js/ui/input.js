@@ -25,6 +25,7 @@ export class InputHandler {
         this.designateMode = 'chop';
         this.deconstructMode = false;
         this.destroyMode = false;
+        this.rallyMode = false;
         this.spellTargeting = null;
 
         this.charWidth = 0;
@@ -509,6 +510,12 @@ export class InputHandler {
         if (btn) btn.classList.toggle('active', this.touchPanMode);
     }
 
+    toggleRallyMode() {
+        this.rallyMode = !this.rallyMode;
+        const btn = document.getElementById('touch-rally-btn');
+        if (btn) btn.classList.toggle('active', this.rallyMode);
+    }
+
     designateArea(start, end) {
         const minX = Math.min(start.x, end.x), maxX = Math.max(start.x, end.x);
         const minY = Math.min(start.y, end.y), maxY = Math.max(start.y, end.y);
@@ -570,6 +577,10 @@ export class InputHandler {
     handleLeftClick(pos) {
         if (this.spellTargeting) {
             this.executeSpellTarget(pos);
+            return;
+        }
+        if (this.rallyMode) {
+            this.handleRightClick(pos);
             return;
         }
         if (this.destroyMode) {

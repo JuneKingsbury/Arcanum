@@ -510,6 +510,8 @@ body {
 
 #game-canvas {
     cursor: crosshair;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 #notifications {
@@ -541,6 +543,9 @@ body {
     border-radius: 3px;
     font-size: 1em;
     opacity: 0.9;
+    background: #222233;
+    color: #cccccc;
+    border: 1px solid #444455;
 }
 
 .notif-danger { background: #442222; color: #ff6666; border: 1px solid #663333; }

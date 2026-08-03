@@ -750,7 +750,8 @@ const arcaneMethods = {
         const cat = categoryHint || this._getItemCategory(itemKey);
         if (!cat) return '';
         const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || HELMETS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey]);
-        const ch = itemDef?.char || ITEM_CHARS[cat]?.char || '?';
+        const ch = itemDef?.char || ITEM_CHARS[cat]?.char;
+        if (!ch) return '';
         const color = itemDef?.charColor || ITEM_CHARS[cat]?.color || '#aaa';
         return `<span style="color:${color};font-weight:bold;margin-right:2px;">${ch}</span>`;
     },

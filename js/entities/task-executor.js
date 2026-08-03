@@ -1,4 +1,4 @@
-import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS } from '../core/config.js';
+import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH } from '../core/config.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
@@ -238,12 +238,25 @@ export function completeTask(colonist, task, game) {
             if (researchMult > 0) researchPts = Math.floor(researchPts * researchMult);
             const completedKey = game.research.addProgress(researchPts);
             if (completedKey) {
-                const name = completedKey.replace(/_/g, ' ');
+                const tech = RESEARCH[completedKey];
+                const name = tech?.name || completedKey.replace(/_/g, ' ');
+                const desc = tech?.description || '';
                 game.notifications.push({ text: `Research complete: ${name}!`, tick: game.tick, type: 'success' });
                 game.eventLog.add(game, `Research unlocked: ${name}`, 'success', null);
                 game.story.checkMilestone(`research_${completedKey}`, game);
                 game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.researchCompleteChar, color: COMBAT_VISUALS.researchCompleteColor, ttl: COMBAT_VISUALS.researchCompleteTtl });
                 window.soundManager?.playSFX('research_complete');
+                if (!game.events.pendingEvent) {
+                    game.events.pendingEvent = {
+                        type: 'research_complete',
+                        text: `Research Complete: ${name}!${desc ? ' — ' + desc : ''}`,
+                        choices: ['Dismiss'],
+                    };
+                    if (game.settings.pauseOnResearch && !game.paused) {
+                        game.togglePause();
+                        game._eventPaused = true;
+                    }
+                }
             }
             let tomeRate = game.research.activeResearch
                 ? MAGIC_STUDY_CONFIG.studyTicksPerProgress

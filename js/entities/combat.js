@@ -189,10 +189,14 @@ function updateRaider(raider, game) {
     }
 
     raider.pathAge = (raider.pathAge || 0) + 1;
-    if (!raider.path || raider.path.length === 0 || raider.pathAge > PATHFINDING_CONFIG.raiderRepathInterval) {
+    const targetMoved = raider._lastTargetX !== undefined &&
+        (Math.abs(nearest.x - raider._lastTargetX) + Math.abs(nearest.y - raider._lastTargetY)) > 3;
+    if (!raider.path || raider.path.length === 0 || raider.pathAge > PATHFINDING_CONFIG.raiderRepathInterval || targetMoved) {
         raider.path = findPathForEnemies(game.map, raider.x, raider.y, nearest.x, nearest.y) || [];
         raider.pathAge = 0;
     }
+    raider._lastTargetX = nearest.x;
+    raider._lastTargetY = nearest.y;
 
     if (raider.path.length > 0) {
         const next = raider.path[0];

@@ -50,11 +50,18 @@ export class Renderer {
     }
 
     _resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
         const w = CONFIG.VIEWPORT_WIDTH * this.charWidth;
         const h = CONFIG.VIEWPORT_HEIGHT * this.charHeight;
-        if (this.canvas.width !== w || this.canvas.height !== h) {
-            this.canvas.width = w;
-            this.canvas.height = h;
+        const bw = Math.round(w * dpr);
+        const bh = Math.round(h * dpr);
+        if (this.canvas.width !== bw || this.canvas.height !== bh) {
+            this.canvas.width = bw;
+            this.canvas.height = bh;
+            this.canvas.style.width = w + 'px';
+            this.canvas.style.height = h + 'px';
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            this.ctx.imageSmoothingEnabled = false;
             this.ctx.font = `${this.fontSize}px 'Courier New', monospace`;
             this.ctx.textBaseline = 'top';
         }
@@ -67,6 +74,11 @@ export class Renderer {
         const sm = this.skinManager;
         if (entity) {
             if (entity.type === 'colonist') {
+                if (entity.sleeping) {
+                    const key = entity.sleepingInBed ? 'colonist_sleeping' : 'colonist_sleeping_ground';
+                    const s = sm.getSprite('entities', key) || sm.getColonistSleepingSprite();
+                    if (s) return s;
+                }
                 if (entity.armorKey || entity.helmetKey) {
                     const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey);
                     if (comp) return comp;
@@ -129,14 +141,17 @@ export class Renderer {
     // (Bayer matrix) dithering. Each mask is a 1-tile canvas with white pixels where
     // the neighbor terrain should "bleed through". The 4x4 Bayer matrix provides a
     // perceptually even dot pattern that avoids banding artifacts at low densities.
-    _generateDitherMasks() {
+    _generateDitherMasks(ditherDepthFraction, blockSize) {
         const cw = this.charWidth;
         const ch = this.charHeight;
-        const depth = Math.max(3, Math.round(cw * RENDER_CONFIG.ditherDepth));
+        const depthFrac = ditherDepthFraction ?? RENDER_CONFIG.ditherDepth;
+        const bs = blockSize || 1;
+        const depth = Math.max(1, Math.round(cw * depthFrac));
         this._ditherTileSize = cw;
+        this._ditherDepthFraction = depthFrac;
+        this._ditherBlockSize = bs;
         this._ditherMasks = {};
 
-        // 4x4 Bayer threshold matrix — values 0-15 define the order pixels "turn on"
         const bayer = [
             [ 0,  8,  2, 10],
             [12,  4, 14,  6],
@@ -154,7 +169,8 @@ export class Renderer {
 
             for (let y = 0; y < ch; y++) {
                 for (let x = 0; x < cw; x++) {
-                    // Distance from the edge that faces the neighbor tile
+                    const bx = Math.floor(x / bs);
+                    const by = Math.floor(y / bs);
                     let edgeDist;
                     if (dir === 'north') edgeDist = y;
                     else if (dir === 'south') edgeDist = (ch - 1) - y;
@@ -163,11 +179,9 @@ export class Renderer {
 
                     if (edgeDist >= depth) continue;
 
-                    // t=0 at edge, t=1 at depth boundary — intensity fades as we move inward
                     const t = edgeDist / depth;
                     const intensity = 0.5 * (1 - t);
-                    // Normalize Bayer value to 0..1 range (+0.5 centers the threshold)
-                    const threshold = (bayer[y % 4][x % 4] + 0.5) / 16;
+                    const threshold = (bayer[by % 4][bx % 4] + 0.5) / 16;
                     if (intensity > threshold) {
                         const idx = (y * cw + x) * 4;
                         data[idx] = 255;
@@ -206,10 +220,17 @@ export class Renderer {
     // Draws dithered terrain transitions on edges where a tile borders a different
     // terrain type. For each cardinal neighbor with a different terrain, composites
     // the neighbor's sprite through the directional dither mask (from _generateDitherMasks).
-    _drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map) {
+    _drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map, game) {
         if (!RENDER_CONFIG.terrainDithering) return;
-        if (!this._ditherMasks || this._ditherTileSize !== cw) {
-            this._generateDitherMasks();
+        const distanceMap = { none: 0, minimal: 0.12, light: 0.2, normal: 0.3, heavy: 0.45, extreme: 0.6 };
+        const qualityMap = { chunky: 4, low: 3, medium: 2, high: 1 };
+        const distSetting = (game && game.settings.ditherDistance) || 'normal';
+        if (distSetting === 'none') return;
+        const depthFrac = distanceMap[distSetting] ?? 0.3;
+        const qualSetting = (game && game.settings.ditherQuality) || 'high';
+        const blockSize = qualityMap[qualSetting] ?? 1;
+        if (!this._ditherMasks || this._ditherTileSize !== cw || this._ditherDepthFraction !== depthFrac || this._ditherBlockSize !== blockSize) {
+            this._generateDitherMasks(depthFrac, blockSize);
             this._ditherCache.clear();
         }
 
@@ -376,7 +397,9 @@ export class Renderer {
                     color = c.nameColor || TILE_COLORS.colonist;
                 }
                 const showEq = game.settings.showEquipmentOverlays;
-                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
+                const isSleeping = c.state === 'sleeping';
+                const sleepingInBed = isSleeping && c.assignedBed && c.x === c.assignedBed.x && c.y === c.assignedBed.y;
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, sleeping: isSleeping, sleepingInBed, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
                 if (isEntityMoving(c)) {
                     movingEntities.push({ entity: c, ...entData });
                 } else {
@@ -505,6 +528,10 @@ export class Renderer {
                     if (overlaySprite) {
                         const ground = this._resolveGroundSprite(tile, game.weather.season);
                         if (ground) ctx.drawImage(ground, px, py, cw, ch);
+                        if (tile.structure) {
+                            const structSprite = this.skinManager.getSprite('buildings', tile.structure);
+                            if (structSprite) ctx.drawImage(structSprite, px, py, cw, ch);
+                        }
                         if (entity) {
                             const entitySprite = this._resolveSprite(tile, entity, game.weather.season);
                             if (entitySprite) {
@@ -540,12 +567,20 @@ export class Renderer {
                                 const ground = this._resolveGroundSprite(tile, game.weather.season);
                                 if (ground) ctx.drawImage(ground, px, py, cw, ch);
                             }
+                            const canDither = !tile.structure && !tile.resource && !tile.zone && !tile.floor;
+                            if (entity) {
+                                if (canDither) this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map, game);
+                                if (tile.structure) {
+                                    const structSprite = this.skinManager.getSprite('buildings', tile.structure);
+                                    if (structSprite) ctx.drawImage(structSprite, px, py, cw, ch);
+                                }
+                            }
                             const shakeActive = game.settings.showOverlays && game.settings.enableScreenShake && entity && entity._atkShakeUntil > game.tick;
                             const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
                             const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
                             ctx.drawImage(sprite, px + shakeX, py + shakeY, cw, ch);
-                            if (!tile.structure && !tile.resource && !tile.zone && !entity && !tile.floor) {
-                                this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map);
+                            if (!entity && canDither) {
+                                this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map, game);
                             }
                             if (entity && entity.type === 'colonist') {
                                 ctx.fillStyle = entity.color;
@@ -677,10 +712,6 @@ export class Renderer {
             const rpy = Math.round(sy * ch) + shakeY;
             if (this.skinManager.isActive) {
                 const destTile = map[ent.y]?.[ent.x];
-                if (destTile) {
-                    const ground = this._resolveGroundSprite(destTile, game.weather.season);
-                    if (ground) ctx.drawImage(ground, rpx - shakeX, rpy - shakeY, cw, ch);
-                }
                 const sprite = this._resolveSprite(destTile || {}, me, game.weather.season);
                 if (sprite) {
                     ctx.drawImage(sprite, rpx, rpy, cw, ch);

@@ -48,6 +48,7 @@ class Game {
             autoPauseHostile: true,
             autoPauseEvent: true,
             pauseOnDeath: false,
+            pauseOnResearch: true,
             uiFontSize: 12,
             autoCookTarget: 0,
             showOverlays: true,
@@ -77,7 +78,13 @@ class Game {
             musicVolume: 70,
             sfxVolume: 80,
             temperatureUnit: 'F',
+            ditherDistance: 'light',
+            ditherQuality: 'medium',
         };
+        try {
+            const saved = JSON.parse(localStorage.getItem('colony_settings'));
+            if (saved) Object.assign(this.settings, saved);
+        } catch (e) {}
         this._fpsFrames = 0;
         this._fpsLastTime = 0;
         this._fpsDisplay = 0;
@@ -228,6 +235,7 @@ class Game {
         this.settings.activeSkin = skinName;
         localStorage.setItem('convocation_skin', skinName);
         this.renderer._ditherCache.clear();
+        if (this.ui) this.ui._buildingSpriteCache = null;
     }
 
     setLayoutMode(mode) {
@@ -701,6 +709,8 @@ class Game {
                 this.camera.centerOn(evt.data.x, evt.data.y);
             }
             this.events.pendingEvent = null;
+        } else if (evt.type === 'research_complete') {
+            this.events.pendingEvent = null;
         }
         this._unpauseFromEvent();
     }
@@ -1169,6 +1179,10 @@ class Game {
         } else if (entityType === 'position') {
             this.camera.centerOn(entityId.x, entityId.y);
         }
+    }
+
+    saveSettingsToStorage() {
+        try { localStorage.setItem('colony_settings', JSON.stringify(this.settings)); } catch (e) {}
     }
 
     save() {
