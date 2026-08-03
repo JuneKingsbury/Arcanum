@@ -3,6 +3,62 @@ import { createColonist, addThought } from '../entities/colonist.js';
 import { createWildAnimal } from '../entities/entity-factory.js';
 import { getPedestalEffect } from './artifacts.js';
 
+/**
+ * Computes effective trade rates for the current game state.
+ * Rates are affected by: Trade Routes research, pedestal artifacts (Haggler's Coin, Merchant's Ring).
+ *
+ * @param {object} game - Game instance (needs game.research, pedestal effects)
+ * @returns {{ markup: number, discount: number }}
+ *   markup  - multiplier on item base value when BUYING from trader (higher = more expensive)
+ *   discount - multiplier on item base value when SELLING to trader (lower = less value received)
+ */
+export function getTradeRates(game) {
+    const markupMult = getPedestalEffect(game, 'tradeMarkupMult');
+    const tradeRoutesMult = game.research.isResearched('trade_routes') ? (110 / 120) : 1;
+    return {
+        markup: TRADER_MARKUP * markupMult * tradeRoutesMult,
+        discount: game.research.isResearched('trade_routes') ? 0.85 : TRADER_DISCOUNT,
+    };
+}
+
+/**
+ * Calculates gold values for a trade offer and request.
+ * Gold is always valued 1:1. Resources use base value × rate.
+ * Special keys: '__exclusive' (trader's unique item), '__gold' (direct gold request).
+ *
+ * @param {object} offer - { resource: amount } the player is giving
+ * @param {object} request - { resource: amount } the player wants (may include __exclusive, __gold)
+ * @param {number} goldOffer - gold the player is spending
+ * @param {{ markup: number, discount: number }} rates - from getTradeRates()
+ * @param {object} tradeData - pendingEvent.data (traderResources, exclusiveItem, traderGold)
+ * @returns {{ offerVal: number, resourceOfferVal: number, reqVal: number }}
+ */
+export function computeTradeValues(offer, request, goldOffer, rates, tradeData) {
+    let resourceOfferVal = 0;
+    for (const [res, amt] of Object.entries(offer)) {
+        if (amt <= 0) continue;
+        resourceOfferVal += (TRADE_VALUES[res] || 1) * amt * rates.discount;
+    }
+
+    let reqVal = 0;
+    for (const [res, amt] of Object.entries(request)) {
+        if (amt <= 0) continue;
+        if (res === '__exclusive') {
+            reqVal += TRADER_EXCLUSIVE_ITEMS[tradeData.exclusiveItem]?.tradeValue || 0;
+        } else if (res === '__gold') {
+            reqVal += amt;
+        } else {
+            reqVal += (TRADE_VALUES[res] || 1) * amt * rates.markup;
+        }
+    }
+
+    return {
+        offerVal: resourceOfferVal + goldOffer,
+        resourceOfferVal,
+        reqVal,
+    };
+}
+
 export class EventSystem {
     constructor() {
         this.cooldowns = {};
@@ -199,6 +255,14 @@ export class EventSystem {
         this.pendingEvent = null;
     }
 
+    /**
+     * Spawns a trade caravan event with randomized inventory.
+     * Tuning knobs:
+     *   - numItems: 3-6 resource types carried (change range for variety)
+     *   - per-item quantity: 3-10 units each
+     *   - exclusive item chance: 30% (change for rarity)
+     *   - traderGold: 20-49g (change range for economy pacing)
+     */
     eventCaravan(game) {
         const traderResources = {};
         const available = Object.keys(TRADE_VALUES);
@@ -214,11 +278,13 @@ export class EventSystem {
             exclusiveItem = keys[Math.floor(Math.random() * keys.length)];
         }
 
+        const traderGold = 20 + Math.floor(Math.random() * 30);
+
         this.pendingEvent = {
             type: 'trade',
             text: 'A trade caravan arrives! Barter resources with the merchant.',
             choices: ['Open Trade', 'Dismiss'],
-            data: { traderResources, exclusiveItem, traderCredit: 0 },
+            data: { traderResources, exclusiveItem, traderGold },
         };
         game.notifications.push({ text: 'Trade caravan arrived!', tick: game.tick, type: 'event' });
         game.eventLog.add(game, 'Trade caravan arrived', 'event', null);
@@ -236,39 +302,51 @@ export class EventSystem {
         // choice 0 = Open Trade — handled by UI, keep event open
     }
 
-    executeBarterTrade(game, offering, requesting) {
+    /**
+     * Executes a barter trade between the player and the caravan.
+     * Validates availability of all resources/gold on both sides, then transfers.
+     * Gold offered by the player goes to the trader's pool AFTER fulfilling requests
+     * (prevents offering gold and immediately requesting it back).
+     *
+     * @param {object} game - Game instance
+     * @param {object} offering - { resource: amount } player is giving
+     * @param {object} requesting - { resource: amount, __exclusive?: 1, __gold?: amount }
+     * @param {number} goldOffered - gold the player is spending (separate from resources)
+     * @returns {boolean} true if trade succeeded
+     */
+    executeBarterTrade(game, offering, requesting, goldOffered) {
         if (!this.pendingEvent || this.pendingEvent.type !== 'trade') return false;
         const data = this.pendingEvent.data;
+        const goldOffer = goldOffered || 0;
 
-        const markupMult = getPedestalEffect(game, 'tradeMarkupMult');
-        const tradeRoutesMult = game.research.isResearched('trade_routes') ? (130 / 140) : 1;
-        const effectiveMarkup = TRADER_MARKUP * markupMult * tradeRoutesMult;
-        const effectiveDiscount = game.research.isResearched('trade_routes') ? 0.75 : TRADER_DISCOUNT;
+        // --- Validation: check both sides can fulfill the trade ---
+        if (goldOffer > (game.resources.stockpile.gold || 0)) return false;
 
-        let offerValue = 0;
         for (const [res, amt] of Object.entries(offering)) {
             if (amt <= 0) continue;
             if ((game.resources.stockpile[res] || 0) < amt) return false;
-            offerValue += (TRADE_VALUES[res] || 1) * amt * effectiveDiscount;
         }
 
-        let requestValue = 0;
         for (const [res, amt] of Object.entries(requesting)) {
             if (amt <= 0) continue;
-            if (res === '__exclusive') {
-                if (!data.exclusiveItem) return false;
-                requestValue += TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem].tradeValue;
-            } else {
-                if ((data.traderResources[res] || 0) < amt) return false;
-                requestValue += (TRADE_VALUES[res] || 1) * amt * effectiveMarkup;
-            }
+            if (res === '__exclusive' && !data.exclusiveItem) return false;
+            if (res === '__gold' && amt > data.traderGold) return false;
+            if (res !== '__exclusive' && res !== '__gold' && (data.traderResources[res] || 0) < amt) return false;
         }
 
-        if (offerValue < requestValue) return false;
+        // Value check: player's offer must cover the request cost
+        const rates = getTradeRates(game);
+        const { offerVal, reqVal } = computeTradeValues(offering, requesting, goldOffer, rates, data);
+        if (offerVal < reqVal) return false;
 
+        // --- Execute: deduct from player ---
+        if (goldOffer > 0) game.resources.deduct({ gold: goldOffer });
         for (const [res, amt] of Object.entries(offering)) {
             if (amt > 0) game.resources.deduct({ [res]: amt });
         }
+
+        // --- Execute: give player what they requested ---
+        const goldRequested = requesting.__gold || 0;
         for (const [res, amt] of Object.entries(requesting)) {
             if (res === '__exclusive') {
                 const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
@@ -277,6 +355,12 @@ export class EventSystem {
                 else if (item.type === 'artifact') game.resources.addArtifact({ ...item, key: data.exclusiveItem });
                 else if (item.type === 'consumable') game.resources.addConsumable({ key: data.exclusiveItem, name: item.name });
                 data.exclusiveItem = null;
+            } else if (res === '__gold') {
+                const goldAmt = Math.min(amt, data.traderGold);
+                if (goldAmt > 0) {
+                    game.resources.add({ gold: goldAmt });
+                    data.traderGold -= goldAmt;
+                }
             } else {
                 game.resources.add({ [res]: amt });
                 data.traderResources[res] -= amt;
@@ -284,7 +368,11 @@ export class EventSystem {
             }
         }
 
-        game.notifications.push({ text: 'Trade complete!', tick: game.tick, type: 'success' });
+        // Player's gold enters trader's pool after requests (no same-trade recycling)
+        if (goldOffer > 0) data.traderGold += goldOffer;
+
+        const goldStr = goldRequested % 1 !== 0 ? goldRequested.toFixed(1) : String(goldRequested);
+        game.notifications.push({ text: `Trade complete!${goldRequested > 0 ? ` +${goldStr}g` : ''}`, tick: game.tick, type: 'success' });
         game.story.checkMilestone('first_trade_completed', game);
         return true;
     }

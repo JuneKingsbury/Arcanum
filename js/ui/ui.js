@@ -1,4 +1,5 @@
-import { CONFIG, COLONIST_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
+import { CONFIG, COLONIST_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
+import { getTradeRates, computeTradeValues } from '../systems/events.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -333,7 +334,7 @@ export class UI {
         const resStyle = (key, val) => (alerts[key] && val <= alerts[key]) ? ' style="color:#ff4444;font-weight:bold"' : '';
         const mgr = this.game.skinManager;
         const hasSkin = mgr && mgr.isActive;
-        const RES_ABBR = { wood: 'W', stone: 'S', food: 'F', planks: 'P', bricks: 'Bk', iron_ore: 'Or', iron: 'Fe', runite: 'Ru', leather: 'Le', wool: 'Wl', void_essence: 'V' };
+        const RES_ABBR = { wood: 'W', stone: 'S', food: 'F', planks: 'P', bricks: 'Bk', iron_ore: 'Or', iron: 'Fe', runite: 'Ru', leather: 'Le', wool: 'Wl', void_essence: 'V', gold: 'Au' };
         const resIcon = (key, label, color) => {
             if (hasSkin) {
                 const url = mgr.getItemSpriteDataURL(key);
@@ -342,6 +343,7 @@ export class UI {
             return `<span style="color:${color};font-weight:bold;margin-right:1px;" title="${label}">${RES_ABBR[key] || label.slice(0, 2)}</span>`;
         };
         const coreResources = [
+            { key: 'gold', label: 'Gold', color: '#ffdd00' },
             { key: 'wood', label: 'Wood', color: '#8b6b3a', always: true },
             { key: 'stone', label: 'Stone', color: '#999', always: true },
             { key: 'food', label: 'Food', color: '#88cc44', always: true },
@@ -351,9 +353,10 @@ export class UI {
         ];
         let resHtml = '';
         for (const res of coreResources) {
-            const val = Math.round(r[res.key] || 0);
-            if (!res.always && val === 0) continue;
-            const alertAttr = resStyle(res.key, val);
+            const raw = r[res.key] || 0;
+            const val = res.key === 'gold' ? (raw % 1 !== 0 ? raw.toFixed(1) : raw) : Math.round(raw);
+            if (!res.always && raw === 0) continue;
+            const alertAttr = resStyle(res.key, raw);
             resHtml += `<span class="res"${alertAttr}>${resIcon(res.key, res.label, res.color)}${val}</span>`;
         }
         const html = resHtml +
@@ -2208,69 +2211,219 @@ export class UI {
         this.elements.eventPanel.innerHTML = html;
     }
 
+    _formatResourceName(key) {
+        return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    _tradeResIcon(key) {
+        const mgr = this.game.skinManager;
+        if (mgr && mgr.isActive) {
+            const url = mgr.getItemSpriteDataURL(key);
+            if (url) return `<img src="${url}" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;margin-right:3px;">`;
+        }
+        const colors = {
+            wood: '#8b6b3a', stone: '#999', food: '#88cc44', planks: '#c89648',
+            bricks: '#cc6633', iron_ore: '#887766', iron: '#aaa', runite: '#44ccff',
+            void_essence: '#9933ff', hides: '#8b7355', leather: '#a0522d',
+            meat: '#cc6666', wheat: '#daa520', berries: '#cc4488', corn: '#ccaa22',
+            potatoes: '#c8a060', moonbloom: '#cc88ff', eggs: '#eecc88',
+            milk: '#eeeedd', wool: '#ddd', gold: '#ffdd00',
+        };
+        const abbr = { wood: 'W', stone: 'S', food: 'F', planks: 'P', bricks: 'Bk', iron_ore: 'Or', iron: 'Fe', runite: 'Ru', leather: 'Le', wool: 'Wl', void_essence: 'V', hides: 'Hi', meat: 'Mt', wheat: 'Wh', berries: 'Be', corn: 'Cn', potatoes: 'Po', moonbloom: 'Mb', eggs: 'Eg', milk: 'Mk', gold: 'Au' };
+        const color = colors[key] || '#aaa';
+        const ch = abbr[key] || this._formatResourceName(key).slice(0, 2);
+        return `<span style="color:${color};font-weight:bold;margin-right:3px;font-size:0.9em;">${ch}</span>`;
+    }
+
+    _getExclusiveItemTooltip(key) {
+        const item = TRADER_EXCLUSIVE_ITEMS[key];
+        if (!item) return '';
+        if (item.type === 'artifact' && ARTIFACTS[key]) {
+            return this._getArtifactTooltip(ARTIFACTS[key]);
+        }
+        if (item.type === 'consumable') {
+            return item.description || '';
+        }
+        const lines = [];
+        if (item.description) lines.push(item.description);
+        const stats = getItemStatLines(item);
+        if (stats.length) lines.push(stats.join(', '));
+        return lines.join(' | ') || item.name;
+    }
+
     _updateTradePanel(evt) {
         const data = evt.data;
         const stock = this.game.resources.stockpile;
-        let html = `<div class="event-text" style="font-size:0.9em;">Trader's Goods — select what to buy and offer</div>`;
+        const offer = this._tradeOffer || {};
+        const request = this._tradeRequest || {};
+        const step = this._tradeStep || 1;
+        const goldOffer = this._tradeGoldOffer || 0;
+        const playerGold = stock.gold || 0;
+        const fmtGold = v => v % 1 !== 0 ? v.toFixed(1) : v;
 
-        const markupMult = getPedestalEffect(this.game, 'tradeMarkupMult');
-        const tradeRoutesMult = this.game.research.isResearched('trade_routes') ? (130 / 140) : 1;
-        const effectiveMarkup = TRADER_MARKUP * markupMult * tradeRoutesMult;
-        const bonuses = [];
-        if (this.game.research.isResearched('trade_routes')) bonuses.push('Trade Routes: better prices');
-        if (markupMult < 1) bonuses.push(`Artifact aura: ${Math.round((1 - markupMult) * 100)}% cheaper`);
-        if (bonuses.length > 0) {
-            html += `<div style="font-size:0.8em;color:#88ffaa;margin-bottom:4px;padding:2px 6px;background:#1a2e1a;border-radius:3px;border:1px solid #336633;">Active bonuses: ${bonuses.join(' | ')}</div>`;
-        }
+        this.elements.eventPanel.className = 'trade-panel-active';
 
-        html += `<div class="trade-columns" style="display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow-y:auto;">`;
-        html += `<div style="flex:1;min-width:140px;"><b style="color:#88ddff;">Trader Sells:</b>`;
-        for (const [res, amt] of Object.entries(data.traderResources)) {
-            const val = Math.ceil((TRADE_VALUES[res] || 1) * effectiveMarkup);
-            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRemoveRequest('${res}',10)" style="padding:0 4px;">-10</button><button onclick="window.game.tradeRemoveRequest('${res}',1)" style="padding:0 4px;">-1</button><button onclick="window.game.tradeRequest('${res}',1)" style="padding:0 4px;">+1</button><button onclick="window.game.tradeRequest('${res}',10)" style="padding:0 4px;margin-left:2px;">+10</button></div>`;
-        }
-        if (data.exclusiveItem) {
-            const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
-            html += `<div style="font-size:0.85em;color:#ffcc00;">${item.name} (${item.tradeValue}v) <button onclick="window.game.tradeRequest('__exclusive',1)" style="padding:0 4px;">Buy</button></div>`;
-        }
-        html += `</div>`;
+        // Compute effective trade rates and values (shared with executeBarterTrade and balanceTradeWithGold)
+        const rates = getTradeRates(this.game);
+        const effectiveMarkup = rates.markup;
+        const effectiveDiscount = rates.discount;
+        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, goldOffer, rates, data);
 
-        const effectiveDiscount = this.game.research.isResearched('trade_routes') ? 0.75 : TRADER_DISCOUNT;
-        html += `<div style="flex:1;min-width:140px;"><b style="color:#ffaa44;">You Offer:</b>`;
-        for (const [res, amt] of Object.entries(stock)) {
-            if (typeof amt !== 'number' || amt <= 0 || res.startsWith('_')) continue;
-            if (!TRADE_VALUES[res]) continue;
-            const val = Math.floor((TRADE_VALUES[res] || 1) * effectiveDiscount * 10) / 10;
-            html += `<div style="font-size:0.85em;">${res}: ${amt} (${val}v ea) <button onclick="window.game.tradeRemoveOffer('${res}',10)" style="padding:0 4px;">-10</button><button onclick="window.game.tradeRemoveOffer('${res}',1)" style="padding:0 4px;">-1</button><button onclick="window.game.tradeOffer('${res}',1)" style="padding:0 4px;">+1</button><button onclick="window.game.tradeOffer('${res}',10)" style="padding:0 4px;margin-left:2px;">+10</button></div>`;
+        const ratio = (effectiveMarkup / effectiveDiscount).toFixed(2);
+        let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">`;
+        html += `<div class="event-text" style="font-size:0.95em;margin:0;">Trade Caravan</div>`;
+        html += `<div class="trade-step-selector">`;
+        for (const s of [1, 10, 100]) {
+            html += `<button class="trade-step-btn${step === s ? ' active' : ''}" onclick="window.game.ui._tradeStep=${s};window.game.ui._tradeDirty=true;">±${s}</button>`;
         }
         html += `</div></div>`;
 
-        const offer = this._tradeOffer || {};
-        const request = this._tradeRequest || {};
-        const offerVal = Object.entries(offer).reduce((sum, [r, n]) => sum + (TRADE_VALUES[r] || 1) * n * effectiveDiscount, 0);
-        const reqVal = Object.entries(request).reduce((sum, [r, n]) => {
-            if (r === '__exclusive') return sum + (TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem]?.tradeValue || 0);
-            return sum + (TRADE_VALUES[r] || 1) * n * effectiveMarkup;
-        }, 0);
+        html += `<div class="trade-ratio-bar">Trade ratio: <b>${ratio}:1</b> — sell at <b>${Math.round(effectiveDiscount * 100)}%</b>, buy at <b>${Math.round(effectiveMarkup * 100)}%</b></div>`;
 
-        html += `<div style="margin-top:4px;font-size:0.85em;">`;
-        html += `<span style="color:#ffaa44;">Offering: ${Object.entries(offer).map(([r,n]) => `${n} ${r}`).join(', ') || 'nothing'} (${offerVal.toFixed(1)}v)</span> `;
-        html += `<span style="color:#88ddff;">Requesting: ${Object.entries(request).map(([r,n]) => r === '__exclusive' ? TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem]?.name : `${n} ${r}`).join(', ') || 'nothing'} (${reqVal.toFixed(1)}v)</span>`;
+        const bonuses = [];
+        if (this.game.research.isResearched('trade_routes')) bonuses.push('Trade Routes');
+        const artMult = getPedestalEffect(this.game, 'tradeMarkupMult');
+        if (artMult < 1) bonuses.push(`Artifact: ${Math.round((1 - artMult) * 100)}% off`);
+        if (bonuses.length > 0) {
+            html += `<div class="trade-bonuses">${bonuses.join(' | ')}</div>`;
+        }
+
+        html += `<div class="trade-grid">`;
+
+        // Trader sells column
+        const goldReqAmt = request.__gold || 0;
+        html += `<div class="trade-column">`;
+        html += `<div class="trade-column-header sell">Trader Sells</div>`;
+        html += `<div class="trade-item-row${goldReqAmt > 0 ? ' selected' : ''}">`;
+        html += `<div class="trade-item-name">${this._tradeResIcon('gold')}Gold <span style="color:#888;">×${fmtGold(data.traderGold)}</span>`;
+        if (goldReqAmt > 0) html += `<span class="trade-item-badge">${fmtGold(goldReqAmt)}</span>`;
+        html += `</div>`;
+        html += `<div class="trade-item-value" style="color:#ffdd00;">1.0g</div>`;
+        html += `<div class="trade-item-buttons">`;
+        html += `<button class="trade-btn" onclick="window.game.tradeRequestGold(-${step})">−</button>`;
+        html += `<button class="trade-btn" onclick="window.game.tradeRequestGold(${step})">+</button>`;
+        html += `</div></div>`;
+        for (const [res, amt] of Object.entries(data.traderResources)) {
+            const val = ((TRADE_VALUES[res] || 1) * effectiveMarkup).toFixed(1);
+            const reqAmt = request[res] || 0;
+            const selected = reqAmt > 0 ? ' selected' : '';
+            html += `<div class="trade-item-row${selected}">`;
+            html += `<div class="trade-item-name">${this._tradeResIcon(res)}${this._formatResourceName(res)} <span style="color:#888;">×${amt}</span>`;
+            if (reqAmt > 0) html += `<span class="trade-item-badge">${reqAmt}</span>`;
+            html += `</div>`;
+            html += `<div class="trade-item-value">${val}g</div>`;
+            html += `<div class="trade-item-buttons">`;
+            html += `<button class="trade-btn" onclick="window.game.tradeRemoveRequest('${res}',${step})">−</button>`;
+            html += `<button class="trade-btn" onclick="window.game.tradeRequest('${res}',${step})">+</button>`;
+            html += `</div></div>`;
+        }
+        if (data.exclusiveItem) {
+            const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
+            const isSelected = request.__exclusive ? ' active' : '';
+            const tip = this._getExclusiveItemTooltip(data.exclusiveItem);
+            const exIcon = this._itemIcon(data.exclusiveItem, item.type === 'consumable' ? 'artifact' : item.type);
+            html += `<div class="trade-exclusive-row skill-tip" data-tip="${tip.replace(/"/g, '&quot;')}">`;
+            html += `<div class="trade-item-name">${exIcon}${item.name}</div>`;
+            html += `<div class="trade-item-value">${item.tradeValue}g</div>`;
+            html += `<button class="trade-exclusive-toggle${isSelected}" onclick="window.game.${request.__exclusive ? 'tradeRemoveRequest' : 'tradeRequest'}('__exclusive',1)">${request.__exclusive ? 'Remove' : 'Buy'}</button>`;
+            html += `</div>`;
+        }
+        html += `<div style="height:12px;"></div></div>`;
+
+        // You offer column - sorted by value descending
+        const tradableStock = Object.entries(stock)
+            .filter(([res, amt]) => typeof amt === 'number' && amt > 0 && !res.startsWith('_') && TRADE_VALUES[res])
+            .sort((a, b) => (TRADE_VALUES[b[0]] || 0) - (TRADE_VALUES[a[0]] || 0));
+
+        html += `<div class="trade-column">`;
+        html += `<div class="trade-column-header offer">You Offer</div>`;
+
+        // Gold offer row (always shown if player has gold)
+        if (playerGold > 0) {
+            const selected = goldOffer > 0 ? ' selected' : '';
+            html += `<div class="trade-item-row${selected}">`;
+            html += `<div class="trade-item-name">${this._tradeResIcon('gold')}Gold <span style="color:#888;">×${fmtGold(playerGold)}</span>`;
+            if (goldOffer > 0) html += `<span class="trade-item-badge">${fmtGold(goldOffer)}</span>`;
+            html += `</div>`;
+            html += `<div class="trade-item-value" style="color:#ffdd00;">1.0g</div>`;
+            html += `<div class="trade-item-buttons">`;
+            html += `<button class="trade-btn" onclick="window.game.tradeGold(-${step})">−</button>`;
+            html += `<button class="trade-btn" onclick="window.game.tradeGold(${step})">+</button>`;
+            html += `</div></div>`;
+        }
+
+        for (const [res, amt] of tradableStock) {
+            const val = ((TRADE_VALUES[res] || 1) * effectiveDiscount).toFixed(1);
+            const offAmt = offer[res] || 0;
+            const selected = offAmt > 0 ? ' selected' : '';
+            html += `<div class="trade-item-row${selected}">`;
+            html += `<div class="trade-item-name">${this._tradeResIcon(res)}${this._formatResourceName(res)} <span style="color:#888;">×${amt}</span>`;
+            if (offAmt > 0) html += `<span class="trade-item-badge">${offAmt}</span>`;
+            html += `</div>`;
+            html += `<div class="trade-item-value">${val}g</div>`;
+            html += `<div class="trade-item-buttons">`;
+            html += `<button class="trade-btn" onclick="window.game.tradeRemoveOffer('${res}',${step})">−</button>`;
+            html += `<button class="trade-btn" onclick="window.game.tradeOffer('${res}',${step})">+</button>`;
+            html += `</div></div>`;
+        }
+        html += `<div style="height:12px;"></div></div></div>`;
+
+        // Deal meter — trade is valid when player is offering something and offer value covers request
+        const hasOffer = offerVal > 0;
+        const hasRequest = reqVal > 0;
+        const canTrade = hasOffer && offerVal >= reqVal;
+        const meterPercent = reqVal > 0 ? Math.min(100, (offerVal / reqVal) * 100) : 0;
+        const diff = offerVal - reqVal;
+        const overpay = diff > 0 ? diff : 0;
+
+        html += `<div class="trade-deal-meter">`;
+        html += `<div class="trade-meter-bar"><div class="trade-meter-fill ${canTrade ? (overpay > 0 ? 'warning' : 'valid') : 'invalid'}" style="width:${meterPercent}%"></div></div>`;
+        html += `<div class="trade-meter-text">`;
+        html += `<span class="offer-val">Offer: ${offerVal.toFixed(1)}g</span>`;
+        if (reqVal > 0 || hasOffer) {
+            if (diff > 0) {
+                html += `<span class="deficit">Overpay: −${diff.toFixed(1)}g</span>`;
+            } else if (diff < 0) {
+                html += `<span class="deficit">Need: ${Math.abs(diff).toFixed(1)}g</span>`;
+            } else if (diff === 0 && hasRequest) {
+                html += `<span class="surplus">Even trade</span>`;
+            }
+        }
+        html += `<span class="request-val">Cost: ${reqVal.toFixed(1)}g</span>`;
+        html += `</div>`;
+        if (overpay > 0) {
+            html += `<div class="trade-meter-warning">You will lose ${overpay.toFixed(1)}g in value!</div>`;
+        }
         html += `</div>`;
 
-        const canTrade = offerVal >= reqVal && reqVal > 0;
-        html += `<div class="event-choices" style="margin-top:4px;">`;
-        html += `<button ${canTrade ? '' : 'disabled'} onclick="window.game.confirmTrade()">Confirm Trade</button>`;
+        // Action buttons
+        const goldReqCurrent = request.__gold || 0;
+        const traderGoldAvailable = data.traderGold - goldReqCurrent;
+        const resourceSurplus = Math.max(0, resourceOfferVal - reqVal);
+        const canBalanceDeficit = diff < 0 && (-diff) <= (playerGold - goldOffer);
+        const canBalanceSurplus = resourceSurplus > 0 && traderGoldAvailable > 0;
+        const canBalance = canBalanceDeficit || canBalanceSurplus;
+        let balanceLabel = 'Balance';
+        if (canBalanceDeficit) balanceLabel = `Balance (+${(-diff).toFixed(1)}g)`;
+        else if (canBalanceSurplus) balanceLabel = `Balance (get ${Math.min(resourceSurplus, traderGoldAvailable).toFixed(1)}g)`;
+        html += `<div class="trade-actions">`;
+        if (overpay > 0) {
+            html += `<button class="confirm" ${canTrade ? '' : 'disabled'} onclick="window.game.confirmTrade()" style="border-color:#aa4400;color:#ffaa66;">Confirm (lose ${overpay.toFixed(1)}g)</button>`;
+        } else {
+            html += `<button class="confirm" ${canTrade ? '' : 'disabled'} onclick="window.game.confirmTrade()">Confirm Trade</button>`;
+        }
+        html += `<button ${canBalance ? '' : 'disabled'} onclick="window.game.balanceTradeWithGold()" style="border-color:#aa8800;color:#ffdd88;">${balanceLabel}</button>`;
         html += `<button onclick="window.game.clearTradeSelection()">Clear</button>`;
         html += `<button onclick="window.game.dismissTrader()">Done</button>`;
         html += `</div>`;
 
-        const scrollEl = this.elements.eventPanel.querySelector('.trade-columns');
+        const scrollEl = this.elements.eventPanel.querySelector('.trade-grid');
         const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
         this.elements.eventPanel.innerHTML = html;
-        const newScrollEl = this.elements.eventPanel.querySelector('.trade-columns');
+        const newScrollEl = this.elements.eventPanel.querySelector('.trade-grid');
         if (newScrollEl) newScrollEl.scrollTop = scrollTop;
     }
+
 
     toggleStoryPanel() {
         const opening = !this.storyPanelVisible;

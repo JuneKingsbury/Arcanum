@@ -13,7 +13,7 @@ import { queueCraftingOrder, updateAutoCook, updateAutoCraft } from '../systems/
 import { Weather } from '../world/weather.js';
 import { updateWildlife, designateHunt } from '../entities/wildlife.js';
 import { CombatSystem } from '../entities/combat.js';
-import { EventSystem, updateFires } from '../systems/events.js';
+import { EventSystem, updateFires, getTradeRates, computeTradeValues } from '../systems/events.js';
 import { UI } from '../ui/ui.js';
 import { Minimap } from '../ui/minimap.js';
 import { ResearchSystem, updateResearch } from '../systems/research.js';
@@ -21,7 +21,6 @@ import { updateTamedAnimals, designateTame } from '../entities/taming.js';
 import { updateSummons } from '../entities/summons.js';
 import { syncEntityIdCounter, createWildAnimal } from '../entities/entity-factory.js';
 import { PowerSystem } from '../systems/power.js';
-import { getPedestalEffect } from '../systems/artifacts.js';
 import { ExplorationSystem } from '../systems/exploration.js';
 import { WaveSystem } from '../entities/waves.js';
 import { EventLog } from '../ui/eventlog.js';
@@ -727,10 +726,20 @@ class Game {
         this._eventPaused = false;
     }
 
+    // ─── Trade Panel State & Actions ───────────────────────────────────────
+    // UI state lives on this.ui._trade*:
+    //   _tradeOffer: { resource: amount } - what player is giving
+    //   _tradeRequest: { resource: amount, __exclusive?: 1, __gold?: amount } - what player wants
+    //   _tradeGoldOffer: number - gold the player is spending
+    //   _tradeStep: 1|10|100 - increment for +/- buttons
+    //   _tradeDirty: bool - triggers UI re-render
+
     openTradePanel() {
         this.ui._tradeOpen = true;
         this.ui._tradeOffer = {};
         this.ui._tradeRequest = {};
+        this.ui._tradeGoldOffer = 0;
+        this.ui._tradeStep = 1;
         this.ui._tradeDirty = true;
     }
 
@@ -782,10 +791,11 @@ class Game {
     }
 
     confirmTrade() {
-        const success = this.events.executeBarterTrade(this, this.ui._tradeOffer || {}, this.ui._tradeRequest || {});
+        const success = this.events.executeBarterTrade(this, this.ui._tradeOffer || {}, this.ui._tradeRequest || {}, this.ui._tradeGoldOffer || 0);
         if (success) {
             this.ui._tradeOffer = {};
             this.ui._tradeRequest = {};
+            this.ui._tradeGoldOffer = 0;
         }
         this.ui._tradeDirty = true;
     }
@@ -793,7 +803,70 @@ class Game {
     clearTradeSelection() {
         this.ui._tradeOffer = {};
         this.ui._tradeRequest = {};
+        this.ui._tradeGoldOffer = 0;
         this.ui._tradeDirty = true;
+    }
+
+    // Adjust how much of the player's gold to offer (capped at what they have)
+    tradeGold(amount) {
+        const max = this.resources.stockpile.gold || 0;
+        this.ui._tradeGoldOffer = Math.min(Math.max(0, (this.ui._tradeGoldOffer || 0) + amount), max);
+        this.ui._tradeDirty = true;
+    }
+
+    // Adjust how much gold to request FROM the trader (capped at trader's current gold)
+    tradeRequestGold(amount) {
+        if (!this.ui._tradeRequest) this.ui._tradeRequest = {};
+        const evt = this.events.pendingEvent;
+        const max = evt?.data?.traderGold || 0;
+        const cur = this.ui._tradeRequest.__gold || 0;
+        const next = Math.min(Math.max(0, cur + amount), max);
+        if (next <= 0) {
+            delete this.ui._tradeRequest.__gold;
+        } else {
+            this.ui._tradeRequest.__gold = next;
+        }
+        this.ui._tradeDirty = true;
+    }
+
+    /**
+     * Auto-balances the current trade with gold.
+     * - If player's offer < request cost: adds player gold to cover the deficit.
+     * - If player's resources > request cost: requests gold from trader to capture surplus.
+     *   Only resource value (not player's gold offer) counts as claimable surplus,
+     *   preventing the exploit of offering gold then requesting it back.
+     */
+    balanceTradeWithGold() {
+        const evt = this.events.pendingEvent;
+        if (!evt || evt.type !== 'trade') return;
+        const data = evt.data;
+        const offer = this.ui._tradeOffer || {};
+        const request = this.ui._tradeRequest || {};
+        const currentGoldOffer = this.ui._tradeGoldOffer || 0;
+        const currentGoldRequest = request.__gold || 0;
+
+        const rates = getTradeRates(this);
+        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, currentGoldOffer, rates, data);
+
+        const diff = offerVal - reqVal;
+        if (diff < 0) {
+            // Deficit: spend player gold to cover it
+            const available = (this.resources.stockpile.gold || 0) - currentGoldOffer;
+            const goldToAdd = Math.min(-diff, available);
+            if (goldToAdd > 0) {
+                this.ui._tradeGoldOffer = currentGoldOffer + goldToAdd;
+                this.ui._tradeDirty = true;
+            }
+        } else if (diff > 0) {
+            // Surplus: request gold from trader (only for resource-based surplus)
+            const claimable = Math.max(0, resourceOfferVal - reqVal);
+            const traderAvailable = data.traderGold - currentGoldRequest;
+            const goldToRequest = Math.min(claimable, traderAvailable);
+            if (goldToRequest > 0) {
+                this.ui._tradeRequest = { ...request, __gold: currentGoldRequest + goldToRequest };
+                this.ui._tradeDirty = true;
+            }
+        }
     }
 
     dismissTrader() {
@@ -801,6 +874,7 @@ class Game {
         this.ui._tradeOpen = false;
         this.ui._tradeOffer = {};
         this.ui._tradeRequest = {};
+        this.ui._tradeGoldOffer = 0;
         this._unpauseFromEvent();
     }
 

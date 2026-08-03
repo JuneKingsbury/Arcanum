@@ -104,15 +104,26 @@ export const RAID_CONFIG = {
     timeout: 600,
 };
 
+// Base gold value per unit. Used by both buy and sell calculations.
+// Effective buy price = value × TRADER_MARKUP, effective sell price = value × TRADER_DISCOUNT.
+// Gold itself is always 1:1 (not subject to markup/discount).
 export const TRADE_VALUES = {
-    wood: 1, stone: 1.5, planks: 2.5, food: 1.2, bricks: 3,
+    wood: 1, stone: 1.5, planks: 2, food: 1.5, bricks: 3,
     hides: 1.5, leather: 3, iron_ore: 2, iron: 4,
-    runite: 6, void_essence: 10, meat: 0.8, wheat: 0.6, berries: 0.5,
-    corn: 0.7, potatoes: 0.6, moonbloom: 3, eggs: 1.5, milk: 2, wool: 2.5,
+    runite: 6, void_essence: 10, meat: 1, wheat: 0.7, berries: 0.6,
+    corn: 0.8, potatoes: 0.7, moonbloom: 3, eggs: 1.5, milk: 2, wool: 2.5,
 };
-export const TRADER_MARKUP = 1.4;
-export const TRADER_DISCOUNT = 0.7;
 
+// TRADER_MARKUP: multiplier on base value when buying FROM the trader (higher = more expensive).
+// TRADER_DISCOUNT: multiplier on base value when selling TO the trader (lower = less value).
+// Effective ratio = MARKUP / DISCOUNT (currently 1.5:1). Must always be > 1 to prevent arbitrage.
+// Modified at runtime by: Trade Routes research (see getTradeRates), pedestal artifacts (tradeMarkupMult).
+export const TRADER_MARKUP = 1.2;
+export const TRADER_DISCOUNT = 0.8;
+
+// Exclusive items the trader may carry (30% chance per caravan, see eventCaravan).
+// tradeValue is flat gold cost (not affected by markup/discount).
+// Effects defined here are for the trade panel tooltip; full artifact effects are in equipment.js.
 export const TRADER_EXCLUSIVE_ITEMS = {
     amulet_of_fortune: { type: 'artifact', name: 'Amulet of Fortune', xpBonus: 0.2, tradeValue: 40 },
     enchanted_blade: { type: 'weapon', name: 'Enchanted Blade', damage: 18, spellDamageBonus: 0.15, tradeValue: 50 },
