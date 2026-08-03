@@ -34,13 +34,12 @@ const BASE_RECIPES = {
 };
 
 export const WEAPONS = {
-    fists: { name: 'Fists', damage: 5, tier: 0, description: 'Bare fists. Better than nothing.' },
+    fists: { name: 'Fists', damage: 5, tier: 0, description: 'Bare fists.' },
     stone_spear: { name: 'Stone Spear', damage: 8, tier: 1, description: 'A sharpened stone lashed to a stick.', recipe: { input: { stone: 2, wood: 1 }, ticks: 12 } },
     wooden_club: { name: 'Wooden Club', damage: 10, tier: 1, description: 'A heavy wooden bludgeon.', recipe: { input: { wood: 2, planks: 1 }, ticks: 15 } },
-    hatchet: { name: 'Hatchet', damage: 12, tier: 1, choppingSpeed: 1.2, description: 'Good for chopping trees and enemies alike.', recipe: { input: { planks: 2, stone: 1 }, ticks: 16 } },
     iron_sword: { name: 'Iron Sword', damage: 14, tier: 2, description: 'A reliable iron blade.', recipe: { input: { iron: 2, planks: 1 }, ticks: 20 } },
     etched_axe: { name: 'Etched Axe', damage: 15, tier: 2, description: 'An axe inscribed with runes of sharpness.', recipe: { input: { stone: 2, planks: 1 }, ticks: 22, research: 'runecraft' } },
-    iron_mace: { name: 'Iron Mace', damage: 16, tier: 2, miningSpeed: 1.2, description: 'A heavy mace that doubles as a mining tool.', recipe: { input: { iron: 3, planks: 1 }, ticks: 24, research: 'runecraft' } },
+    etched_mace: { name: 'Etched Mace', damage: 17, tier: 2, description: 'A heavy mace with runes that make it heavier.', recipe: { input: { iron: 3, planks: 1 }, ticks: 24, research: 'runecraft' } },
     enchanted_glaive: { name: 'Enchanted Glaive', damage: 18, tier: 3, spellDamageBonus: 0.25, description: 'A long blade humming with arcane energy.', recipe: { input: { iron: 2, runite: 1, planks: 2 }, ticks: 38, research: 'mana_weaving' } },
     void_dagger: { name: 'Void Dagger', damage: 20, tier: 3, spellDamageBonus: 0.35, description: 'A dagger forged from void essence. Amplifies spells.', recipe: { input: { void_essence: 3, runite: 1 }, ticks: 45, research: 'void_sorcery' } },
     runic_blade: { name: 'Runic Blade', damage: 22, tier: 3, description: 'A blade etched with powerful runes.', recipe: { input: { runite: 2, planks: 1 }, ticks: 40, research: 'runeforging' } },
