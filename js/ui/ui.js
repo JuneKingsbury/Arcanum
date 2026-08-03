@@ -1,4 +1,4 @@
-import { CONFIG, COLONIST_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES } from '../core/config.js';
+import { CONFIG, COLONIST_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
@@ -666,62 +666,27 @@ export class UI {
 
     getPedestalEffectDescription(artDef) {
         if (!artDef?.pedestal) return '';
-        const p = artDef.pedestal;
-        const effects = [];
-        if (p.blightImmunity) effects.push('Crops immune to blight');
-        if (p.workSpeedBonus) effects.push(`+${Math.round(p.workSpeedBonus * 100)}% work speed`);
-        if (p.damageBonusMult) effects.push(`+${Math.round((p.damageBonusMult - 1) * 100)}% damage`);
-        if (p.skillGrowthBonus) effects.push(`+${Math.round(p.skillGrowthBonus * 100)}% skill growth`);
-        if (p.lightRadius) effects.push(`Light radius: ${p.lightRadius}`);
-        if (p.wandererChanceMult) effects.push(`+${Math.round((p.wandererChanceMult - 1) * 100)}% wanderer chance`);
-        if (p.cookingBonusFood) effects.push(`+${p.cookingBonusFood} bonus food per cook`);
-        if (p.tradeMarkupMult) effects.push(`${Math.round((1 - p.tradeMarkupMult) * 100)}% cheaper trade prices`);
+        const effects = getNestedEffectLines(artDef.pedestal);
         if (effects.length === 0) return '';
         return `<div class="info-row" style="color:#aaffaa;font-size:11px;">${effects.join(' | ')}</div>`;
     }
 
     _buildEquipmentEffectsHtml(colonist) {
-        const STAT_LABELS = {
-            damage: { label: 'Damage', fmt: v => `${v}` },
-            damageReduction: { label: 'Damage Reduction', fmt: v => `${Math.round(v * 100)}%` },
-            critChance: { label: 'Crit Chance', fmt: v => `${Math.round(v * 100)}%` },
-            dodgeChance: { label: 'Dodge', fmt: v => `${Math.round(v * 100)}%` },
-            hpOnKill: { label: 'HP on Kill', fmt: v => `+${v}` },
-            thornsDamage: { label: 'Thorns', fmt: v => `${v}` },
-            spellDamageBonus: { label: 'Spell Dmg', fmt: v => `+${Math.round(v * 100)}%` },
-            healthRegen: { label: 'Health Regen', fmt: v => `+${v}/tick` },
-            manaRegen: { label: 'Mana Regen', fmt: v => `+${v}/tick` },
-            spellCostReduction: { label: 'Spell Cost', fmt: v => `-${Math.round(v * 100)}%` },
-            tomeStudySpeed: { label: 'Tome Speed', fmt: v => `${v}x` },
-            researchSpeed: { label: 'Research', fmt: v => `${v}x` },
-            maxHpBonus: { label: 'Max HP', fmt: v => `+${v}` },
-            moodBonus: { label: 'Mood', fmt: v => `+${v}` },
-            hungerReduction: { label: 'Hunger', fmt: v => `-${Math.round(v * 100)}%` },
-            coldResistance: { label: 'Cold Res', fmt: v => `${Math.round(v * 100)}%` },
-            moveSpeedBonus: { label: 'Move Speed', fmt: v => `+${Math.round(v * 100)}%` },
-            workSpeedBonus: { label: 'Work Speed', fmt: v => `+${Math.round(v * 100)}%` },
-            miningSpeed: { label: 'Mining', fmt: v => `${v}x` },
-            choppingSpeed: { label: 'Chopping', fmt: v => `${v}x` },
-            farmingSpeed: { label: 'Farming', fmt: v => `${v}x` },
-            craftingSpeed: { label: 'Crafting', fmt: v => `${v}x` },
-            cookingSpeed: { label: 'Cooking', fmt: v => `${v}x` },
-            buildSpeed: { label: 'Building', fmt: v => `${v}x` },
-        };
         const items = getEquippedItems(colonist);
         if (items.length === 0) return '';
         const totals = {};
         let drMult = 1;
         for (const item of items) {
-            for (const [stat, def] of Object.entries(STAT_LABELS)) {
+            for (const stat of Object.keys(STAT_META)) {
                 if (!item[stat]) continue;
-                if (stat === 'damageReduction') { drMult *= (1 - item[stat]); }
+                if (STAT_META[stat].aggregation === 'multiplicative') { drMult *= (1 - item[stat]); }
                 else { totals[stat] = (totals[stat] || 0) + item[stat]; }
             }
         }
         if (drMult < 1) totals.damageReduction = 1 - drMult;
         const parts = [];
-        for (const [stat, def] of Object.entries(STAT_LABELS)) {
-            if (totals[stat]) parts.push(`<span style="color:#ccc">${def.label}:</span> ${def.fmt(totals[stat])}`);
+        for (const [stat, meta] of Object.entries(STAT_META)) {
+            if (totals[stat]) parts.push(`<span style="color:#ccc">${meta.label}:</span> ${formatStatValue(stat, totals[stat])}`);
         }
         return parts.length ? parts.join(' <span style="color:#333">|</span> ') : '';
     }
@@ -729,45 +694,20 @@ export class UI {
     _getArtifactTooltip(art) {
         const lines = [];
         if (art.description) lines.push(art.description);
-        if (art.moveSpeedBonus) lines.push(`Equipped: +${Math.round(art.moveSpeedBonus * 100)}% move speed`);
-        if (art.workSpeedBonus) lines.push(`Equipped: +${Math.round(art.workSpeedBonus * 100)}% work speed`);
+        const equipped = getItemStatLines(art);
+        if (equipped.length) lines.push(`Equipped: ${equipped.join(', ')}`);
         if (art.pedestal) {
-            const p = art.pedestal;
-            const r = p.radius === 'global' ? 'Colony-wide' : `Radius ${p.radius}`;
-            const parts = [];
-            if (p.blightImmunity) parts.push('blight immunity');
-            if (p.workSpeedBonus) parts.push(`+${Math.round(p.workSpeedBonus * 100)}% work`);
-            if (p.damageBonusMult) parts.push(`+${Math.round((p.damageBonusMult - 1) * 100)}% dmg`);
-            if (p.skillGrowthBonus) parts.push(`+${Math.round(p.skillGrowthBonus * 100)}% skill growth`);
-            if (p.lightRadius) parts.push(`light r${p.lightRadius}`);
-            if (p.wandererChanceMult) parts.push(`+${Math.round((p.wandererChanceMult - 1) * 100)}% wanderers`);
-            if (p.cookingBonusFood) parts.push(`+${p.cookingBonusFood} food/cook`);
-            if (p.tradeMarkupMult) parts.push(`${Math.round((1 - p.tradeMarkupMult) * 100)}% cheaper trades`);
+            const r = art.pedestal.radius === 'global' ? 'Colony-wide' : `Radius ${art.pedestal.radius}`;
+            const parts = getNestedEffectLines(art.pedestal);
             if (parts.length) lines.push(`Aura (${r}): ${parts.join(', ')}`);
-            if (p.manaCost) lines.push(`Pedestal mana: -${p.manaCost}`);
+            if (art.pedestal.manaCost) lines.push(`Pedestal mana: -${art.pedestal.manaCost}`);
         }
         if (art.combat) {
-            const parts = [];
-            if (art.combat.healthRegen > 0) parts.push('heals you over time');
-            if (art.combat.healthRegen < 0) parts.push('hurts you over time');
-            if (art.combat.targetPriority > 0) parts.push('draws enemy fire');
-            if (art.combat.targetPriority < 0) parts.push('enemies avoid you');
-            if (art.combat.damageReduction) parts.push(`-${Math.round(art.combat.damageReduction * 100)}% dmg taken`);
-            if (art.combat.autoReviveHp) parts.push(`auto-revive at ${Math.round(art.combat.autoReviveHp * 100)}% HP`);
+            const parts = getNestedEffectLines(art.combat);
             if (parts.length) lines.push(`Combat: ${parts.join(', ')}`);
         }
         if (art.expedition) {
-            const parts = [];
-            if (art.expedition.lootMult) parts.push(`+${Math.round((art.expedition.lootMult - 1) * 100)}% loot`);
-            if (art.expedition.trapDamageMult && art.expedition.trapDamageMult < 1) parts.push(`-${Math.round((1 - art.expedition.trapDamageMult) * 100)}% trap dmg`);
-            if (art.expedition.trapDamageMult && art.expedition.trapDamageMult > 1) parts.push(`+${Math.round((art.expedition.trapDamageMult - 1) * 100)}% trap dmg`);
-            if (art.expedition.rareEncounterMult) parts.push(`${art.expedition.rareEncounterMult}x rare encounters`);
-            if (art.expedition.partyDamageMult) parts.push(`+${Math.round((art.expedition.partyDamageMult - 1) * 100)}% party dmg`);
-            if (art.expedition.durationMult) parts.push(`-${Math.round((1 - art.expedition.durationMult) * 100)}% duration`);
-            if (art.expedition.targetPriority > 0) parts.push('draws enemy fire');
-            if (art.expedition.targetPriority < 0) parts.push('enemies avoid you');
-            if (art.expedition.damageReduction) parts.push(`-${Math.round(art.expedition.damageReduction * 100)}% dmg taken`);
-            if (art.expedition.autoReviveHp) parts.push(`auto-revive at ${Math.round(art.expedition.autoReviveHp * 100)}% HP`);
+            const parts = getNestedEffectLines(art.expedition);
             if (parts.length) lines.push(`Expedition: ${parts.join(', ')}`);
         }
         if (art.durability) lines.push(`Breaks after ${art.durability.max} use(s) — repair at Anvil`);
@@ -806,9 +746,9 @@ export class UI {
         ).join('<br>');
 
         const weaponTip = colonist.weapon ? getWeaponTooltip(colonist) : 'No weapon equipped';
-        const armorTip = colonist.armor ? `${colonist.armor.description || ''} ${Math.round(colonist.armor.damageReduction * 100)}% damage reduction${colonist.armor.spellDamageBonus ? `, +${Math.round(colonist.armor.spellDamageBonus*100)}% spell dmg` : ''}${colonist.armor.coldResistance ? `, ${Math.round(colonist.armor.coldResistance*100)}% cold res` : ''}`.trim() : 'No armor equipped';
-        const helmetTip = colonist.helmet ? `${colonist.helmet.description || ''} ${Math.round(colonist.helmet.damageReduction * 100)}% damage reduction${colonist.helmet.spellDamageBonus ? `, +${Math.round(colonist.helmet.spellDamageBonus*100)}% spell dmg` : ''}${colonist.helmet.moodBonus ? `, +${colonist.helmet.moodBonus} mood` : ''}`.trim() : 'No helmet equipped';
-        const toolTip = colonist.tool ? `${colonist.tool.description || ''} ${Object.entries(colonist.tool).filter(([k]) => !['name','key','description'].includes(k)).map(([k, v]) => `${k}: ${typeof v === 'number' ? (v > 1 ? `+${Math.round((v-1)*100)}%` : `${Math.round(v*100)}%`) : v}`).join(', ')}`.trim() : 'No tool equipped';
+        const armorTip = colonist.armor ? `${colonist.armor.description || ''} ${getItemStatLines(colonist.armor).join(', ')}`.trim() : 'No armor equipped';
+        const helmetTip = colonist.helmet ? `${colonist.helmet.description || ''} ${getItemStatLines(colonist.helmet).join(', ')}`.trim() : 'No helmet equipped';
+        const toolTip = colonist.tool ? `${colonist.tool.description || ''} ${getItemStatLines(colonist.tool).join(', ')}`.trim() : 'No tool equipped';
         const artifactTip = colonist.artifact ? this._getArtifactTooltip(colonist.artifact) : 'No artifact equipped';
 
         const nc = colonist.nameColor || '#ffff00';
@@ -972,10 +912,10 @@ export class UI {
         const overlayStyle = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
         const SLOT_CONFIG = {
             weapon: { listName: 'weapons', label: 'Weapon', fallback: 'Fists', equipFn: 'equipWeapon', unequipFn: 'unequipWeapon', statRenderer: w => { const cd = w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown; return `${w.damage} dmg (${(w.damage / cd).toFixed(1)}/t)`; } },
-            armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => `${Math.round(a.damageReduction * 100)}% DR` },
-            helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => `${Math.round(h.damageReduction * 100)}% DR` },
-            tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => Object.entries(t).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? `+${Math.round((v - 1) * 100)}%` : '').filter(Boolean).join('/') },
-            artifact: { listName: 'artifacts', label: 'Artifact', fallback: 'None', equipFn: 'equipArtifact', unequipFn: 'unequipArtifact', statRenderer: a => Object.entries(a).filter(([k]) => k !== 'name' && k !== 'key').map(([k, v]) => typeof v === 'number' ? (v < 1 ? `${Math.round(v*100)}%` : `+${Math.round((v-1)*100)}%`) : '').filter(Boolean).join('/') },
+            armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => getItemStatLines(a).join(', ') },
+            helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => getItemStatLines(h).join(', ') },
+            tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => getItemStatLines(t).join(', ') },
+            artifact: { listName: 'artifacts', label: 'Artifact', fallback: 'None', equipFn: 'equipArtifact', unequipFn: 'unequipArtifact', statRenderer: a => getItemStatLines(a).join(', ') },
         };
         if (slot === 'tome') {
             const tomes = this.game.resources.tomes || [];
@@ -1101,39 +1041,27 @@ export class UI {
             let tip = w.description ? `${w.description} ` : '';
             tip += `${w.damage} dmg, ${dpt}/t (cd ${baseCd})`;
             if (w.ranged) tip += `, range ${w.range}`;
-            if (w.spellDamageBonus) tip += `, +${Math.round(w.spellDamageBonus * 100)}% spell dmg`;
-            if (w.miningSpeed) tip += `, +${Math.round((w.miningSpeed - 1) * 100)}% mining`;
-            if (w.choppingSpeed) tip += `, +${Math.round((w.choppingSpeed - 1) * 100)}% chopping`;
+            const extras = getItemStatLines({ ...w, damage: undefined, ranged: undefined, range: undefined });
+            if (extras.length) tip += `, ${extras.join(', ')}`;
             return tip;
         }
         if (ARMORS[outputKey]) {
             const a = ARMORS[outputKey];
             let tip = a.description ? `${a.description} ` : '';
-            tip += `${Math.round(a.damageReduction * 100)}% damage reduction`;
-            if (a.spellDamageBonus) tip += `, +${Math.round(a.spellDamageBonus * 100)}% spell dmg`;
-            if (a.coldResistance) tip += `, ${Math.round(a.coldResistance * 100)}% cold res`;
-            if (a.hungerReduction) tip += `, -${Math.round(a.hungerReduction * 100)}% hunger`;
+            tip += getItemStatLines(a).join(', ');
             return tip;
         }
         if (HELMETS[outputKey]) {
             const h = HELMETS[outputKey];
             let tip = h.description ? `${h.description} ` : '';
-            tip += `${Math.round(h.damageReduction * 100)}% damage reduction`;
-            if (h.spellDamageBonus) tip += `, +${Math.round(h.spellDamageBonus * 100)}% spell dmg`;
-            if (h.coldResistance) tip += `, ${Math.round(h.coldResistance * 100)}% cold res`;
-            if (h.moodBonus) tip += `, +${h.moodBonus} mood`;
+            tip += getItemStatLines(h).join(', ');
             return tip;
         }
         if (TOOLS[outputKey]) {
             const t = TOOLS[outputKey];
             let tip = t.description ? `${t.description} ` : '';
-            const stats = [];
-            if (t.miningSpeed) stats.push(`+${Math.round((t.miningSpeed - 1) * 100)}% mining`);
-            if (t.choppingSpeed) stats.push(`+${Math.round((t.choppingSpeed - 1) * 100)}% chopping`);
-            if (t.farmingSpeed) stats.push(`+${Math.round((t.farmingSpeed - 1) * 100)}% farming`);
-            if (t.craftingSpeed) stats.push(`+${Math.round((t.craftingSpeed - 1) * 100)}% crafting`);
-            if (t.moveSpeedBonus) stats.push(`+${Math.round(t.moveSpeedBonus * 100)}% move speed`);
-            return tip + stats.join(', ');
+            tip += getItemStatLines(t).join(', ');
+            return tip;
         }
         if (ARTIFACTS[outputKey]) {
             return this._getArtifactTooltip(ARTIFACTS[outputKey]);
@@ -1830,39 +1758,31 @@ export class UI {
         if (weapons.length > 0) {
             html += '<div class="info-row" style="color:#cc8888;margin-bottom:4px;"><b>Weapons:</b></div>';
             weapons.forEach((w, i) => {
+                const extras = getItemStatLines({ ...w, damage: undefined });
                 let stats = `Dmg: ${w.damage}`;
-                if (w.spellDamageBonus) stats += `, +${Math.round(w.spellDamageBonus * 100)}% spell`;
-                if (w.miningSpeed) stats += `, +${Math.round((w.miningSpeed-1)*100)}% mine`;
-                if (w.choppingSpeed) stats += `, +${Math.round((w.choppingSpeed-1)*100)}% chop`;
+                if (extras.length) stats += `, ${extras.join(', ')}`;
                 html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(w)}">${this._itemIcon(w.key, 'weapon')}${w.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${w.name.replace(/'/g, "\\\\'")}?')){window.game.discardWeapon(${i})}">♻</button></div>`;
             });
         }
         if (armors.length > 0) {
             html += '<div class="info-row" style="color:#9966cc;margin-top:8px;margin-bottom:4px;"><b>Armor:</b></div>';
             armors.forEach((a, i) => {
-                let stats = `-${Math.round(a.damageReduction * 100)}% dmg`;
-                if (a.spellDamageBonus) stats += `, +${Math.round(a.spellDamageBonus * 100)}% spell`;
+                const stats = getItemStatLines(a).join(', ');
                 html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(a)}">${this._itemIcon(a.key, 'armor')}${a.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${a.name.replace(/'/g, "\\\\'")}?')){window.game.discardArmor(${i})}">♻</button></div>`;
             });
         }
         if (helmets.length > 0) {
             html += '<div class="info-row" style="color:#7799cc;margin-top:8px;margin-bottom:4px;"><b>Helmets:</b></div>';
             helmets.forEach((h, i) => {
-                let stats = `-${Math.round(h.damageReduction * 100)}% dmg`;
-                if (h.spellDamageBonus) stats += `, +${Math.round(h.spellDamageBonus * 100)}% spell`;
+                const stats = getItemStatLines(h).join(', ');
                 html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(h)}">${this._itemIcon(h.key, 'helmet')}${h.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${h.name.replace(/'/g, "\\\\'")}?')){window.game.discardHelmet(${i})}">♻</button></div>`;
             });
         }
         if (tools.length > 0) {
             html += '<div class="info-row" style="color:#88aacc;margin-top:8px;margin-bottom:4px;"><b>Tools:</b></div>';
             tools.forEach((t, i) => {
-                const stats = [];
-                if (t.miningSpeed) stats.push(`+${Math.round((t.miningSpeed-1)*100)}% mine`);
-                if (t.choppingSpeed) stats.push(`+${Math.round((t.choppingSpeed-1)*100)}% chop`);
-                if (t.farmingSpeed) stats.push(`+${Math.round((t.farmingSpeed-1)*100)}% farm`);
-                if (t.craftingSpeed) stats.push(`+${Math.round((t.craftingSpeed-1)*100)}% craft`);
-                if (t.moveSpeedBonus) stats.push(`+${Math.round(t.moveSpeedBonus*100)}% move`);
-                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(t)}">${this._itemIcon(t.key, 'tool')}${t.name}</span><span class="inv-amount">${stats.join(', ')}</span><button class="inv-delete" onclick="if(confirm('Salvage ${t.name.replace(/'/g, "\\\\'")}?')){window.game.discardTool(${i})}">♻</button></div>`;
+                const stats = getItemStatLines(t).join(', ');
+                html += `<div class="inv-row"><span class="inv-name" style="color:${this._qualityColor(t)}">${this._itemIcon(t.key, 'tool')}${t.name}</span><span class="inv-amount">${stats}</span><button class="inv-delete" onclick="if(confirm('Salvage ${t.name.replace(/'/g, "\\\\'")}?')){window.game.discardTool(${i})}">♻</button></div>`;
             });
         }
         if (artifacts.length > 0) {
@@ -2425,9 +2345,8 @@ function getWeaponTooltip(colonist) {
         tip += `, ${baseDpt}/t (cd ${baseCd})`;
     }
     if (w.ranged) tip += `, range ${w.range}`;
-    if (w.spellDamageBonus) tip += `, +${Math.round(w.spellDamageBonus * 100)}% spell dmg`;
-    if (w.miningSpeed) tip += `, +${Math.round((w.miningSpeed - 1) * 100)}% mining`;
-    if (w.choppingSpeed) tip += `, +${Math.round((w.choppingSpeed - 1) * 100)}% chopping`;
+    const extras = getItemStatLines({ ...w, damage: undefined, ranged: undefined, range: undefined });
+    if (extras.length) tip += `, ${extras.join(', ')}`;
     return tip;
 }
 

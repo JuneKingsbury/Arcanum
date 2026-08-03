@@ -1,4 +1,4 @@
-import { SUMMON_TYPES } from '../core/config.js';
+import { SUMMON_TYPES, STAT_META } from '../core/config.js';
 
 export const EFFECT_TYPES = [
     { value: 'stat_bonus', label: 'Stat Bonus', contexts: ['passive', 'aura', 'buff', 'on_hit'] },
@@ -34,40 +34,7 @@ export const EFFECT_TYPES = [
     { value: 'transform_terrain', label: 'Transform Terrain', contexts: ['passive', 'aura'] },
 ];
 
-export const STAT_KEYS = [
-    { value: 'damage', label: 'Damage' },
-    { value: 'attackSpeed', label: 'Attack Speed' },
-    { value: 'damageReduction', label: 'Damage Reduction' },
-    { value: 'critChance', label: 'Crit Chance' },
-    { value: 'dodgeChance', label: 'Dodge Chance' },
-    { value: 'moveSpeedBonus', label: 'Move Speed' },
-    { value: 'workSpeedBonus', label: 'Work Speed' },
-    { value: 'miningSpeed', label: 'Mining Speed' },
-    { value: 'choppingSpeed', label: 'Chopping Speed' },
-    { value: 'farmingSpeed', label: 'Farming Speed' },
-    { value: 'craftingSpeed', label: 'Crafting Speed' },
-    { value: 'cookingSpeed', label: 'Cooking Speed' },
-    { value: 'buildSpeed', label: 'Build Speed' },
-    { value: 'spellDamageBonus', label: 'Spell Damage' },
-    { value: 'manaRegen', label: 'Mana Regen' },
-    { value: 'researchSpeed', label: 'Research Speed' },
-    { value: 'tomeStudySpeed', label: 'Tome Study Speed' },
-    { value: 'spellCostReduction', label: 'Spell Cost Reduction' },
-    { value: 'maxHpBonus', label: 'Max HP Bonus' },
-    { value: 'moodBonus', label: 'Mood Bonus' },
-    { value: 'hungerReduction', label: 'Hunger Reduction' },
-    { value: 'coldResistance', label: 'Cold Resistance' },
-    { value: 'thornsDamage', label: 'Thorns Damage' },
-    { value: 'hpOnKill', label: 'HP on Kill' },
-    { value: 'lightRadius', label: 'Light Radius' },
-    { value: 'wandererChanceMult', label: 'Wanderer Chance' },
-    { value: 'cookingBonusFood', label: 'Cooking Bonus Food' },
-    { value: 'tradeMarkupMult', label: 'Trade Markup' },
-    { value: 'skillGrowthBonus', label: 'Skill Growth' },
-    { value: 'lootMult', label: 'Loot Mult' },
-    { value: 'targetPriority', label: 'Target Priority' },
-    { value: 'autoReviveHp', label: 'Auto-Revive HP' },
-];
+export const STAT_KEYS = Object.entries(STAT_META).map(([value, m]) => ({ value, label: m.label }));
 
 export const CONTEXTS = [
     { value: 'passive', label: 'Passive' },
