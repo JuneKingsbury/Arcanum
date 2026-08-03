@@ -3,7 +3,43 @@ import { syncEntityIdCounter } from '../entities/entity-factory.js';
 import { initEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
+
+function migrateTomeKey(key) {
+    if (!key || key.startsWith('tome_of_')) return key;
+    if (key.startsWith('tome_')) return 'tome_of_' + key.slice(5);
+    return key;
+}
+
+function migrateTomeKeys(data) {
+    if (data.colonists) {
+        for (const c of data.colonists) {
+            if (c.equippedTome) c.equippedTome = migrateTomeKey(c.equippedTome);
+            if (c.tomeProgress) {
+                const newProgress = {};
+                for (const [k, v] of Object.entries(c.tomeProgress)) {
+                    newProgress[migrateTomeKey(k)] = v;
+                }
+                c.tomeProgress = newProgress;
+            }
+        }
+    }
+    if (data.resources?.tomes) {
+        for (const t of data.resources.tomes) {
+            if (t.key) t.key = migrateTomeKey(t.key);
+        }
+    }
+    if (data.settings?.craftTargets) {
+        const newTargets = {};
+        for (const [k, v] of Object.entries(data.settings.craftTargets)) {
+            const newKey = k.startsWith('craft_tome_') && !k.startsWith('craft_tome_of_')
+                ? 'craft_tome_of_' + k.slice(11)
+                : k;
+            newTargets[newKey] = v;
+        }
+        data.settings.craftTargets = newTargets;
+    }
+}
 
 export function saveGame(game) {
     const layout = captureLayout();
@@ -107,10 +143,15 @@ export function loadGame(game) {
 
         const data = JSON.parse(json);
 
-        if (!data.version || data.version < SAVE_VERSION) {
+        if (!data.version || data.version < 3) {
             console.warn(`Incompatible save version ${data.version}, expected ${SAVE_VERSION}. Starting fresh.`);
             localStorage.removeItem(SAVE_KEY);
             return false;
+        }
+
+        if (data.version < 4) {
+            migrateTomeKeys(data);
+            data.version = 4;
         }
 
         CONFIG.PEACEFUL_MODE = data.peaceful;

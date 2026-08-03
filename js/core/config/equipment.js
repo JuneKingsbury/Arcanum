@@ -10,27 +10,27 @@ export const MATERIALS = {
 const BASE_RECIPES = {
     repair_artifact: { input: { runite: 1 }, output: {}, skill: 'crafting', ticks: 40, station: 'anvil', category: 'Repair', special: 'repair' },
     cook_meal: { input: { foodstuffs: 5 }, output: { food: 4 }, skill: 'cooking', ticks: 8, station: 'cauldron', category: 'Food & Potions' },
-    craft_tome_spark: { input: { planks: 2, stone: 1 }, output: { tome_spark: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_mend: { input: { planks: 2, berries: 2 }, output: { tome_mend: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_quicken: { input: { planks: 2, stone: 1 }, output: { tome_quicken: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_phase_step: { input: { planks: 2, stone: 1 }, output: { tome_phase_step: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_nurture: { input: { planks: 2, wheat: 2 }, output: { tome_nurture: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_smite: { input: { planks: 2, runite: 1, iron: 1 }, output: { tome_smite: 1 }, skill: 'crafting', ticks: 20, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_magic_missile: { input: { planks: 3, runite: 1 }, output: { tome_magic_missile: 1 }, skill: 'crafting', ticks: 30, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_heal: { input: { planks: 3, runite: 1, berries: 2 }, output: { tome_heal: 1 }, skill: 'crafting', ticks: 32, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_haste: { input: { planks: 4, runite: 2 }, output: { tome_haste: 1 }, skill: 'crafting', ticks: 38, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_warp: { input: { planks: 4, runite: 2, void_essence: 1 }, output: { tome_warp: 1 }, skill: 'crafting', ticks: 38, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_fireball: { input: { planks: 5, runite: 3, void_essence: 2 }, output: { tome_fireball: 1 }, skill: 'crafting', ticks: 50, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_shield: { input: { planks: 4, runite: 3, stone: 3 }, output: { tome_shield: 1 }, skill: 'crafting', ticks: 45, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_summon_familiar: { input: { planks: 5, runite: 3, void_essence: 3 }, output: { tome_summon_familiar: 1 }, skill: 'crafting', ticks: 55, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_summon_ghost: { input: { planks: 6, runite: 4, void_essence: 4 }, output: { tome_summon_ghost: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_circle_of_growth: { input: { planks: 4, runite: 2, wheat: 3 }, output: { tome_circle_of_growth: 1 }, skill: 'crafting', ticks: 40, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_level_field: { input: { planks: 5, runite: 4, void_essence: 3 }, output: { tome_level_field: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_foresight: { input: { planks: 2, berries: 1 }, output: { tome_foresight: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_fair_winds: { input: { planks: 3, runite: 1 }, output: { tome_fair_winds: 1 }, skill: 'crafting', ticks: 20, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_merchants_omen: { input: { planks: 4, runite: 2 }, output: { tome_merchants_omen: 1 }, skill: 'crafting', ticks: 25, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
-    craft_tome_ward_of_calamity: { input: { planks: 5, runite: 3, void_essence: 2 }, output: { tome_ward_of_calamity: 1 }, skill: 'crafting', ticks: 50, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
-    craft_tome_fortunate_discovery: { input: { planks: 5, runite: 4, void_essence: 3 }, output: { tome_fortunate_discovery: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_spark: { input: { planks: 2, stone: 1 }, output: { tome_of_spark: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_mend: { input: { planks: 2, berries: 2 }, output: { tome_of_mend: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_quicken: { input: { planks: 2, stone: 1 }, output: { tome_of_quicken: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_phase_step: { input: { planks: 2, stone: 1 }, output: { tome_of_phase_step: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_nurture: { input: { planks: 2, wheat: 2 }, output: { tome_of_nurture: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_smite: { input: { planks: 2, runite: 1, iron: 1 }, output: { tome_of_smite: 1 }, skill: 'crafting', ticks: 20, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_magic_missile: { input: { planks: 3, runite: 1 }, output: { tome_of_magic_missile: 1 }, skill: 'crafting', ticks: 30, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_heal: { input: { planks: 3, runite: 1, berries: 2 }, output: { tome_of_heal: 1 }, skill: 'crafting', ticks: 32, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_haste: { input: { planks: 4, runite: 2 }, output: { tome_of_haste: 1 }, skill: 'crafting', ticks: 38, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_warp: { input: { planks: 4, runite: 2, void_essence: 1 }, output: { tome_of_warp: 1 }, skill: 'crafting', ticks: 38, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_fireball: { input: { planks: 5, runite: 3, void_essence: 2 }, output: { tome_of_fireball: 1 }, skill: 'crafting', ticks: 50, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_shield: { input: { planks: 4, runite: 3, stone: 3 }, output: { tome_of_shield: 1 }, skill: 'crafting', ticks: 45, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_summon_familiar: { input: { planks: 5, runite: 3, void_essence: 3 }, output: { tome_of_summon_familiar: 1 }, skill: 'crafting', ticks: 55, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_summon_ghost: { input: { planks: 6, runite: 4, void_essence: 4 }, output: { tome_of_summon_ghost: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_circle_of_growth: { input: { planks: 4, runite: 2, wheat: 3 }, output: { tome_of_circle_of_growth: 1 }, skill: 'crafting', ticks: 40, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_level_field: { input: { planks: 5, runite: 4, void_essence: 3 }, output: { tome_of_level_field: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_foresight: { input: { planks: 2, berries: 1 }, output: { tome_of_foresight: 1 }, skill: 'crafting', ticks: 12, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_fair_winds: { input: { planks: 3, runite: 1 }, output: { tome_of_fair_winds: 1 }, skill: 'crafting', ticks: 20, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_merchants_omen: { input: { planks: 4, runite: 2 }, output: { tome_of_merchants_omen: 1 }, skill: 'crafting', ticks: 25, station: 'enchanting_table', research: 'arcane_studies', category: 'Tomes' },
+    craft_tome_of_ward_of_calamity: { input: { planks: 5, runite: 3, void_essence: 2 }, output: { tome_of_ward_of_calamity: 1 }, skill: 'crafting', ticks: 50, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
+    craft_tome_of_fortunate_discovery: { input: { planks: 5, runite: 4, void_essence: 3 }, output: { tome_of_fortunate_discovery: 1 }, skill: 'crafting', ticks: 60, station: 'enchanting_table', research: 'advanced_arcana', category: 'Tomes' },
 };
 
 export const WEAPONS = {
@@ -132,10 +132,10 @@ export const ARTIFACTS = {
 };
 
 export const POTIONS = {
-    health_potion: { name: 'Health Potion', trigger: 'lowHealth', hpThreshold: 0.4, effect: 'heal', healAmount: 50, cooldown: 30, recipe: { input: { berries: 3, wheat: 1 }, skill: 'cooking', ticks: 16, station: 'cauldron', research: 'alchemy' } },
-    speed_potion: { name: 'Speed Potion', trigger: 'hasTask', effect: 'speed', moveSpeedBonus: 0.5, workSpeedBonus: 1.3, duration: 100, cooldown: 400, recipe: { input: { corn: 2, potatoes: 2, berries: 1 }, skill: 'cooking', ticks: 20, station: 'cauldron', research: 'alchemy' } },
-    mana_potion: { name: 'Mana Potion', trigger: 'lowMana', manaThreshold: 0.3, effect: 'restoreMana', manaAmount: 30, cooldown: 300, recipe: { input: { moonbloom: 3, runite: 1 }, skill: 'cooking', ticks: 22, station: 'cauldron', research: 'herbalism' } },
-    resistance_potion: { name: 'Resistance Potion', trigger: 'inCombat', effect: 'resistance', damageReduction: 0.25, duration: 80, cooldown: 500, recipe: { input: { moonbloom: 2, stone: 2, iron: 1 }, skill: 'cooking', ticks: 25, station: 'cauldron', research: 'herbalism' } },
+    health_potion: { name: 'Health Potion', trigger: 'lowHealth', hpThreshold: 0.4, effect: 'heal', healAmount: 50, cooldown: 30, description: 'A restorative brew that mends wounds.', recipe: { input: { berries: 3, wheat: 1 }, skill: 'cooking', ticks: 16, station: 'cauldron', research: 'alchemy' } },
+    speed_potion: { name: 'Speed Potion', trigger: 'hasTask', effect: 'speed', moveSpeedBonus: 0.5, workSpeedBonus: 1.3, duration: 100, cooldown: 400, description: 'An invigorating tonic that quickens body and mind.', recipe: { input: { corn: 2, potatoes: 2, berries: 1 }, skill: 'cooking', ticks: 20, station: 'cauldron', research: 'alchemy' } },
+    mana_potion: { name: 'Mana Potion', trigger: 'lowMana', manaThreshold: 0.3, effect: 'restoreMana', manaAmount: 30, cooldown: 300, description: 'A shimmering elixir that restores magical energy.', recipe: { input: { moonbloom: 3, runite: 1 }, skill: 'cooking', ticks: 22, station: 'cauldron', research: 'herbalism' } },
+    resistance_potion: { name: 'Resistance Potion', trigger: 'inCombat', effect: 'resistance', damageReduction: 0.25, duration: 80, cooldown: 500, description: 'A thick draught that hardens the body against blows.', recipe: { input: { moonbloom: 2, stone: 2, iron: 1 }, skill: 'cooking', ticks: 25, station: 'cauldron', research: 'herbalism' } },
 };
 
 export const ITEM_CHARS = {

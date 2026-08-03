@@ -1910,6 +1910,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.getElementById('start-equipment-editor-pro').addEventListener('click', () => {
+        import('../editor/equipment-editor-pro.js').then(m => m.launchEquipmentEditorPro());
+    });
+    document.getElementById('start-realm-editor-pro').addEventListener('click', () => {
+        import('../editor/realm-editor-pro.js').then(m => m.launchRealmEditorPro());
+    });
+
     const importFileInput = document.getElementById('import-file');
     document.getElementById('import-game').addEventListener('click', () => {
         importFileInput.click();

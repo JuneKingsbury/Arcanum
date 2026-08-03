@@ -1068,9 +1068,23 @@ export class UI {
         }
         if (POTIONS[outputKey]) {
             const p = POTIONS[outputKey];
-            if (p.effect === 'heal') return `Heals ${p.healAmount} HP`;
-            if (p.effect === 'speed') return `+${Math.round((p.workSpeedBonus - 1) * 100)}% work, +${Math.round(p.moveSpeedBonus * 100)}% move for ${p.duration} ticks`;
-            return p.name;
+            let tip = p.description ? `${p.description} ` : '';
+            if (p.effect === 'heal') tip += `Heals ${p.healAmount} HP`;
+            else if (p.effect === 'speed') tip += `+${Math.round((p.workSpeedBonus - 1) * 100)}% work, +${Math.round(p.moveSpeedBonus * 100)}% move for ${p.duration} ticks`;
+            else if (p.effect === 'restoreMana') tip += `Restores ${p.manaAmount} mana`;
+            else if (p.effect === 'resistance') tip += `${Math.round(p.damageReduction * 100)}% damage reduction for ${p.duration} ticks`;
+            return tip.trim();
+        }
+        if (SPELL_TOMES[outputKey]) {
+            const t = SPELL_TOMES[outputKey];
+            const spell = SPELLS[t.spell];
+            let tip = t.description ? `${t.description} ` : '';
+            tip += `School: ${spell.school}, Lv ${t.minSchoolLevel}`;
+            if (spell.manaCost) tip += `, ${spell.manaCost} mana`;
+            if (spell.damage) tip += `, ${spell.damage} dmg`;
+            if (spell.healAmount) tip += `, heals ${spell.healAmount}`;
+            if (spell.range) tip += `, range ${spell.range}`;
+            return tip;
         }
         return null;
     }
@@ -1816,7 +1830,8 @@ export class UI {
             }
             for (const [type, count] of Object.entries(potionCounts)) {
                 const def = POTIONS[type];
-                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(type, 'potion')}${def ? def.name : type}</span><span class="inv-amount">x${count}</span></div>`;
+                const potionTip = this.getCraftOutputTip(type) || '';
+                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${potionTip}">${this._itemIcon(type, 'potion')}${def ? def.name : type}</span><span class="inv-amount">x${count}</span></div>`;
             }
         }
         if (tomes.length > 0) {
@@ -1829,7 +1844,8 @@ export class UI {
                 const def = SPELL_TOMES[key];
                 const spell = def ? SPELLS[def.spell] : null;
                 const schoolName = spell ? MAGIC_SKILLS[spell.school]?.name : '';
-                html += `<div class="inv-row"><span class="inv-name">${this._itemIcon(key, 'tome')}${def ? def.name : key}</span><span class="inv-amount">x${count}${schoolName ? ` (${schoolName})` : ''}</span></div>`;
+                const tomeTip = this.getCraftOutputTip(key) || '';
+                html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${tomeTip}">${this._itemIcon(key, 'tome')}${def ? def.name : key}</span><span class="inv-amount">x${count}${schoolName ? ` (${schoolName})` : ''}</span></div>`;
             }
         }
         if (!html) html = '<div class="info-row" style="color:#666;">No consumables.</div>';
