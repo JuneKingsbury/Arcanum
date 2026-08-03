@@ -40,8 +40,12 @@ const ENTITY_SPECIALS = [
     { key: 'combat_golem', char: 'G', color: '#cc4444', desc: 'Combat Golem' },
     { key: 'familiar', char: 'f', color: '#9966ff', desc: 'Summoned familiar' },
     { key: 'ghost', char: 'g', color: '#88ccff', desc: 'Summoned ghost' },
-    { key: 'raider', char: 'R', color: '#ff3333', desc: 'Enemy raider' },
-    { key: 'wave_enemy', char: 'E', color: '#ff2222', desc: 'Void nexus wave enemy' },
+    { key: 'raider', char: 'R', color: '#ff3333', desc: 'Enemy raider (fallback)' },
+    { key: 'raider_brute', char: 'R', color: '#ff3333', desc: 'Raider Brute' },
+    { key: 'raider_archer', char: 'R', color: '#ff6633', desc: 'Raider Archer' },
+    { key: 'wave_enemy', char: 'V', color: '#aa33ff', desc: 'Wave enemy (fallback)' },
+    { key: 'void_walker', char: 'V', color: '#aa33ff', desc: 'Void Walker' },
+    { key: 'void_brute', char: 'V', color: '#7722cc', desc: 'Void Brute' },
 ];
 
 const VARIANT_COLORS = ['#ffff00', '#00ffff', '#00ff00', '#ff88ff', '#ffaa00', '#88ffaa', '#ff8888', '#aaaaff'];

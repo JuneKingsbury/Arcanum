@@ -250,7 +250,7 @@ export function completeTask(colonist, task, game) {
                     game.events.pendingEvent = {
                         type: 'research_complete',
                         text: `Research Complete: ${name}!${desc ? ' — ' + desc : ''}`,
-                        choices: ['Dismiss'],
+                        choices: ['Dismiss', 'Go to Research'],
                     };
                     if (game.settings.pauseOnResearch && !game.paused) {
                         game.togglePause();

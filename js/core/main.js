@@ -711,6 +711,11 @@ class Game {
             this.events.pendingEvent = null;
         } else if (evt.type === 'research_complete') {
             this.events.pendingEvent = null;
+            if (choice === 1) {
+                this._eventPaused = false;
+                this.ui.toggleResearchPanel();
+                return;
+            }
         }
         this._unpauseFromEvent();
     }

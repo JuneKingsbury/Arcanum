@@ -93,9 +93,17 @@ export class Renderer {
                 return sm.getSprite('entities', 'golem');
             }
             if (entity.type === 'raider') {
+                if (entity.entityType) {
+                    const specific = sm.getSprite('entities', entity.entityType);
+                    if (specific) return specific;
+                }
                 return sm.getSprite('entities', 'raider');
             }
             if (entity.type === 'wave_enemy') {
+                if (entity.entityType) {
+                    const specific = sm.getSprite('entities', entity.entityType);
+                    if (specific) return specific;
+                }
                 return sm.getSprite('entities', 'wave_enemy') || sm.getSprite('entities', 'raider');
             }
             if (entity.type === 'rally') {
@@ -366,9 +374,9 @@ export class Renderer {
             for (const e of game.waves.enemies) {
                 if (e.hp <= 0) continue;
                 if (isEntityMoving(e)) {
-                    movingEntities.push({ entity: e, char: e.char, color: e.color, type: 'wave_enemy' });
+                    movingEntities.push({ entity: e, char: e.char, color: e.color, type: 'wave_enemy', entityType: e.type });
                 } else {
-                    entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy', _dmgFlashUntil: e._dmgFlashUntil });
+                    entityMap.set(e.y * CONFIG.MAP_WIDTH + e.x, { char: e.char, color: e.color, type: 'wave_enemy', entityType: e.type, _dmgFlashUntil: e._dmgFlashUntil });
                 }
             }
         }
@@ -377,9 +385,9 @@ export class Renderer {
             const rChar = r.char || 'R';
             const rColor = r.color || TILE_COLORS.raider;
             if (isEntityMoving(r)) {
-                movingEntities.push({ entity: r, char: rChar, color: rColor, type: 'raider' });
+                movingEntities.push({ entity: r, char: rChar, color: rColor, type: 'raider', entityType: r.type });
             } else {
-                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: rChar, color: rColor, type: 'raider', _dmgFlashUntil: r._dmgFlashUntil });
+                entityMap.set(r.y * CONFIG.MAP_WIDTH + r.x, { char: rChar, color: rColor, type: 'raider', entityType: r.type, _dmgFlashUntil: r._dmgFlashUntil });
             }
         }
         const rallySet = this._rallySet;
