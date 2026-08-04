@@ -739,7 +739,7 @@ function wander(colonist, game) {
     const dir = dirs[Math.floor(Math.random() * 4)];
     const nx = colonist.x + dir[0];
     const ny = colonist.y + dir[1];
-    if (isPassable(game.map, nx, ny)) {
+    if (isPassable(game.map, nx, ny) && !game.isTileOccupied(nx, ny)) {
         moveEntity(colonist, nx, ny, CONFIG.TICK_RATE / game.speed);
     }
 }
@@ -753,7 +753,7 @@ function updateGuarding(colonist, game) {
         const distFromPost = manhattanDist(colonist.x, colonist.y, post.x, post.y);
 
         if (distFromPost > WORK_CONFIG.guardReturnThreshold) {
-            moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed);
+            moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed, game);
             return;
         }
 
@@ -765,28 +765,35 @@ function updateGuarding(colonist, game) {
 
     const distFromPost = manhattanDist(colonist.x, colonist.y, post.x, post.y);
     if (distFromPost > WORK_CONFIG.guardPatrolRadius) {
-        moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed);
+        moveTowardPoint(colonist, post.x, post.y, game.map, CONFIG.TICK_RATE / game.speed, game);
     } else if (Math.random() < 0.15) {
         const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
         const dir = dirs[Math.floor(Math.random() * 4)];
         const nx = colonist.x + dir[0];
         const ny = colonist.y + dir[1];
-        if (isPassable(game.map, nx, ny) && manhattanDist(nx, ny, post.x, post.y) <= WORK_CONFIG.guardPatrolRadius) {
+        if (isPassable(game.map, nx, ny) && manhattanDist(nx, ny, post.x, post.y) <= WORK_CONFIG.guardPatrolRadius && !game.isTileOccupied(nx, ny)) {
             moveEntity(colonist, nx, ny, CONFIG.TICK_RATE / game.speed);
         }
     }
 }
 
-function moveTowardPoint(colonist, tx, ty, map, dur) {
+function moveTowardPoint(colonist, tx, ty, map, dur, game) {
     const dx = Math.sign(tx - colonist.x);
     const dy = Math.sign(ty - colonist.y);
-    if (Math.random() < 0.5 && dx !== 0 && isPassable(map, colonist.x + dx, colonist.y)) {
-        moveEntity(colonist, colonist.x + dx, colonist.y, dur);
-    } else if (dy !== 0 && isPassable(map, colonist.x, colonist.y + dy)) {
-        moveEntity(colonist, colonist.x, colonist.y + dy, dur);
-    } else if (dx !== 0 && isPassable(map, colonist.x + dx, colonist.y)) {
-        moveEntity(colonist, colonist.x + dx, colonist.y, dur);
+    const candidates = [];
+    if (dx !== 0 && isPassable(map, colonist.x + dx, colonist.y)) candidates.push([colonist.x + dx, colonist.y]);
+    if (dy !== 0 && isPassable(map, colonist.x, colonist.y + dy)) candidates.push([colonist.x, colonist.y + dy]);
+    if (candidates.length === 0) return;
+    if (game) {
+        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+        if (unoccupied.length > 0) {
+            const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
+            moveEntity(colonist, pick[0], pick[1], dur);
+            return;
+        }
     }
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    moveEntity(colonist, pick[0], pick[1], dur);
 }
 
 function updateMoving(colonist, game) {
@@ -822,6 +829,14 @@ function updateMoving(colonist, game) {
     }
     const next = colonist.path[0];
     if (isPassable(game.map, next.x, next.y)) {
+        if (game.isTileOccupied(next.x, next.y) && colonist.path.length > 1) {
+            colonist._occupiedWait = (colonist._occupiedWait || 0) + 1;
+            if (colonist._occupiedWait < 3) {
+                colonist.moveCooldown = 1;
+                return;
+            }
+        }
+        colonist._occupiedWait = 0;
         const cost = getMoveCost(game.map, next.x, next.y);
         const moveBonus = getMoveSpeedBonus(colonist);
         const dur = computeMoveDuration(cost, moveBonus, game.speed);
@@ -1181,13 +1196,24 @@ function updateDrafted(colonist, game) {
             if (path) colonist.path = path;
         }
         if (colonist.path.length > 0) {
-            const next = colonist.path.shift();
+            const next = colonist.path[0];
             if (isPassable(game.map, next.x, next.y)) {
+                if (game.isTileOccupied(next.x, next.y) && colonist.path.length > 1) {
+                    colonist._occupiedWait = (colonist._occupiedWait || 0) + 1;
+                    if (colonist._occupiedWait < 3) {
+                        colonist.moveCooldown = 1;
+                        return;
+                    }
+                }
+                colonist._occupiedWait = 0;
+                colonist.path.shift();
                 const cost = getMoveCost(game.map, next.x, next.y);
                 const moveBonus = getMoveSpeedBonus(colonist);
                 const dur = computeMoveDuration(cost, moveBonus, game.speed);
                 moveEntity(colonist, next.x, next.y, dur);
                 colonist.moveCooldown = computeMoveCooldown(cost, moveBonus);
+            } else {
+                colonist.path.shift();
             }
         }
         if (colonist.x === colonist.draftTarget.x && colonist.y === colonist.draftTarget.y) {

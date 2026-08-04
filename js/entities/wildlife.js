@@ -122,19 +122,19 @@ function updatePassiveAnimal(animal, def, game, dur) {
 
     const nearestColonist = findNearestColonist(animal, game);
     if (nearestColonist && manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y) <= def.fleeRange) {
-        fleeFrom(animal, nearestColonist, game.map, dur);
+        fleeFrom(animal, nearestColonist, game, dur);
         return;
     }
 
     if (Math.random() < WILDLIFE_CONFIG.passiveMoveChance) {
-        randomMove(animal, game.map, dur);
+        randomMove(animal, game, dur);
     }
 }
 
 function updateHostileAnimal(animal, def, game, dur) {
     const nearestColonist = findNearestColonist(animal, game);
     if (!nearestColonist) {
-        randomMove(animal, game.map, dur);
+        randomMove(animal, game, dur);
         return;
     }
 
@@ -143,9 +143,9 @@ function updateHostileAnimal(animal, def, game, dur) {
     if (dist <= 1) {
         colonistTakeDamage(nearestColonist, def.damage, game, animal);
     } else if (dist <= def.aggroRange) {
-        moveToward(animal, nearestColonist, game.map, dur);
+        moveToward(animal, nearestColonist, game, dur);
     } else {
-        if (Math.random() < WILDLIFE_CONFIG.hostileIdleMoveChance) randomMove(animal, game.map, dur);
+        if (Math.random() < WILDLIFE_CONFIG.hostileIdleMoveChance) randomMove(animal, game, dur);
     }
 }
 
@@ -166,42 +166,48 @@ function findNearestColonist(animal, game) {
     return nearest;
 }
 
-function fleeFrom(animal, threat, map, dur) {
+function fleeFrom(animal, threat, game, dur) {
     const dx = Math.sign(animal.x - threat.x);
     const dy = Math.sign(animal.y - threat.y);
     const nx = animal.x + dx;
     const ny = animal.y + dy;
-    if (isPassableForAnimals(map, nx, ny)) {
+    if (isPassableForAnimals(game.map, nx, ny) && !game.isTileOccupied(nx, ny)) {
+        moveEntity(animal, nx, ny, dur);
+    } else if (isPassableForAnimals(game.map, nx, ny)) {
         moveEntity(animal, nx, ny, dur);
     } else {
-        randomMove(animal, map, dur);
+        randomMove(animal, game, dur);
     }
 }
 
-function moveToward(animal, target, map, dur) {
+function moveToward(animal, target, game, dur) {
     const dx = Math.sign(target.x - animal.x);
     const dy = Math.sign(target.y - animal.y);
-    if (Math.random() < 0.5 && dx !== 0) {
-        const nx = animal.x + dx;
-        if (isPassableForAnimals(map, nx, animal.y)) { moveEntity(animal, nx, animal.y, dur); return; }
-    }
-    if (dy !== 0) {
-        const ny = animal.y + dy;
-        if (isPassableForAnimals(map, animal.x, ny)) { moveEntity(animal, animal.x, ny, dur); return; }
-    }
-    if (dx !== 0) {
-        const nx = animal.x + dx;
-        if (isPassableForAnimals(map, nx, animal.y)) { moveEntity(animal, nx, animal.y, dur); }
+    const candidates = [];
+    if (dx !== 0 && isPassableForAnimals(game.map, animal.x + dx, animal.y)) candidates.push([animal.x + dx, animal.y]);
+    if (dy !== 0 && isPassableForAnimals(game.map, animal.x, animal.y + dy)) candidates.push([animal.x, animal.y + dy]);
+    if (candidates.length === 0) return;
+    const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+    if (unoccupied.length > 0) {
+        const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
+        moveEntity(animal, pick[0], pick[1], dur);
+    } else {
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        moveEntity(animal, pick[0], pick[1], dur);
     }
 }
 
-function randomMove(animal, map, dur) {
+function randomMove(animal, game, dur) {
     const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-    const dir = dirs[Math.floor(Math.random() * 4)];
-    const nx = animal.x + dir[0], ny = animal.y + dir[1];
-    if (isPassableForAnimals(map, nx, ny)) {
-        moveEntity(animal, nx, ny, dur);
-    }
+    const shuffled = dirs.filter(([ddx, ddy]) => {
+        const nx = animal.x + ddx, ny = animal.y + ddy;
+        return isPassableForAnimals(game.map, nx, ny);
+    });
+    if (shuffled.length === 0) return;
+    const unoccupied = shuffled.filter(([ddx, ddy]) => !game.isTileOccupied(animal.x + ddx, animal.y + ddy));
+    const pool = unoccupied.length > 0 ? unoccupied : shuffled;
+    const dir = pool[Math.floor(Math.random() * pool.length)];
+    moveEntity(animal, animal.x + dir[0], animal.y + dir[1], dur);
 }
 
 export function designateHunt(game, animalId) {

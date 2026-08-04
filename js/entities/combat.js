@@ -205,6 +205,11 @@ function updateRaider(raider, game) {
             return;
         }
         if (isPassableForEnemies(game.map, next.x, next.y)) {
+            if (game.isTileOccupied(next.x, next.y) && (raider._occupiedWait || 0) < 2) {
+                raider._occupiedWait = (raider._occupiedWait || 0) + 1;
+                return;
+            }
+            raider._occupiedWait = 0;
             moveEntity(raider, next.x, next.y, dur);
             raider.path.shift();
         } else {
@@ -240,13 +245,14 @@ function moveTowardCenter(raider, game, dur) {
     const cy = Math.floor(CONFIG.MAP_HEIGHT / 2);
     const dx = Math.sign(cx - raider.x);
     const dy = Math.sign(cy - raider.y);
-    if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) {
-        moveEntity(raider, raider.x + dx, raider.y, dur);
-    } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) {
-        moveEntity(raider, raider.x, raider.y + dy, dur);
-    } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y + dy)) {
-        moveEntity(raider, raider.x + dx, raider.y + dy, dur);
-    }
+    const candidates = [];
+    if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) candidates.push([raider.x + dx, raider.y]);
+    if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) candidates.push([raider.x, raider.y + dy]);
+    if (candidates.length === 0) return;
+    const unoccupied = candidates.filter(([cx2, cy2]) => !game.isTileOccupied(cx2, cy2));
+    const pool = unoccupied.length > 0 ? unoccupied : candidates;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    moveEntity(raider, pick[0], pick[1], dur);
 }
 
 function moveToEdge(raider, game, dur) {
@@ -263,11 +269,14 @@ function moveToEdge(raider, game, dur) {
     const target = edges[0];
     const dx = Math.sign(target.x - raider.x);
     const dy = Math.sign(target.y - raider.y);
-    if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) {
-        moveEntity(raider, raider.x + dx, raider.y, dur);
-    } else if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) {
-        moveEntity(raider, raider.x, raider.y + dy, dur);
-    }
+    const candidates = [];
+    if (dx !== 0 && isPassableForEnemies(game.map, raider.x + dx, raider.y)) candidates.push([raider.x + dx, raider.y]);
+    if (dy !== 0 && isPassableForEnemies(game.map, raider.x, raider.y + dy)) candidates.push([raider.x, raider.y + dy]);
+    if (candidates.length === 0) return;
+    const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+    const pool = unoccupied.length > 0 ? unoccupied : candidates;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    moveEntity(raider, pick[0], pick[1], dur);
 }
 
 export function attackStructure(game, x, y, damage) {

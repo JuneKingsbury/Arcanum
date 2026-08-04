@@ -203,6 +203,11 @@ export class WaveSystem {
                 return;
             }
             if (isPassableForEnemies(game.map, next.x, next.y)) {
+                if (game.isTileOccupied(next.x, next.y) && (enemy._occupiedWait || 0) < 2) {
+                    enemy._occupiedWait = (enemy._occupiedWait || 0) + 1;
+                    return;
+                }
+                enemy._occupiedWait = 0;
                 moveEntity(enemy, next.x, next.y, dur);
                 enemy.path.shift();
                 enemy.pathAge = (enemy.pathAge || 0) + 1;
@@ -210,7 +215,7 @@ export class WaveSystem {
                 enemy.path = null;
             }
         } else {
-            moveTowardDirect(enemy, this.nexusPosition, game.map, dur);
+            moveTowardDirect(enemy, this.nexusPosition, game.map, dur, game);
         }
     }
 
@@ -273,21 +278,23 @@ function pickFromComposition(composition, currentWave) {
     return eligible[eligible.length - 1].entity;
 }
 
-function moveTowardDirect(entity, target, map, dur) {
+function moveTowardDirect(entity, target, map, dur, game) {
     const dx = Math.sign(target.x - entity.x);
     const dy = Math.sign(target.y - entity.y);
-    if (Math.random() < 0.5 && dx !== 0) {
-        const nx = entity.x + dx;
-        if (isPassableForEnemies(map, nx, entity.y)) { moveEntity(entity, nx, entity.y, dur); return; }
+    const candidates = [];
+    if (dx !== 0 && isPassableForEnemies(map, entity.x + dx, entity.y)) candidates.push([entity.x + dx, entity.y]);
+    if (dy !== 0 && isPassableForEnemies(map, entity.x, entity.y + dy)) candidates.push([entity.x, entity.y + dy]);
+    if (candidates.length === 0) return;
+    if (game) {
+        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+        if (unoccupied.length > 0) {
+            const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
+            moveEntity(entity, pick[0], pick[1], dur);
+            return;
+        }
     }
-    if (dy !== 0) {
-        const ny = entity.y + dy;
-        if (isPassableForEnemies(map, entity.x, ny)) { moveEntity(entity, entity.x, ny, dur); return; }
-    }
-    if (dx !== 0) {
-        const nx = entity.x + dx;
-        if (isPassableForEnemies(map, nx, entity.y)) { moveEntity(entity, nx, entity.y, dur); }
-    }
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    moveEntity(entity, pick[0], pick[1], dur);
 }
 
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];

@@ -35,7 +35,7 @@ export const ROLE_HANDLERS = {
                     rs.state = 'patrolling';
                     return;
                 }
-                moveToward(entity, anchor, game.map, dur);
+                moveToward(entity, anchor, game.map, dur, game);
                 return;
             }
 
@@ -63,7 +63,7 @@ export const ROLE_HANDLERS = {
                         game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: entity.color, ttl: COMBAT_VISUALS.hitTtl });
                     }
                 } else {
-                    moveToward(entity, target, game.map, dur);
+                    moveToward(entity, target, game.map, dur, game);
                 }
             } else {
                 rs.state = 'patrolling';
@@ -73,9 +73,9 @@ export const ROLE_HANDLERS = {
                     const dist = manhattanDist(entity.x, entity.y, anchor.x, anchor.y);
                     const patrolRadius = role.patrolRadius || 3;
                     if (dist > patrolRadius) {
-                        moveToward(entity, anchor, game.map, dur);
+                        moveToward(entity, anchor, game.map, dur, game);
                     } else if (Math.random() < 0.1) {
-                        randomMoveNear(entity, anchor, game.map, dur, patrolRadius);
+                        randomMoveNear(entity, anchor, game.map, dur, patrolRadius, game);
                     }
                 }
             }
@@ -135,7 +135,7 @@ export const ROLE_HANDLERS = {
             }
 
             if (!target) {
-                moveTowardCenter(entity, game.map, dur);
+                moveTowardCenter(entity, game.map, dur, game);
                 return;
             }
 
@@ -155,12 +155,12 @@ export const ROLE_HANDLERS = {
                     });
                 }
                 if (dist < preferDist) {
-                    fleeFrom(entity, target, game.map, dur);
+                    fleeFrom(entity, target, game.map, dur, game);
                 }
             } else if (dist > range) {
-                moveToward(entity, target, game.map, dur);
+                moveToward(entity, target, game.map, dur, game);
             } else {
-                fleeFrom(entity, target, game.map, dur);
+                fleeFrom(entity, target, game.map, dur, game);
             }
         },
     },
@@ -187,7 +187,7 @@ export const ROLE_HANDLERS = {
             }
 
             if (!target) {
-                moveTowardCenter(entity, game.map, dur);
+                moveTowardCenter(entity, game.map, dur, game);
                 return;
             }
 
@@ -205,7 +205,7 @@ export const ROLE_HANDLERS = {
                     }
                 }
             } else {
-                moveToward(entity, target, game.map, dur);
+                moveToward(entity, target, game.map, dur, game);
             }
         },
     },
@@ -245,7 +245,7 @@ export const ROLE_HANDLERS = {
                 return;
             }
 
-            moveTowardPassable(entity, nexus, game.map, dur);
+            moveTowardPassable(entity, nexus, game.map, dur, game);
         },
     },
 
@@ -318,7 +318,7 @@ export const ROLE_HANDLERS = {
             const ny = entity.y + dir[1];
             if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
             const wanderRadius = role.wanderRadius || 3;
-            if (manhattanDist(nx, ny, pen.x, pen.y) <= wanderRadius && isPassable(game.map, nx, ny)) {
+            if (manhattanDist(nx, ny, pen.x, pen.y) <= wanderRadius && isPassable(game.map, nx, ny) && !game.isTileOccupied(nx, ny)) {
                 moveEntity(entity, nx, ny, dur);
             }
         },
@@ -350,7 +350,7 @@ export const ROLE_HANDLERS = {
             }
             if (entity.fleeing) {
                 const dur = CONFIG.TICK_RATE / (entity.speed * game.speed);
-                moveToEdge(entity, game.map, dur);
+                moveToEdge(entity, game.map, dur, game);
             }
         },
     },
@@ -497,57 +497,73 @@ function findPen(entity, game) {
     return bestPen;
 }
 
-function moveToward(entity, target, map, dur) {
+function moveToward(entity, target, map, dur, game) {
     const dx = Math.sign(target.x - entity.x);
     const dy = Math.sign(target.y - entity.y);
     const passCheck = entity.hostile ? isPassableForEnemies : isPassable;
-    if (Math.random() < 0.5 && dx !== 0) {
-        if (passCheck(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); return; }
+    const candidates = [];
+    if (dx !== 0 && passCheck(map, entity.x + dx, entity.y)) candidates.push([entity.x + dx, entity.y]);
+    if (dy !== 0 && passCheck(map, entity.x, entity.y + dy)) candidates.push([entity.x, entity.y + dy]);
+    if (candidates.length === 0) return;
+    if (game) {
+        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+        if (unoccupied.length > 0) {
+            const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
+            moveEntity(entity, pick[0], pick[1], dur);
+            return;
+        }
     }
-    if (dy !== 0) {
-        if (passCheck(map, entity.x, entity.y + dy)) { moveEntity(entity, entity.x, entity.y + dy, dur); return; }
-    }
-    if (dx !== 0) {
-        if (passCheck(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); }
-    }
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    moveEntity(entity, pick[0], pick[1], dur);
 }
 
-function moveTowardPassable(entity, target, map, dur) {
+function moveTowardPassable(entity, target, map, dur, game) {
     const dx = Math.sign(target.x - entity.x);
     const dy = Math.sign(target.y - entity.y);
-    if (Math.random() < 0.5 && dx !== 0) {
-        if (isPassableForEnemies(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); return; }
+    const candidates = [];
+    if (dx !== 0 && isPassableForEnemies(map, entity.x + dx, entity.y)) candidates.push([entity.x + dx, entity.y]);
+    if (dy !== 0 && isPassableForEnemies(map, entity.x, entity.y + dy)) candidates.push([entity.x, entity.y + dy]);
+    if (candidates.length === 0) return;
+    if (game) {
+        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+        if (unoccupied.length > 0) {
+            const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
+            moveEntity(entity, pick[0], pick[1], dur);
+            return;
+        }
     }
-    if (dy !== 0) {
-        if (isPassableForEnemies(map, entity.x, entity.y + dy)) { moveEntity(entity, entity.x, entity.y + dy, dur); return; }
-    }
-    if (dx !== 0) {
-        if (isPassableForEnemies(map, entity.x + dx, entity.y)) { moveEntity(entity, entity.x + dx, entity.y, dur); }
-    }
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    moveEntity(entity, pick[0], pick[1], dur);
 }
 
-function moveTowardCenter(entity, map, dur) {
+function moveTowardCenter(entity, map, dur, game) {
     const cx = Math.floor(CONFIG.MAP_WIDTH / 2);
     const cy = Math.floor(CONFIG.MAP_HEIGHT / 2);
-    moveToward(entity, { x: cx, y: cy }, map, dur);
+    moveToward(entity, { x: cx, y: cy }, map, dur, game);
 }
 
-function fleeFrom(entity, threat, map, dur) {
+function fleeFrom(entity, threat, map, dur, game) {
     const dx = Math.sign(entity.x - threat.x);
     const dy = Math.sign(entity.y - threat.y);
     const passCheck = entity.hostile ? isPassableForEnemies : isPassable;
+    const candidates = [];
     const nx = entity.x + dx;
     const ny = entity.y + dy;
-    if (passCheck(map, nx, ny)) {
-        moveEntity(entity, nx, ny, dur);
-    } else if (passCheck(map, entity.x + dx, entity.y)) {
-        moveEntity(entity, entity.x + dx, entity.y, dur);
-    } else if (passCheck(map, entity.x, entity.y + dy)) {
-        moveEntity(entity, entity.x, entity.y + dy, dur);
+    if (passCheck(map, nx, ny)) candidates.push([nx, ny]);
+    if (dx !== 0 && passCheck(map, entity.x + dx, entity.y) && !(entity.x + dx === nx && entity.y === ny)) candidates.push([entity.x + dx, entity.y]);
+    if (dy !== 0 && passCheck(map, entity.x, entity.y + dy) && !(entity.x === nx && entity.y + dy === ny)) candidates.push([entity.x, entity.y + dy]);
+    if (candidates.length === 0) return;
+    if (game) {
+        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
+        if (unoccupied.length > 0) {
+            moveEntity(entity, unoccupied[0][0], unoccupied[0][1], dur);
+            return;
+        }
     }
+    moveEntity(entity, candidates[0][0], candidates[0][1], dur);
 }
 
-function moveToEdge(entity, map, dur) {
+function moveToEdge(entity, map, dur, game) {
     const edges = [
         { x: 0, y: entity.y },
         { x: CONFIG.MAP_WIDTH - 1, y: entity.y },
@@ -558,17 +574,20 @@ function moveToEdge(entity, map, dur) {
         manhattanDist(entity.x, entity.y, a.x, a.y) -
         manhattanDist(entity.x, entity.y, b.x, b.y)
     );
-    moveToward(entity, edges[0], map, dur);
+    moveToward(entity, edges[0], map, dur, game);
 }
 
-function randomMoveNear(entity, anchor, map, dur, radius) {
+function randomMoveNear(entity, anchor, map, dur, radius, game) {
     const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-    const dir = dirs[Math.floor(Math.random() * 4)];
-    const nx = entity.x + dir[0];
-    const ny = entity.y + dir[1];
-    if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return;
-    if (manhattanDist(nx, ny, anchor.x, anchor.y) <= radius && isPassable(map, nx, ny)) {
-        moveEntity(entity, nx, ny, dur);
-    }
+    const valid = dirs.filter(([ddx, ddy]) => {
+        const nx = entity.x + ddx, ny = entity.y + ddy;
+        if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) return false;
+        return manhattanDist(nx, ny, anchor.x, anchor.y) <= radius && isPassable(map, nx, ny);
+    });
+    if (valid.length === 0) return;
+    const unoccupied = game ? valid.filter(([ddx, ddy]) => !game.isTileOccupied(entity.x + ddx, entity.y + ddy)) : valid;
+    const pool = unoccupied.length > 0 ? unoccupied : valid;
+    const dir = pool[Math.floor(Math.random() * pool.length)];
+    moveEntity(entity, entity.x + dir[0], entity.y + dir[1], dur);
 }
 

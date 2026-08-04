@@ -373,6 +373,8 @@ class Game {
             this.power.updateTurrets(this);
         }
 
+        this._buildOccupancySet();
+
         for (const colonist of this.colonists) {
             if (colonist.hp > 0) {
                 updateColonist(colonist, this);
@@ -411,6 +413,26 @@ class Game {
             this.notifications.push({ text: 'All colonists have died. Game Over.', tick: this.tick, type: 'danger' });
             this.eventLog.add(this, 'All colonists have died. Game Over.', 'danger', null);
         }
+    }
+
+    _buildOccupancySet() {
+        const occ = this._occupiedTiles || (this._occupiedTiles = new Set());
+        occ.clear();
+        for (const c of this.colonists) {
+            if (c.hp > 0) occ.add((c.y << 16) | c.x);
+        }
+        for (const e of this.entities) {
+            if (e.hp > 0) occ.add((e.y << 16) | e.x);
+        }
+        if (this.waves) {
+            for (const e of this.waves.enemies) {
+                if (e.hp > 0) occ.add((e.y << 16) | e.x);
+            }
+        }
+    }
+
+    isTileOccupied(x, y) {
+        return this._occupiedTiles ? this._occupiedTiles.has((y << 16) | x) : false;
     }
 
     togglePause() {
