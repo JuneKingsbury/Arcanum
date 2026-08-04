@@ -50,6 +50,7 @@ export class UI {
             }
         });
         this.elements.modeBar = document.getElementById('mode-bar');
+        this.elements.buildPanel = document.getElementById('build-panel');
         this.elements.notifications = document.getElementById('notifications');
         this.elements.priorityPanel = document.getElementById('priority-panel');
         this.elements.craftPanel = document.getElementById('craft-panel');
@@ -157,13 +158,6 @@ export class UI {
                 this.game.input.setBuildCategory(catOpt.dataset.buildCat);
                 return;
             }
-            const opt = e.target.closest('[data-build-opt]');
-            if (opt) {
-                const buildType = opt.dataset.buildOpt;
-                this.game.input.buildType = buildType;
-                this.updateModeDisplay(this.game.input);
-                return;
-            }
             const cropOpt = e.target.closest('[data-crop-opt]');
             if (cropOpt) {
                 this.game.input.cropType = cropOpt.dataset.cropOpt;
@@ -195,6 +189,73 @@ export class UI {
                 this.updateModeDisplay(this.game.input);
             }
         });
+
+        this._buildTooltip = document.createElement('div');
+        this._buildTooltip.id = 'build-tooltip';
+        this._buildTooltip.style.display = 'none';
+        document.body.appendChild(this._buildTooltip);
+        this._buildTooltipTarget = null;
+
+        const buildOptClick = (e) => {
+            const closeBtn = e.target.closest('[data-mode-action="back"]');
+            if (closeBtn) {
+                this.game.input.setMode('normal');
+                return;
+            }
+            const catTab = e.target.closest('[data-build-cat]');
+            if (catTab) {
+                this.game.input.setBuildCategory(catTab.dataset.buildCat);
+                return;
+            }
+            const cropOpt = e.target.closest('[data-crop-opt]');
+            if (cropOpt) {
+                this.game.input.cropType = cropOpt.dataset.cropOpt;
+                this.updateModeDisplay(this.game.input);
+                return;
+            }
+            const desOpt = e.target.closest('[data-designate-mode]');
+            if (desOpt) {
+                this.game.input.designateMode = desOpt.dataset.designateMode;
+                this.updateModeDisplay(this.game.input);
+                return;
+            }
+            const opt = e.target.closest('[data-build-opt]');
+            if (!opt) return;
+            const buildType = opt.dataset.buildOpt;
+            if ('ontouchstart' in window && this._buildTooltipTarget !== buildType) {
+                this._buildTooltipTarget = buildType;
+                this._showBuildTooltip(opt);
+                return;
+            }
+            this._buildTooltipTarget = null;
+            this._hideBuildTooltip();
+            this.game.input.buildType = buildType;
+            this.updateModeDisplay(this.game.input);
+        };
+        const buildOptHover = (e) => {
+            const card = e.target.closest('[data-build-opt]');
+            if (!card) { this._hideBuildTooltip(); return; }
+            this._showBuildTooltip(card, e);
+        };
+        const buildOptOut = (e) => {
+            if (!e.target.closest('[data-build-opt]')) return;
+            const related = e.relatedTarget;
+            if (related && related.closest && related.closest('[data-build-opt]') === e.target.closest('[data-build-opt]')) return;
+            this._hideBuildTooltip();
+        };
+        const buildOptMove = (e) => {
+            if (this._buildTooltip.style.display === 'none') return;
+            this._positionBuildTooltip(e);
+        };
+
+        this.elements.buildPanel.addEventListener('click', buildOptClick);
+        this.elements.buildPanel.addEventListener('mouseover', buildOptHover);
+        this.elements.buildPanel.addEventListener('mouseout', buildOptOut);
+        this.elements.buildPanel.addEventListener('mousemove', buildOptMove);
+
+        this.elements.modeBar.addEventListener('mouseover', buildOptHover);
+        this.elements.modeBar.addEventListener('mouseout', buildOptOut);
+        this.elements.modeBar.addEventListener('mousemove', buildOptMove);
 
         this.elements.priorityPanel.addEventListener('click', (e) => {
             const cell = e.target.closest('[data-colonist-id][data-skill]');
@@ -407,6 +468,8 @@ export class UI {
     }
 
     updateModeDisplay(input) {
+        this._buildTooltipTarget = null;
+        this._hideBuildTooltip();
         if (input.spellTargeting) {
             const { spell } = input.spellTargeting;
             let html = `<span class="mode-label" style="color:#bb88ff">SPELL TARGET: ${spell.name}</span>`;
@@ -417,58 +480,22 @@ export class UI {
         let html = `<span class="mode-label">Mode: ${input.mode.toUpperCase()}</span>`;
         if (input.mode === 'build') {
             html += '<span class="mode-opt mode-back" data-mode-action="back">[Esc]Back</span>';
-            html += '<span class="build-categories">';
-            BUILD_CATEGORIES.forEach(cat => {
-                const catActive = cat === input.buildCategory ? ' active' : '';
-                html += `<span class="mode-opt build-cat${catActive}" data-build-cat="${cat}">${cat}</span>`;
-            });
-            html += '</span>';
-            html += '<span class="mode-options">';
-            input.buildOptions.forEach((opt, i) => {
-                const active = opt === input.buildType ? ' active' : '';
-                const def = BUILDINGS[opt];
-                const costStr = Object.entries(def.cost).map(([k, v]) => `${k}:${v}`).join(' ');
-                const keyLabel = i < 9 ? i + 1 : (i === 9 ? '0' : '');
-                const locked = this.isBuildingLocked(opt);
-                const atMax = !locked && this.isBuildingAtMax(opt);
-                const lockStr = locked ? ' [LOCKED]' : atMax ? ' [MAX]' : '';
-                const dimmed = locked || atMax;
-                const bldSprite = this.game.skinManager?.isActive && this.game.skinManager.getSprite('buildings', opt);
-                const bldIcon = bldSprite ? `<img src="${this._getBuildingSpriteURL(opt)}" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;">` : `<span style="color:${def.color}">${def.char}</span>`;
-                html += `<span class="mode-opt${active}" data-build-opt="${opt}"${dimmed ? ' style="opacity:0.4"' : ''}>${keyLabel ? `[${keyLabel}]` : ''}${bldIcon} ${opt.replace(/_/g,' ')}(${costStr})${lockStr}</span>`;
-            });
-            html += '</span>';
             const deconActive = input.deconstructMode ? ' active' : '';
             html += `<span class="mode-opt${deconActive}" data-mode-action="deconstruct" style="margin-left:8px;color:#ff6666">[X]Deconstruct</span>`;
-            html += '<span class="mode-hint">[Tab]Cycle category | Click item to select | Right-click/drag to deconstruct</span>';
+            html += '<span class="mode-hint">[Tab]Cycle category | Right-click to deconstruct</span>';
+            this._updateBuildPanel(input);
         } else if (input.mode === 'zone') {
             html += '<span class="mode-opt mode-back" data-mode-action="back">[Esc]Back</span>';
-            html += '<span class="mode-options">';
-            input.cropOptions.forEach((opt, i) => {
-                const req = CROP_RESEARCH_REQS[opt];
-                const locked = req && !this.game.research.isResearched(req);
-                const active = opt === input.cropType ? ' active' : '';
-                if (locked) {
-                    html += `<span class="mode-opt" style="opacity:0.4">[${i + 1}]${opt} [LOCKED]</span>`;
-                } else {
-                    html += `<span class="mode-opt${active}" data-crop-opt="${opt}">[${i + 1}]${opt}</span>`;
-                }
-            });
-            html += '</span>';
-            html += '<span class="mode-hint">Click+drag to designate area</span>';
+            html += '<span class="mode-hint">Click+drag to designate farm area</span>';
+            this._updateFarmPanel(input);
         } else if (input.mode === 'designate') {
             html += '<span class="mode-opt mode-back" data-mode-action="back">[Esc]Back</span>';
-            html += '<span class="mode-options">';
-            const chopActive = input.designateMode === 'chop' ? ' active' : '';
-            const mineActive = input.designateMode === 'mine' ? ' active' : '';
-            html += `<span class="mode-opt${chopActive}" data-designate-mode="chop">[Tab]Chop</span>`;
-            html += `<span class="mode-opt${mineActive}" data-designate-mode="mine">[Tab]Mine</span>`;
-            html += '</span>';
             html += '<span class="mode-hint">Click+drag to select area</span>';
+            this._updateGatherPanel(input);
         } else {
             html += '<span class="mode-options">';
             html += `<span class="mode-opt" data-mode-action="build">[B]Build</span>`;
-            html += `<span class="mode-opt" data-mode-action="zone">[Z]Zone</span>`;
+            html += `<span class="mode-opt" data-mode-action="zone">[F]Farm</span>`;
             html += `<span class="mode-opt" data-mode-action="gather">[G]Gather</span>`;
             html += `<span class="mode-opt" data-mode-action="priority">[P]Priority</span>`;
             html += `<span class="mode-opt" data-mode-action="craft">[C]Craft</span>`;
@@ -481,7 +508,128 @@ export class UI {
             html += `<span class="mode-opt" data-mode-action="story"${storyNew}>[J]Story${this.game.story.hasUnviewed() ? ' •' : ''}</span>`;
             html += '</span>';
         }
+        if (input.mode !== 'build' && input.mode !== 'zone' && input.mode !== 'designate') this._hideBuildPanel();
         this.elements.modeBar.innerHTML = html;
+    }
+
+    _updateBuildPanel(input) {
+        const panel = this.elements.buildPanel;
+        if (!panel) return;
+        let html = '<div class="build-panel-header"><div class="build-panel-tabs">';
+        BUILD_CATEGORIES.forEach(cat => {
+            const active = cat === input.buildCategory ? ' active' : '';
+            html += `<span class="build-tab${active}" data-build-cat="${cat}">${cat}</span>`;
+        });
+        html += '</div><span class="build-panel-close" data-mode-action="back">[Esc] Close</span></div>';
+        html += '<div class="build-grid">';
+        input.buildOptions.forEach((opt, i) => {
+            const active = opt === input.buildType ? ' active' : '';
+            const def = BUILDINGS[opt];
+            const keyLabel = i < 9 ? i + 1 : (i === 9 ? '0' : '');
+            const locked = this.isBuildingLocked(opt);
+            const atMax = !locked && this.isBuildingAtMax(opt);
+            const canAfford = !locked && !atMax && this.game.resources.has(def.cost);
+            let stateClass = locked ? ' build-card--locked' : atMax ? ' build-card--maxed' : !canAfford ? ' build-card--unaffordable' : '';
+            const bldSprite = this.game.skinManager?.isActive && this.game.skinManager.getSprite('buildings', opt);
+            const bldIcon = bldSprite
+                ? `<img src="${this._getBuildingSpriteURL(opt)}" class="build-card-icon--sprite">`
+                : `<span style="color:${def.color}">${def.char}</span>`;
+            const costHtml = Object.entries(def.cost).map(([k, v]) => this._buildCostChip(k, v)).join('');
+            const overlayHtml = locked ? '<span class="build-card-overlay">LOCKED</span>' : atMax ? '<span class="build-card-overlay">MAX</span>' : '';
+            html += `<div class="build-card${active}${stateClass}" data-build-opt="${opt}">`;
+            html += `<div class="build-card-key">${keyLabel}</div>`;
+            html += `<div class="build-card-icon-wrap">${bldIcon}</div>`;
+            html += `<div class="build-card-name">${opt.replace(/_/g, ' ')}</div>`;
+            html += `<div class="build-card-cost">${costHtml}</div>`;
+            html += overlayHtml;
+            html += `</div>`;
+        });
+        html += '</div>';
+        panel.innerHTML = html;
+        panel.style.display = 'block';
+        const toolbar = document.getElementById('touch-toolbar');
+        if (toolbar && toolbar.offsetHeight > 0 && getComputedStyle(toolbar).display !== 'none') {
+            panel.style.bottom = toolbar.offsetHeight + 'px';
+        } else {
+            panel.style.bottom = '0';
+        }
+    }
+
+    updateBuildPanel(input) {
+        if (!input) return;
+        if (input.mode === 'build') this._updateBuildPanel(input);
+        else if (input.mode === 'zone') this._updateFarmPanel(input);
+        else if (input.mode === 'designate') this._updateGatherPanel(input);
+    }
+
+    _updateFarmPanel(input) {
+        const panel = this.elements.buildPanel;
+        if (!panel) return;
+        let html = '<div class="build-panel-header"><div class="build-panel-title">Farm Crops</div>';
+        html += '<span class="build-panel-close" data-mode-action="back">[Esc] Close</span></div>';
+        html += '<div class="build-grid">';
+        input.cropOptions.forEach((opt, i) => {
+            const crop = CROPS[opt];
+            const req = CROP_RESEARCH_REQS[opt];
+            const locked = req && !this.game.research.isResearched(req);
+            const active = opt === input.cropType ? ' active' : '';
+            const stateClass = locked ? ' build-card--locked' : '';
+            const keyLabel = i < 9 ? i + 1 : (i === 9 ? '0' : '');
+            const overlayHtml = locked ? '<span class="build-card-overlay">LOCKED</span>' : '';
+            const seasons = crop.seasons.map(s => s.charAt(0).toUpperCase()).join('');
+            html += `<div class="build-card${active}${stateClass}" data-crop-opt="${opt}">`;
+            html += `<div class="build-card-key">${keyLabel}</div>`;
+            html += `<div class="build-card-icon-wrap"><span style="color:${crop.color}">${crop.readyChar}</span></div>`;
+            html += `<div class="build-card-name">${opt}</div>`;
+            html += `<div class="build-card-cost"><span class="cost-chip" style="color:#88cc44">${crop.harvestYield}x</span><span class="cost-chip" style="color:#aaa">${seasons}</span></div>`;
+            html += overlayHtml;
+            html += `</div>`;
+        });
+        html += '</div>';
+        panel.innerHTML = html;
+        panel.style.display = 'block';
+        const toolbar = document.getElementById('touch-toolbar');
+        if (toolbar && toolbar.offsetHeight > 0 && getComputedStyle(toolbar).display !== 'none') {
+            panel.style.bottom = toolbar.offsetHeight + 'px';
+        } else {
+            panel.style.bottom = '0';
+        }
+    }
+
+    _updateGatherPanel(input) {
+        const panel = this.elements.buildPanel;
+        if (!panel) return;
+        let html = '<div class="build-panel-header"><div class="build-panel-title">Gather</div>';
+        html += '<span class="build-panel-close" data-mode-action="back">[Esc] Close</span></div>';
+        html += '<div class="build-grid">';
+        const chopActive = input.designateMode === 'chop' ? ' active' : '';
+        const mineActive = input.designateMode === 'mine' ? ' active' : '';
+        html += `<div class="build-card${chopActive}" data-designate-mode="chop">`;
+        html += `<div class="build-card-key">1</div>`;
+        html += `<div class="build-card-icon-wrap"><span style="color:#44aa22">♣</span></div>`;
+        html += `<div class="build-card-name">Chop</div>`;
+        html += `<div class="build-card-cost"><span class="cost-chip" style="color:#8b6b3a">Wood</span></div>`;
+        html += `</div>`;
+        html += `<div class="build-card${mineActive}" data-designate-mode="mine">`;
+        html += `<div class="build-card-key">2</div>`;
+        html += `<div class="build-card-icon-wrap"><span style="color:#999">▲</span></div>`;
+        html += `<div class="build-card-name">Mine</div>`;
+        html += `<div class="build-card-cost"><span class="cost-chip" style="color:#999">Stone</span></div>`;
+        html += `</div>`;
+        html += '</div>';
+        panel.innerHTML = html;
+        panel.style.display = 'block';
+        const toolbar = document.getElementById('touch-toolbar');
+        if (toolbar && toolbar.offsetHeight > 0 && getComputedStyle(toolbar).display !== 'none') {
+            panel.style.bottom = toolbar.offsetHeight + 'px';
+        } else {
+            panel.style.bottom = '0';
+        }
+    }
+
+    _hideBuildPanel() {
+        const panel = this.elements.buildPanel;
+        if (panel) panel.style.display = 'none';
     }
 
     getWavePreview(waveNum) {
@@ -1866,6 +2014,64 @@ export class UI {
         return url;
     }
 
+    _buildCostChip(key, amount) {
+        const colors = {
+            wood: '#8b6b3a', stone: '#999', food: '#88cc44', planks: '#c89648',
+            bricks: '#cc6633', iron_ore: '#887766', iron: '#aaa', runite: '#44ccff',
+            void_essence: '#9933ff', hides: '#8b7355', leather: '#a0522d',
+            gold: '#ffdd00',
+        };
+        const abbr = {
+            wood: 'W', stone: 'S', food: 'F', planks: 'P', bricks: 'Bk',
+            iron_ore: 'Or', iron: 'Fe', runite: 'Ru', leather: 'Le',
+            void_essence: 'Ve', hides: 'Hi', gold: 'Au',
+        };
+        const color = colors[key] || '#aaa';
+        const label = abbr[key] || key.charAt(0).toUpperCase();
+        return `<span class="cost-chip" style="color:${color}">${label}${amount}</span>`;
+    }
+
+    _showBuildTooltip(card, e) {
+        const buildType = card.dataset.buildOpt;
+        const def = BUILDINGS[buildType];
+        if (!def) return;
+        let html = `<div class="build-tip-name">${buildType.replace(/_/g, ' ')}</div>`;
+        html += `<div class="build-tip-desc">${def.description || ''}</div>`;
+        if (def.research) {
+            const unlocked = this.game.research.isResearched(def.research);
+            html += `<div class="build-tip-meta" style="color:${unlocked ? '#66cc66' : '#cc6666'}">Research: ${def.research.replace(/_/g, ' ')}${unlocked ? ' (done)' : ''}</div>`;
+        }
+        if (def.power) {
+            if (def.power.generates) html += `<div class="build-tip-meta" style="color:#aa44ff">Generates ${def.power.generates} mana</div>`;
+            if (def.power.consumes) html += `<div class="build-tip-meta" style="color:#ff8844">Consumes ${def.power.consumes} mana</div>`;
+            if (def.power.damage) html += `<div class="build-tip-meta" style="color:#ff4444">Damage: ${def.power.damage} (range ${def.power.range || '?'})</div>`;
+        }
+        if (def.maxCount) {
+            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
+            html += `<div class="build-tip-meta" style="color:#aaa">Max: ${def.maxCount + bonus}</div>`;
+        }
+        this._buildTooltip.innerHTML = html;
+        this._buildTooltip.style.display = 'block';
+        if (e) this._positionBuildTooltip(e);
+        else {
+            const rect = card.getBoundingClientRect();
+            this._buildTooltip.style.left = rect.left + 'px';
+            this._buildTooltip.style.top = (rect.bottom + 4) + 'px';
+        }
+    }
+
+    _hideBuildTooltip() {
+        if (this._buildTooltip) this._buildTooltip.style.display = 'none';
+    }
+
+    _positionBuildTooltip(e) {
+        const tt = this._buildTooltip;
+        const x = (e.clientX || 0) + 12;
+        const y = (e.clientY || 0) - tt.offsetHeight - 8;
+        tt.style.left = Math.min(x, window.innerWidth - tt.offsetWidth - 8) + 'px';
+        tt.style.top = Math.max(y, 4) + 'px';
+    }
+
     _buildInvEquipment(weapons, armors, helmets, tools, artifacts) {
         let html = '';
         if (weapons.length > 0) {
@@ -1987,7 +2193,7 @@ export class UI {
         for (const name of skinNames) {
             const opt = document.createElement('option');
             opt.value = name;
-            opt.textContent = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+            opt.textContent = name === 'ascii' ? 'ASCII' : name.charAt(0).toUpperCase() + name.slice(1);
             opt.selected = this.game.settings.activeSkin === name;
             el.appendChild(opt);
         }
@@ -2009,7 +2215,7 @@ export class UI {
         html += `<select id="set-skin" onchange="window.game.switchSkin(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
         const skinNames = this.game.skinManager.getSkinNames();
         for (const name of skinNames) {
-            const display = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+            const display = name === 'ascii' ? 'ASCII' : name.charAt(0).toUpperCase() + name.slice(1);
             html += `<option value="${name}" ${s.activeSkin === name ? 'selected' : ''}>${display}</option>`;
         }
         html += `</select></div>`;

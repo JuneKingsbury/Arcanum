@@ -333,6 +333,7 @@ export class Renderer {
         const cw = this.charWidth;
         const ch = this.charHeight;
         const selectionRect = game.input.getSelectionRect();
+        const buildDragPreview = game.input.getBuildDragPreview();
         const spellTargeting = game.input.spellTargeting;
         let spellRangeSet = null;
         if (spellTargeting) {
@@ -511,7 +512,18 @@ export class Renderer {
                     wx >= selectionRect.x1 && wx <= selectionRect.x2 &&
                     wy >= selectionRect.y1 && wy <= selectionRect.y2;
 
-                if (inSelection) {
+                if (inSelection && buildDragPreview) {
+                    const tKey = wy * CONFIG.MAP_WIDTH + wx;
+                    if (buildDragPreview.blocked && buildDragPreview.blocked.has(tKey)) {
+                        bg = '#3a1a1a';
+                    } else if (buildDragPreview.affordable.has(tKey)) {
+                        bg = '#1a3a1a';
+                    } else if (buildDragPreview.unaffordable.has(tKey)) {
+                        bg = '#3a1a1a';
+                    } else {
+                        bg = RENDER_CONFIG.selectionBgBuild;
+                    }
+                } else if (inSelection) {
                     bg = game.input.mode === 'zone' ? RENDER_CONFIG.selectionBgZone : RENDER_CONFIG.selectionBgBuild;
                 } else if (cursor && cursor.x === wx && cursor.y === wy) {
                     bg = RENDER_CONFIG.cursorBg;
@@ -703,10 +715,23 @@ export class Renderer {
                 }
 
                 if (spriteDrawn && (inSelection || (cursor && cursor.x === wx && cursor.y === wy))) {
-                    ctx.globalAlpha = 0.3;
-                    ctx.fillStyle = inSelection
-                        ? (game.input.mode === 'zone' ? RENDER_CONFIG.selectionBgZone : RENDER_CONFIG.selectionBgBuild)
-                        : RENDER_CONFIG.cursorBg;
+                    ctx.globalAlpha = 0.35;
+                    if (inSelection && buildDragPreview) {
+                        const tKey = wy * CONFIG.MAP_WIDTH + wx;
+                        if (buildDragPreview.blocked && buildDragPreview.blocked.has(tKey)) {
+                            ctx.fillStyle = '#cc2222';
+                        } else if (buildDragPreview.affordable.has(tKey)) {
+                            ctx.fillStyle = '#22cc22';
+                        } else if (buildDragPreview.unaffordable.has(tKey)) {
+                            ctx.fillStyle = '#cc2222';
+                        } else {
+                            ctx.fillStyle = RENDER_CONFIG.selectionBgBuild;
+                        }
+                    } else if (inSelection) {
+                        ctx.fillStyle = game.input.mode === 'zone' ? RENDER_CONFIG.selectionBgZone : RENDER_CONFIG.selectionBgBuild;
+                    } else {
+                        ctx.fillStyle = RENDER_CONFIG.cursorBg;
+                    }
                     ctx.fillRect(px, py, cw, ch);
                     ctx.globalAlpha = 1.0;
                     lastColor = '';

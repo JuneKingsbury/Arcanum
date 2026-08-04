@@ -1,5 +1,6 @@
 import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG } from './config.js';
-import { generateMap } from '../world/map.js';
+import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
+import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
 import { Renderer } from '../ui/renderer.js';
 import { InputHandler } from '../ui/input.js';
@@ -57,7 +58,7 @@ class Game {
             showMinimap: true,
             showFps: false,
             autoSaveInterval: 60,
-            activeSkin: localStorage.getItem('convocation_skin') || 'ascii',
+            activeSkin: localStorage.getItem('convocation_skin') || '16x16_tiny_world',
             demoMode: false,
             darkenOnPause: true,
             toolbarMode: 'auto',
@@ -1699,6 +1700,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Populate start screen skin dropdown
     const startBgCanvas = document.getElementById('start-bg-canvas');
+    let startBgData = null;
+
     function renderStartBackground() {
         if (!startBgCanvas) return;
         const dpr = window.devicePixelRatio || 1;
@@ -1709,30 +1712,80 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = startBgCanvas.getContext('2d');
         ctx.scale(dpr, dpr);
 
-        const grassSprite = sharedSkinManager.getSprite('terrain', 'grass');
-        const grassDef = TERRAIN.grass;
-        if (grassSprite) {
-            const tileSize = 16;
+        if (!startBgData) {
+            startBgData = generateStartMap();
+        }
+        const { map: bgMap, width: mapW, height: mapH } = startBgData;
+
+        const useSpriteMode = sharedSkinManager.isActive;
+        const tileSize = useSpriteMode ? 16 : 14;
+
+        if (useSpriteMode) {
+            const cols = Math.ceil(w / tileSize);
+            const rows = Math.ceil(h / tileSize);
+            const offsetX = Math.max(0, Math.floor((mapW - cols) / 2));
+            const offsetY = Math.max(0, Math.floor((mapH - rows) / 2));
+
             ctx.imageSmoothingEnabled = false;
-            for (let y = 0; y < h; y += tileSize) {
-                for (let x = 0; x < w; x += tileSize) {
-                    ctx.drawImage(grassSprite, x, y, tileSize, tileSize);
+            for (let sy = 0; sy < rows; sy++) {
+                for (let sx = 0; sx < cols; sx++) {
+                    const mx = offsetX + sx;
+                    const my = offsetY + sy;
+                    if (mx >= mapW || my >= mapH) continue;
+                    const tile = bgMap[my][mx];
+                    const px = sx * tileSize;
+                    const py = sy * tileSize;
+
+                    const groundSprite = sharedSkinManager.getSprite('terrain', tile.terrain);
+                    if (groundSprite) ctx.drawImage(groundSprite, px, py, tileSize, tileSize);
+
+                    if (tile.floor) {
+                        const floorSprite = sharedSkinManager.getSprite('floors', tile.floor);
+                        if (floorSprite) ctx.drawImage(floorSprite, px, py, tileSize, tileSize);
+                    }
+                    if (tile.structure) {
+                        const structSprite = sharedSkinManager.getSprite('buildings', tile.structure);
+                        if (structSprite) ctx.drawImage(structSprite, px, py, tileSize, tileSize);
+                    }
+                    if (tile.resource) {
+                        const resSprite = sharedSkinManager.getSprite('resources', tile.resource.type);
+                        if (resSprite) ctx.drawImage(resSprite, px, py, tileSize, tileSize);
+                    }
                 }
             }
         } else {
-            const fontSize = 14;
+            const fontSize = tileSize;
+            const cellSize = fontSize;
+            const cols = Math.ceil(w / cellSize);
+            const rows = Math.ceil(h / cellSize);
+            const offsetX = Math.max(0, Math.floor((mapW - cols) / 2));
+            const offsetY = Math.max(0, Math.floor((mapH - rows) / 2));
+
             ctx.font = `${fontSize}px monospace`;
             ctx.textBaseline = 'top';
-            if (grassDef.bg) {
-                ctx.fillStyle = grassDef.bg;
-                ctx.fillRect(0, 0, w, h);
-            }
-            ctx.fillStyle = grassDef.color;
-            const cw = fontSize * 0.6;
-            const ch = fontSize;
-            for (let y = 0; y < h; y += ch) {
-                for (let x = 0; x < w; x += cw) {
-                    ctx.fillText(grassDef.char, x, y);
+            const naturalCharWidth = Math.ceil(fontSize * 0.6);
+            const scaleX = cellSize / naturalCharWidth;
+
+            for (let sy = 0; sy < rows; sy++) {
+                for (let sx = 0; sx < cols; sx++) {
+                    const mx = offsetX + sx;
+                    const my = offsetY + sy;
+                    if (mx >= mapW || my >= mapH) continue;
+                    const tile = bgMap[my][mx];
+                    const px = sx * cellSize;
+                    const py = sy * cellSize;
+
+                    const bg = getTileBg(tile);
+                    if (bg) {
+                        ctx.fillStyle = bg;
+                        ctx.fillRect(px, py, cellSize, cellSize);
+                    }
+                    ctx.fillStyle = getTileColor(tile, 'summer');
+                    ctx.save();
+                    ctx.translate(px, py);
+                    ctx.scale(scaleX, 1);
+                    ctx.fillText(getTileChar(tile, 'summer'), 0, 0);
+                    ctx.restore();
                 }
             }
         }
@@ -1740,14 +1793,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const startSkinSelect = document.getElementById('start-skin');
     if (startSkinSelect) {
-        const savedSkin = localStorage.getItem('convocation_skin') || 'ascii';
+        const savedSkin = localStorage.getItem('convocation_skin') || '16x16_tiny_world';
         sharedSkinManager.init().then(async () => {
             const names = sharedSkinManager.getSkinNames();
             startSkinSelect.innerHTML = '';
             for (const name of names) {
                 const opt = document.createElement('option');
                 opt.value = name;
-                opt.textContent = name === 'ascii' ? 'ASCII (default)' : name.charAt(0).toUpperCase() + name.slice(1);
+                opt.textContent = name === 'ascii' ? 'ASCII' : name.charAt(0).toUpperCase() + name.slice(1);
                 opt.selected = name === savedSkin;
                 startSkinSelect.appendChild(opt);
             }
@@ -1939,7 +1992,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showFps: document.getElementById('start-fps').checked,
             showColonistNames: document.getElementById('start-names').value,
             uiFontSize: parseInt(document.getElementById('start-ui-font-size').value) || 12,
-            activeSkin: document.getElementById('start-skin').value || 'ascii',
+            activeSkin: document.getElementById('start-skin').value || '16x16_tiny_world',
             demoMode: document.getElementById('start-demo-mode').checked,
             darkenOnPause: document.getElementById('start-darken-pause').checked,
             toolbarMode: document.getElementById('start-toolbar-mode').value,

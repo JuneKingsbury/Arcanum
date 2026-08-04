@@ -1,4 +1,4 @@
-import { CONFIG, CROPS, BUILDINGS, BUILD_CATEGORIES, DRAG_BUILD_TYPES, SINGLE_PLACE_TYPES, SPELLS, ARTIFACTS } from '../core/config.js';
+import { CONFIG, CROPS, BUILDINGS, BUILD_CATEGORIES, DRAG_BUILD_TYPES, SPELLS, ARTIFACTS } from '../core/config.js';
 import { designateBuild, designateChop, designateMine, cancelDesignation } from '../systems/building.js';
 import { designateFarmZone, removeFarmZone, CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { isPassable } from '../world/map.js';
@@ -20,7 +20,6 @@ export class InputHandler {
         this.buildCategory = BUILD_CATEGORIES[0];
         this.buildOptions = Object.keys(BUILDINGS).filter(k => BUILDINGS[k].category === this.buildCategory);
         this.dragBuildTypes = DRAG_BUILD_TYPES;
-        this.singlePlaceTypes = SINGLE_PLACE_TYPES;
         this.cropOptions = Object.keys(CROPS);
         this.designateMode = 'chop';
         this.deconstructMode = false;
@@ -105,6 +104,70 @@ export class InputHandler {
         };
     }
 
+    getBuildDragPreview() {
+        if (!this.dragging) return null;
+        const rect = this.getSelectionRect();
+        if (!rect) return null;
+
+        if (this.mode === 'zone') return this._getZoneDragPreview(rect);
+
+        if (this.mode !== 'build' || !this.buildType) return null;
+        const def = BUILDINGS[this.buildType];
+        if (!def) return null;
+        const affordable = new Set();
+        const unaffordable = new Set();
+        const blocked = new Set();
+        const remaining = {};
+        for (const [k, v] of Object.entries(this.game.resources.stockpile)) {
+            remaining[k] = v;
+        }
+        for (let y = rect.y1; y <= rect.y2; y++) {
+            for (let x = rect.x1; x <= rect.x2; x++) {
+                if (x < 0 || x >= CONFIG.MAP_WIDTH || y < 0 || y >= CONFIG.MAP_HEIGHT) continue;
+                const tile = this.game.map[y][x];
+                const key = y * CONFIG.MAP_WIDTH + x;
+                if (tile.resource || tile.terrain === 'water' || tile.terrain === 'rock' || tile.terrain === 'tall_rock' || !tile.passable) {
+                    blocked.add(key);
+                    continue;
+                }
+                if (def.structureType === 'floor') {
+                    if (tile.floor) { blocked.add(key); continue; }
+                } else {
+                    if (tile.structure) { blocked.add(key); continue; }
+                }
+                let canAfford = true;
+                for (const [res, amt] of Object.entries(def.cost)) {
+                    if ((remaining[res] || 0) < amt) { canAfford = false; break; }
+                }
+                if (canAfford) {
+                    for (const [res, amt] of Object.entries(def.cost)) remaining[res] -= amt;
+                    affordable.add(key);
+                } else {
+                    unaffordable.add(key);
+                }
+            }
+        }
+        return { affordable, unaffordable, blocked };
+    }
+
+    _getZoneDragPreview(rect) {
+        const affordable = new Set();
+        const blocked = new Set();
+        for (let y = rect.y1; y <= rect.y2; y++) {
+            for (let x = rect.x1; x <= rect.x2; x++) {
+                if (x < 0 || x >= CONFIG.MAP_WIDTH || y < 0 || y >= CONFIG.MAP_HEIGHT) continue;
+                const tile = this.game.map[y][x];
+                const key = y * CONFIG.MAP_WIDTH + x;
+                if ((tile.terrain !== 'grass' && tile.terrain !== 'dirt') || tile.structure || tile.resource || tile.zone) {
+                    blocked.add(key);
+                } else {
+                    affordable.add(key);
+                }
+            }
+        }
+        return { affordable, unaffordable: new Set(), blocked };
+    }
+
     onKeyDown(e) {
         this.keysDown.add(e.key.toLowerCase());
 
@@ -114,7 +177,7 @@ export class InputHandler {
             case 'a': case 'arrowleft': this.game.camera.pan(-3, 0); break;
             case 'd': case 'arrowright': this.game.camera.pan(3, 0); break;
             case 'b': this.setMode(this.mode === 'build' ? 'normal' : 'build'); break;
-            case 'z': this.setMode(this.mode === 'zone' ? 'normal' : 'zone'); break;
+            case 'f': this.setMode(this.mode === 'zone' ? 'normal' : 'zone'); break;
             case 'g': this.setMode(this.mode === 'designate' ? 'normal' : 'designate'); break;
             case 'escape': {
                 if (this.spellTargeting) {
@@ -136,6 +199,8 @@ export class InputHandler {
                     if (ui.storyPanelVisible) ui.toggleStoryPanel();
                 } else if (this.mode !== 'normal') {
                     this.setMode('normal');
+                } else {
+                    ui.toggleSettingsPanel();
                 }
                 break;
             }
@@ -195,6 +260,12 @@ export class InputHandler {
                 const req = CROP_RESEARCH_REQS[crop];
                 if (req && !this.game.research.isResearched(req)) return;
                 this.cropType = crop;
+                this.game.ui.updateModeDisplay(this);
+            }
+        } else if (this.mode === 'designate') {
+            const modes = ['chop', 'mine'];
+            if (num >= 1 && num <= modes.length) {
+                this.designateMode = modes[num - 1];
                 this.game.ui.updateModeDisplay(this);
             }
         }
@@ -543,6 +614,7 @@ export class InputHandler {
                 designateBuild(this.game, x, y, this.buildType);
             }
         }
+        this.game.ui.updateBuildPanel(this);
     }
 
     deconstructArea(start, end) {
@@ -602,10 +674,8 @@ export class InputHandler {
                     break;
                 }
                 if (!this.buildType) break;
-                designateBuild(this.game, pos.x, pos.y, this.buildType);
-                if (this.singlePlaceTypes.has(this.buildType)) {
-                    this.buildType = null;
-                    this.game.ui.updateModeDisplay(this);
+                if (designateBuild(this.game, pos.x, pos.y, this.buildType)) {
+                    this.game.ui.updateBuildPanel(this);
                 }
                 break;
         }

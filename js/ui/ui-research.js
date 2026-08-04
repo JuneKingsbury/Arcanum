@@ -81,7 +81,7 @@ const researchMethods = {
                 } else {
                     html += `<div class="research-node-cost">${tech.cost} pts</div>`;
                 }
-                const crossTabReqs = tech.requires.filter(r => RESEARCH[r]?.tab !== activeTab);
+                const crossTabReqs = tech.requires.filter(r => RESEARCH[r]?.tab !== activeTab && !research.completed.has(r));
                 if (crossTabReqs.length > 0) {
                     html += '<div class="research-cross-tab-row">';
                     for (const req of crossTabReqs) {

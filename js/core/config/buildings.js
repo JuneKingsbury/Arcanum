@@ -72,9 +72,6 @@ export const DOOR_STRUCTURES = new Set(
 export const DRAG_BUILD_TYPES = new Set(
     Object.entries(BUILDINGS).filter(([, b]) => b.structureType === 'wall' || b.structureType === 'floor' || b.structureType === 'door' || b.dragPlace).map(([k]) => k)
 );
-export const SINGLE_PLACE_TYPES = new Set(
-    Object.entries(BUILDINGS).filter(([, b]) => b.structureType === 'furniture' && !b.dragPlace).map(([k]) => k)
-);
 
 export const COMPLEX_STRUCTURES = {
     great_forge: {
