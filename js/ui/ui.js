@@ -678,20 +678,53 @@ export class UI {
         const items = getEquippedItems(colonist);
         if (items.length === 0) return '';
         const totals = {};
+        const combatTotals = {};
+        const expeditionTotals = {};
         let drMult = 1;
+        let combatDrMult = 1;
+        let expDrMult = 1;
         for (const item of items) {
             for (const stat of Object.keys(STAT_META)) {
                 if (!item[stat]) continue;
                 if (STAT_META[stat].aggregation === 'multiplicative') { drMult *= (1 - item[stat]); }
                 else { totals[stat] = (totals[stat] || 0) + item[stat]; }
             }
+            if (item.combat) {
+                for (const [stat, value] of Object.entries(item.combat)) {
+                    if (!STAT_META[stat] || !value) continue;
+                    if (STAT_META[stat].aggregation === 'multiplicative') { combatDrMult *= (1 - value); }
+                    else { combatTotals[stat] = (combatTotals[stat] || 0) + value; }
+                }
+            }
+            if (item.expedition) {
+                for (const [stat, value] of Object.entries(item.expedition)) {
+                    if (!STAT_META[stat] || !value) continue;
+                    if (STAT_META[stat].aggregation === 'multiplicative') { expDrMult *= (1 - value); }
+                    else { expeditionTotals[stat] = (expeditionTotals[stat] || 0) + value; }
+                }
+            }
         }
         if (drMult < 1) totals.damageReduction = 1 - drMult;
+        if (combatDrMult < 1) combatTotals.damageReduction = 1 - combatDrMult;
+        if (expDrMult < 1) expeditionTotals.damageReduction = 1 - expDrMult;
+        const sep = ' <span style="color:#333">|</span> ';
+        const sections = [];
         const parts = [];
         for (const [stat, meta] of Object.entries(STAT_META)) {
             if (totals[stat]) parts.push(`<span style="color:#ccc">${meta.label}:</span> ${formatStatValue(stat, totals[stat])}`);
         }
-        return parts.length ? parts.join(' <span style="color:#333">|</span> ') : '';
+        if (parts.length) sections.push(parts.join(sep));
+        const combatParts = [];
+        for (const [stat, meta] of Object.entries(STAT_META)) {
+            if (combatTotals[stat]) combatParts.push(`<span style="color:#ccc">${meta.label}:</span> ${formatStatValue(stat, combatTotals[stat])}`);
+        }
+        if (combatParts.length) sections.push(`<span style="color:#ff8866">Combat:</span> ${combatParts.join(sep)}`);
+        const expParts = [];
+        for (const [stat, meta] of Object.entries(STAT_META)) {
+            if (expeditionTotals[stat]) expParts.push(`<span style="color:#ccc">${meta.label}:</span> ${formatStatValue(stat, expeditionTotals[stat])}`);
+        }
+        if (expParts.length) sections.push(`<span style="color:#33ccff">Expedition:</span> ${expParts.join(sep)}`);
+        return sections.join('<br>');
     }
 
     _getArtifactTooltip(art) {
@@ -918,7 +951,12 @@ export class UI {
             armor: { listName: 'armors', label: 'Armor', fallback: 'None', equipFn: 'equipArmor', unequipFn: 'unequipArmor', statRenderer: a => getItemStatLines(a).join(', ') },
             helmet: { listName: 'helmets', label: 'Helmet', fallback: 'None', equipFn: 'equipHelmet', unequipFn: 'unequipHelmet', statRenderer: h => getItemStatLines(h).join(', ') },
             tool: { listName: 'tools', label: 'Tool', fallback: 'None', equipFn: 'equipTool', unequipFn: 'unequipTool', statRenderer: t => getItemStatLines(t).join(', ') },
-            artifact: { listName: 'artifacts', label: 'Artifact', fallback: 'None', equipFn: 'equipArtifact', unequipFn: 'unequipArtifact', statRenderer: a => getItemStatLines(a).join(', ') },
+            artifact: { listName: 'artifacts', label: 'Artifact', fallback: 'None', equipFn: 'equipArtifact', unequipFn: 'unequipArtifact', statRenderer: a => {
+                const lines = getItemStatLines(a);
+                if (a.expedition) { const el = getNestedEffectLines(a.expedition); if (el.length) lines.push(...el); }
+                if (a.combat) { const cl = getNestedEffectLines(a.combat); if (cl.length) lines.push(...cl); }
+                return lines.join(', ');
+            } },
         };
         if (slot === 'tome') {
             const tomes = this.game.resources.tomes || [];

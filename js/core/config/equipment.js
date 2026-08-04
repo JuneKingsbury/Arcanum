@@ -102,7 +102,7 @@ export const TOOLS = {
 
 export const ARTIFACTS = {
     boots_of_haste: { name: 'Boots of Haste', moveSpeedBonus: 0.5, description: 'Enchanted boots that quicken the wearer.', expedition: { durationMult: 0.85 }, recipe: { input: { void_essence: 3, planks: 2, runite: 1 }, ticks: 55, research: 'void_forging' } },
-    seedkeepers_locket: { name: "Seedkeeper's Locket", description: 'A locket blessed by druids. Protects crops from blight.', pedestal: { radius: 5, manaCost: 1, blightImmunity: true }, expedition: { trapDamageMult: 0.7 } },
+    seedkeepers_locket: { name: "Seedkeeper's Locket", description: 'A locket blessed by druids. Protects crops from blight.', pedestal: { radius: 8, manaCost: 1, blightImmunity: true }, expedition: { trapDamageMult: 0.7 } },
     hourglass_of_diligence: { name: 'Hourglass of Diligence', description: 'Time bends around this hourglass, hastening all labor.', workSpeedBonus: 0.25, pedestal: { radius: 4, manaCost: 2, workSpeedBonus: 0.15 } },
     lodestone_of_prosperity: { name: 'Lodestone of Prosperity', description: 'A magnetic stone that draws wanderers to your colony.', pedestal: { radius: 'global', manaCost: 2, wandererChanceMult: 1.5 } },
     cornucopia_charm: { name: 'Cornucopia Charm', description: 'A charm of abundance. Cooking yields extra food.', pedestal: { radius: 'global', manaCost: 1, cookingBonusFood: 1 } },
