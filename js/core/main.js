@@ -8,7 +8,7 @@ import { SkinManager } from '../ui/skin-manager.js';
 import { createColonist, createGolem, updateColonist, addThought, grantCastXp } from '../entities/colonist.js';
 import { TaskQueue } from './tasks.js';
 import { ResourceManager } from '../systems/resources.js';
-import { detectRooms } from '../world/rooms.js';
+import { detectRooms, calculateRoomQualities } from '../world/rooms.js';
 import { updateFarming } from '../systems/farming.js';
 import { queueCraftingOrder, updateAutoCook, updateAutoCraft } from '../systems/crafting.js';
 import { Weather } from '../world/weather.js';
@@ -122,6 +122,8 @@ class Game {
         this.selectedColonists = [];
         this.followingColonist = null;
         this.roomsDirty = true;
+        this.roomQualities = {};
+        this.workshopQualities = {};
         this._recipeCacheVersion = 0;
 
         this.spatial = {
@@ -347,9 +349,12 @@ class Game {
         }
 
         if (this.roomsDirty) {
-            detectRooms(this.map);
+            const roomCount = detectRooms(this.map);
             this.mapIndex.rebuild(this.map);
             checkComplexStructures(this);
+            const qualities = calculateRoomQualities(this.map, roomCount);
+            this.roomQualities = qualities.roomQualities;
+            this.workshopQualities = qualities.workshopQualities;
             this.roomsDirty = false;
         }
 
@@ -621,7 +626,7 @@ class Game {
         if (c[slot]) this.resources[addMethod](c[slot]);
         c[slot] = item;
         this._recalcEquipmentStats(c);
-        if (slot === 'armor' || slot === 'helmet') this.renderer?.skinManager?.invalidateComposite(colonistId);
+        if (slot === 'armor' || slot === 'helmet' || slot === 'weapon' || slot === 'tool') this.renderer?.skinManager?.invalidateComposite(colonistId);
         this.notifications.push({ text: `${c.name} equipped ${item.name}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);
@@ -634,7 +639,7 @@ class Game {
         this.resources[addMethod](c[slot]);
         c[slot] = null;
         this._recalcEquipmentStats(c);
-        if (slot === 'armor' || slot === 'helmet') this.renderer?.skinManager?.invalidateComposite(colonistId);
+        if (slot === 'armor' || slot === 'helmet' || slot === 'weapon' || slot === 'tool') this.renderer?.skinManager?.invalidateComposite(colonistId);
         this.notifications.push({ text: `${c.name} unequipped ${label}`, tick: this.tick, type: 'success' });
         if (slot === 'artifact') this._updateColonistRadiusHighlight(c);
         this.ui.showColonistInfo(c);

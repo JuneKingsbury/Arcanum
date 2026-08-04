@@ -1194,6 +1194,43 @@ export class UI {
         return html;
     }
 
+    _buildRoomQualityHtml(roomId) {
+        let html = '';
+        const rq = this.game.roomQualities[roomId];
+        const wq = this.game.workshopQualities[roomId];
+        if (!rq && !wq) {
+            html += `<div class="info-row">Room #${roomId}</div>`;
+            return html;
+        }
+        if (rq) {
+            html += `<div class="info-row" style="color:#aaccff;font-weight:bold;">${rq.tierName} (${rq.total}/100)</div>`;
+            html += `<div class="info-row" style="color:#88ff88;font-size:0.85em;">  → Mood +${rq.moodEffect} for ${rq.duration} ticks when sleeping here</div>`;
+            const b = rq.breakdown;
+            if (b.size > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Size: +${b.size}</div>`;
+            if (b.floor > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Flooring: +${b.floor}</div>`;
+            if (b.light > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Lighting: +${b.light}</div>`;
+            if (b.decor > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Decorations: +${b.decor} (${rq.decorList.map(d => d.replace(/_/g, ' ')).join(', ')})</div>`;
+            if (b.coherence > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Coherence: +${b.coherence}</div>`;
+        }
+        if (wq) {
+            const label = wq.focusGroup ? `${wq.tierName} ${wq.focusGroup}` : wq.tierName;
+            html += `<div class="info-row" style="color:#ffcc44;font-weight:bold;">Workshop — ${label} (${wq.total}/100)</div>`;
+            const b = wq.breakdown;
+            if (b.size > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Size: +${b.size}</div>`;
+            if (b.floor > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Flooring: +${b.floor}</div>`;
+            if (b.light > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Lighting: +${b.light}</div>`;
+            if (b.focus > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Focus: +${b.focus}${wq.focusGroup ? ` (${wq.focusGroup})` : ''}</div>`;
+            if (b.support > 0) html += `<div class="info-row" style="color:#888;font-size:0.85em;">  Support: +${b.support} (${wq.supportList.map(s => s.replace(/_/g, ' ')).join(', ')})</div>`;
+            if (wq.speedMult > 1 || wq.qualityBonus > 0) {
+                let bonusText = '';
+                if (wq.speedMult > 1) bonusText += `Speed: +${Math.round((wq.speedMult - 1) * 100)}%`;
+                if (wq.qualityBonus > 0) bonusText += `${bonusText ? ' | ' : ''}Quality: +${wq.qualityBonus} skill`;
+                html += `<div class="info-row" style="color:#88ff88;font-size:0.85em;">  → ${bonusText}</div>`;
+            }
+        }
+        return html;
+    }
+
     _buildBedInfoHtml(tile, x, y) {
         let html = '';
         const assigned = this.game.colonists.find(c =>
@@ -1379,7 +1416,7 @@ export class UI {
                 }
             }
         }
-        if (tile.roomId !== null) html += `<div class="info-row">Room #${tile.roomId}</div>`;
+        if (tile.roomId !== null) html += this._buildRoomQualityHtml(tile.roomId);
         if (tile.onFire) html += `<div class="info-row fire">ON FIRE!</div>`;
 
         if (tile.structure === 'bed') {
@@ -1543,7 +1580,7 @@ export class UI {
         }
         if (tile.resource) html += `<div class="info-row">Resource: ${tile.resource.type} (${tile.resource.amount})</div>`;
         html += `<div class="info-row">Terrain: ${tile.terrain}</div>`;
-        if (tile.roomId !== null) html += `<div class="info-row">Room #${tile.roomId}</div>`;
+        if (tile.roomId !== null) html += this._buildRoomQualityHtml(tile.roomId);
 
         if (tile.structure === 'bed') {
             html += this._buildBedInfoHtml(tile, x, y);

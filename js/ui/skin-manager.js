@@ -131,10 +131,10 @@ export class SkinManager {
         return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
-    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender) {
-        if (!armorKey && !helmetKey) return this.getColonistSprite(colonistId, drafted, gender);
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender, weaponKey, toolKey) {
+        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, gender);
 
-        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}`;
+        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}:${weaponKey || ''}:${toolKey || ''}`;
         if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
 
         const base = this.getColonistSprite(colonistId, drafted, gender);
@@ -142,8 +142,10 @@ export class SkinManager {
 
         const armorSprite = armorKey ? this._sprites.get('equipment_worn:' + armorKey) : null;
         const helmetSprite = helmetKey ? this._sprites.get('equipment_worn:' + helmetKey) : null;
+        const weaponSprite = weaponKey ? this._sprites.get('equipment_worn:' + weaponKey) : null;
+        const toolSprite = toolKey ? this._sprites.get('equipment_worn:' + toolKey) : null;
 
-        if (!armorSprite && !helmetSprite) {
+        if (!armorSprite && !helmetSprite && !weaponSprite && !toolSprite) {
             this._compositeCache.set(cacheKey, base);
             return base;
         }
@@ -157,12 +159,24 @@ export class SkinManager {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(base, 0, 0, cw, ch);
         if (armorSprite) {
+            const offX = Math.floor(cw * (EQUIPMENT_OVERLAY_OFFSETS.armor.offsetX || 0));
             const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.armor.offsetY || 0));
-            ctx.drawImage(armorSprite, 0, offY, cw, ch);
+            ctx.drawImage(armorSprite, offX, offY, cw, ch);
         }
         if (helmetSprite) {
+            const offX = Math.floor(cw * (EQUIPMENT_OVERLAY_OFFSETS.helmet.offsetX || 0));
             const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.helmet.offsetY || 0));
-            ctx.drawImage(helmetSprite, 0, offY, cw, ch);
+            ctx.drawImage(helmetSprite, offX, offY, cw, ch);
+        }
+        if (weaponSprite) {
+            const offX = Math.floor(cw * (EQUIPMENT_OVERLAY_OFFSETS.weapon.offsetX || 0));
+            const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.weapon.offsetY || 0));
+            ctx.drawImage(weaponSprite, offX, offY, cw, ch);
+        }
+        if (toolSprite) {
+            const offX = Math.floor(cw * (EQUIPMENT_OVERLAY_OFFSETS.tool.offsetX || 0));
+            const offY = Math.floor(ch * (EQUIPMENT_OVERLAY_OFFSETS.tool.offsetY || 0));
+            ctx.drawImage(toolSprite, offX, offY, cw, ch);
         }
 
         this._compositeCache.set(cacheKey, canvas);

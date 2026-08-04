@@ -5,8 +5,14 @@ import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from '.
 import { getHarvestYield } from '../systems/farming.js';
 import { manhattanDist } from '../world/pathfinding.js';
 
-function applyQuality(item, colonist, ...statKeys) {
-    const skill = colonist.skills.crafting || 1;
+function applyQuality(item, colonist, game, ...statKeys) {
+    let skill = colonist.skills.crafting || 1;
+    if (game && game.workshopQualities) {
+        const roomId = game.map[colonist.y]?.[colonist.x]?.roomId;
+        if (roomId !== null && roomId !== undefined && game.workshopQualities[roomId]) {
+            skill += game.workshopQualities[roomId].qualityBonus;
+        }
+    }
     const chances = QUALITY_TIERS.map(t => Math.max(0, t.baseChance + t.perSkill * skill));
     const total = chances.reduce((s, c) => s + c, 0);
     let roll = Math.random() * total;
@@ -159,22 +165,22 @@ export function completeTask(colonist, task, game) {
                 for (const key of Object.keys(output)) {
                     if (WEAPONS[key]) {
                         const item = { ...WEAPONS[key], key };
-                        applyQuality(item, colonist, 'damage');
+                        applyQuality(item, colonist, game, 'damage');
                         game.resources.addWeapon(item);
                         handled = true;
                     } else if (ARMORS[key]) {
                         const item = { ...ARMORS[key], key };
-                        applyQuality(item, colonist, 'damageReduction');
+                        applyQuality(item, colonist, game, 'damageReduction');
                         game.resources.addArmor(item);
                         handled = true;
                     } else if (HELMETS[key]) {
                         const item = { ...HELMETS[key], key };
-                        applyQuality(item, colonist, 'damageReduction');
+                        applyQuality(item, colonist, game, 'damageReduction');
                         game.resources.addHelmet(item);
                         handled = true;
                     } else if (TOOLS[key]) {
                         const item = { ...TOOLS[key], key };
-                        applyQuality(item, colonist, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
+                        applyQuality(item, colonist, game, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
                         game.resources.addTool(item);
                         handled = true;
                     } else if (ARTIFACTS[key]) {

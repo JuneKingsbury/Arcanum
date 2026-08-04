@@ -896,6 +896,13 @@ function updateWorking(colonist, game) {
 
     speed *= getEquipmentWorkBonus(colonist, task);
 
+    if ((task.type === 'craft' || task.type === 'cook') && game.workshopQualities) {
+        const roomId = game.map[colonist.y]?.[colonist.x]?.roomId;
+        if (roomId !== null && roomId !== undefined && game.workshopQualities[roomId]) {
+            speed *= game.workshopQualities[roomId].speedMult;
+        }
+    }
+
     if (colonist.activeEffects) {
         for (const e of colonist.activeEffects) {
             if (e.type === 'speed' && e.workSpeedBonus) speed *= e.workSpeedBonus;
@@ -976,7 +983,10 @@ function updateSleeping(colonist, game) {
             colonist.x === colonist.assignedBed.x && colonist.y === colonist.assignedBed.y;
         if (inBed) {
             const roomId = game.map[colonist.y][colonist.x].roomId;
-            if (roomId !== null) {
+            if (roomId !== null && game.roomQualities[roomId]) {
+                const rq = game.roomQualities[roomId];
+                addThought(colonist, rq.tierName, rq.moodEffect, rq.duration, game.tick);
+            } else if (roomId !== null) {
                 addThought(colonist, 'Slept in nice room', COLONIST_CONFIG.sleptInRoomMoodBonus, COLONIST_CONFIG.sleptInRoomMoodDuration, game.tick);
             } else {
                 addThought(colonist, 'Slept in bed', COLONIST_CONFIG.sleptInBedMoodBonus, COLONIST_CONFIG.sleptInBedMoodDuration, game.tick);

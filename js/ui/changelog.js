@@ -1,4 +1,11 @@
 export const CHANGELOG = [
+    { date: '2026-08-04', message: 'Room Quality system: enclosed rooms are now scored (0-100) based on size, flooring, lighting, decorations, and wall quality — nicer bedrooms give better mood bonuses when sleeping' },
+    { date: '2026-08-04', message: 'Workshop Quality system: rooms with crafting stations score based on size, flooring, lighting, station focus (dedicated rooms score higher), and support furniture — grants up to +25% craft speed and +3 virtual skill for quality rolls' },
+    { date: '2026-08-04', message: 'Station Focus bonus: rooms with a single workstation group (Smithy, Kitchen, Workshop, Scriptorium, Laboratory) get a large quality bonus — dedicated rooms outperform cluttered ones' },
+    { date: '2026-08-04', message: 'New Scriptorium workstation: dedicated tome-crafting station unlocked with Arcane Studies research — all spell tome recipes moved here from the Enchanting Table' },
+    { date: '2026-08-04', message: 'New decorative furniture: Rug, Shelf, Chair, Bookcase — place in rooms to boost bedroom quality' },
+    { date: '2026-08-04', message: 'New workshop support furniture: Tool Rack, Material Shelf — place in workshops to boost crafting bonuses' },
+    { date: '2026-08-04', message: 'Room quality breakdown shown in tile info panel — see exactly what contributes to your room score and current bonuses' },
     { date: '2026-08-03', message: 'Entities no longer hide buildings/furniture underneath them — transparent sprite areas reveal the structure below' },
     { date: '2026-08-03', message: 'Terrain dithering intensity setting: Off, Minimal, Light, Normal, Heavy, Extreme (Settings > Visual)' },
     { date: '2026-08-03', message: 'Separate sleeping sprites: colonists sleeping in a bed vs on the ground use different sprites' },

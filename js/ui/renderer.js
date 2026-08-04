@@ -79,8 +79,8 @@ export class Renderer {
                     const s = sm.getSprite('entities', key) || sm.getColonistSleepingSprite();
                     if (s) return s;
                 }
-                if (entity.armorKey || entity.helmetKey) {
-                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey, entity.gender);
+                if (entity.armorKey || entity.helmetKey || entity.weaponKey || entity.toolKey) {
+                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey, entity.gender, entity.weaponKey, entity.toolKey);
                     if (comp) return comp;
                 }
                 return sm.getColonistSprite(entity.colonistId, entity.drafted, entity.gender);
@@ -415,7 +415,7 @@ export class Renderer {
                 const showEq = game.settings.showEquipmentOverlays;
                 const isSleeping = c.state === 'sleeping';
                 const sleepingInBed = isSleeping && c.assignedBed && c.x === c.assignedBed.x && c.y === c.assignedBed.y;
-                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, gender: c.gender, drafted, golemType: c.golemType, sleeping: isSleeping, sleepingInBed, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, gender: c.gender, drafted, golemType: c.golemType, sleeping: isSleeping, sleepingInBed, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null, weaponKey: showEq ? (c.weapon?.key || null) : null, toolKey: showEq ? (c.tool?.key || null) : null };
                 if (isEntityMoving(c)) {
                     movingEntities.push({ entity: c, ...entData });
                 } else {

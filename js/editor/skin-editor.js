@@ -191,6 +191,7 @@ class SkinEditor {
         this._onionSkinKey = null; // spriteKey of overlay sprite
         this._onionSkinData = null; // ImageData or pixel array
         this._onionSkinOpacity = 0.3;
+        this._onionSkinOffsetX = 0;
         this._onionSkinOffsetY = 0;
 
         // Tile preview
@@ -538,6 +539,13 @@ class SkinEditor {
                 }
                 for (const [key, def] of Object.entries(HELMETS)) {
                     items.push({ key, char: def.char || ITEM_CHARS.helmet.char, color: def.charColor || ITEM_CHARS.helmet.color, desc: `Worn: ${def.name}`, category: 'equipment_worn' });
+                }
+                for (const [key, def] of Object.entries(WEAPONS)) {
+                    if (key === 'fists') continue;
+                    items.push({ key, char: def.char || ITEM_CHARS.weapon.char, color: def.charColor || ITEM_CHARS.weapon.color, desc: `Worn: ${def.name}`, category: 'equipment_worn' });
+                }
+                for (const [key, def] of Object.entries(TOOLS)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.tool.char, color: def.charColor || ITEM_CHARS.tool.color, desc: `Worn: ${def.name}`, category: 'equipment_worn' });
                 }
                 break;
         }
@@ -1321,13 +1329,19 @@ class SkinEditor {
             const colonistSprite = this.savedSprites['entities:colonist_1'];
             if (colonistSprite) {
                 this._onionSkinOpacity = 1.0;
-                const slotType = HELMETS[key] ? 'helmet' : 'armor';
-                const offset = EQUIPMENT_OVERLAY_OFFSETS[slotType]?.offsetY || 0;
-                this._onionSkinOffsetY = -offset;
-                this._setOnionSkinFromSprite('entities:colonist_1');
+                const slotType = HELMETS[key] ? 'helmet' : WEAPONS[key] ? 'weapon' : TOOLS[key] ? 'tool' : 'armor';
+                const offsets = EQUIPMENT_OVERLAY_OFFSETS[slotType] || {};
+                this._onionSkinOffsetX = -(offsets.offsetX || 0);
+                this._onionSkinOffsetY = -(offsets.offsetY || 0);
+                if (slotType === 'weapon' || slotType === 'tool') {
+                    this._setOnionSkinComposite('entities:colonist_1');
+                } else {
+                    this._setOnionSkinFromSprite('entities:colonist_1');
+                }
             }
         } else if (this._onionSkinOpacity === 1.0) {
             this._onionSkinOpacity = 0.3;
+            this._onionSkinOffsetX = 0;
             this._onionSkinOffsetY = 0;
             if (this._onionSkinKey && this._onionSkinKey !== '__pending__') {
                 this._onionSkinKey = null;
@@ -1530,8 +1544,9 @@ class SkinEditor {
         if (this._onionSkinKey && this._onionSkinData) {
             ctx.globalAlpha = this._onionSkinOpacity;
             ctx.imageSmoothingEnabled = false;
+            const onionOffX = this._onionSkinOffsetX ? Math.floor(gridW * this._onionSkinOffsetX) : 0;
             const onionOffY = this._onionSkinOffsetY ? Math.floor(gridH * this._onionSkinOffsetY) : 0;
-            ctx.drawImage(this._onionSkinData, ox, oy + onionOffY, gridW, gridH);
+            ctx.drawImage(this._onionSkinData, ox + onionOffX, oy + onionOffY, gridW, gridH);
             ctx.globalAlpha = 1.0;
         }
 
@@ -1657,9 +1672,11 @@ class SkinEditor {
             tempCanvas.width = size;
             tempCanvas.height = size;
             tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+            const previewOffX = (this.activeObject?.category === 'equipment_worn' && this._onionSkinOffsetX)
+                ? -Math.floor(size * this._onionSkinOffsetX) : 0;
             const previewOffY = (this.activeObject?.category === 'equipment_worn' && this._onionSkinOffsetY)
                 ? -Math.floor(size * this._onionSkinOffsetY) : 0;
-            ctx.drawImage(tempCanvas, 0, previewOffY);
+            ctx.drawImage(tempCanvas, previewOffX, previewOffY);
         }
     }
 
@@ -2199,6 +2216,52 @@ class SkinEditor {
         const img = new Image();
         img.onload = () => { this._onionSkinData = img; };
         img.src = saved.data;
+    }
+
+    _setOnionSkinComposite(colonistSpriteKey) {
+        const colonistSaved = this.savedSprites[colonistSpriteKey];
+        if (!colonistSaved) {
+            this._setOnionSkinFromSprite(colonistSpriteKey);
+            return;
+        }
+        this._onionSkinKey = colonistSpriteKey;
+        const size = this.canvasSize;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const drawLayer = (dataURL, offsetY) => {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    const offY = Math.floor(size * (offsetY || 0));
+                    ctx.drawImage(img, 0, offY, size, size);
+                    resolve();
+                };
+                img.onerror = () => resolve();
+                img.src = dataURL;
+            });
+        };
+
+        const armorKeys = Object.keys(ARMORS);
+        const helmetKeys = Object.keys(HELMETS);
+        const firstArmor = armorKeys.find(k => this.savedSprites['equipment_worn:' + k]);
+        const firstHelmet = helmetKeys.find(k => this.savedSprites['equipment_worn:' + k]);
+
+        drawLayer(colonistSaved.data, 0).then(() => {
+            const layers = [];
+            if (firstArmor) {
+                layers.push(drawLayer(this.savedSprites['equipment_worn:' + firstArmor].data, EQUIPMENT_OVERLAY_OFFSETS.armor.offsetY));
+            }
+            if (firstHelmet) {
+                layers.push(drawLayer(this.savedSprites['equipment_worn:' + firstHelmet].data, EQUIPMENT_OVERLAY_OFFSETS.helmet.offsetY));
+            }
+            return Promise.all(layers);
+        }).then(() => {
+            this._onionSkinData = canvas;
+        });
     }
 
     // --- Tile Preview ---

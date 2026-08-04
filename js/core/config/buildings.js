@@ -20,6 +20,12 @@ export const BUILDINGS = {
     food_chest:        { char: 'S', color: '#997744', cost: { planks: 4, stone: 2 }, work: 25, structureType: 'furniture', category: 'Furniture', description: 'Preserves food — reduces spoilage by 15% per chest (stacks up to 60%).' },
     ice_box:           { char: 'I', color: '#88ccff', cost: { runite: 2, stone: 4, planks: 2, void_essence: 2 }, work: 40, structureType: 'furniture', category: 'Furniture', research: 'alchemy', power: { consumes: 1 }, description: 'Magically chills food — reduces spoilage by 40%. Consumes 1 mana.' },
     glowstone:         { char: 'L', color: '#ffff88', cost: { planks: 2, stone: 1 }, work: 14, structureType: 'furniture', category: 'Furniture', lightRadius: 10, research: 'luminance', power: { consumes: 2, radius: 5 }, description: 'Mana-powered light, radius 5. Consumes 2 mana.' },
+    rug:               { char: '~', color: '#cc6644', bg: '#4a2211', cost: { leather: 2 }, work: 10, structureType: 'floor', category: 'Furniture', description: 'Decorative rug. Counts as fine flooring for room quality.' },
+    shelf:             { char: '=', color: '#996633', cost: { planks: 3 }, work: 12, structureType: 'furniture', category: 'Furniture', roomQuality: 5, description: 'Wall shelf. Improves room quality.' },
+    chair:             { char: 'h', color: '#aa7744', cost: { planks: 2 }, work: 8, structureType: 'furniture', category: 'Furniture', roomQuality: 4, description: 'A simple chair. Improves room quality.' },
+    bookcase:          { char: '║', color: '#775533', cost: { planks: 4, leather: 1 }, work: 18, structureType: 'furniture', category: 'Furniture', roomQuality: 7, research: 'stonework', description: 'A bookcase. Improves room quality.' },
+    tool_rack:         { char: '╥', color: '#886644', cost: { planks: 3, iron: 1 }, work: 15, structureType: 'furniture', category: 'Furniture', workshopBonus: 10, description: 'Organized tools. Improves workshop quality.' },
+    material_shelf:    { char: '╡', color: '#997755', cost: { planks: 4 }, work: 12, structureType: 'furniture', category: 'Furniture', workshopBonus: 8, description: 'Material storage. Improves workshop quality.' },
 
     // === Production (ordered by progression) ===
     workbench:         { char: 'C', color: '#bb8833', cost: { wood: 5, stone: 2 }, work: 30, structureType: 'furniture', category: 'Production', description: 'Basic crafting — planks, bricks, leather, simple weapons, and tools.' },
@@ -29,6 +35,7 @@ export const BUILDINGS = {
     alchemy_table:     { char: '⚗', color: '#44cc88', cost: { planks: 4, stone: 2 }, work: 25, structureType: 'furniture', category: 'Production', research: 'alchemy', description: 'Required for brewing potions.' },
     beast_circle:      { char: 'A', color: '#9cf642', cost: { wood: 6 }, work: 28, structureType: 'furniture', category: 'Production', research: 'beast_binding', description: 'Required for binding creatures. Bound animals produce resources.' },
     enchanting_table:  { char: 'P', color: '#bb88ff', cost: { planks: 4, stone: 3 }, work: 35, structureType: 'furniture', category: 'Production', research: 'arcane_infusion', power: { consumes: 4, speedMult: 2.0 }, description: '2x crafting speed. Consumes 4 mana.' },
+    scriptorium:       { char: '𝕊', color: '#4488cc', cost: { planks: 6, stone: 3, leather: 2 }, work: 40, structureType: 'furniture', category: 'Production', research: 'arcane_studies', description: 'Required for crafting spell tomes.' },
     golem_forge:       { char: 'Ğ', color: '#cc8833', cost: { stone: 8, runite: 4, planks: 4 }, work: 50, structureType: 'furniture', category: 'Production', research: 'golem_craft', description: 'Animate stone golems. Click to craft.' },
 
     // === Defense (ordered by progression) ===
