@@ -1135,6 +1135,20 @@ body {
     padding: 2px 5px;
 }
 
+.craft-repeat {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #888;
+    border-radius: 4px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.craft-repeat.active {
+    background: #1a4a1a;
+    border-color: #4a4;
+    color: #6f6;
+}
+
 #priority-panel table {
     border-collapse: collapse;
     width: 100%;
@@ -1261,7 +1275,7 @@ body {
     padding: 4px;
 }
 
-.craft-available button {
+.craft-available button:not(.craft-repeat) {
     background: #2a4a2a;
     border: 1px solid #4a4;
     color: #8c8;
@@ -1271,7 +1285,7 @@ body {
     border-radius: 3px;
 }
 
-.craft-available button:hover { background: #3a6a3a; }
+.craft-available button:not(.craft-repeat):hover { background: #3a6a3a; }
 
 .craft-unavailable {
     opacity: 0.5;

@@ -1822,11 +1822,11 @@ export class UI {
             }).join('+');
             const cls = canCraft ? 'craft-available' : 'craft-unavailable';
             const ct = this.game.settings.craftTargets[key] || {};
-            const repeatActive = ct.repeat ? ' style="background:#336633;border-color:#4a4"' : '';
+            const repeatCls = ct.repeat ? 'craft-repeat active' : 'craft-repeat';
             html += `<div class="craft-row ${cls}">`;
             html += `<button ${canCraft ? '' : 'disabled'} onclick="window.game.craft('${key}')">${key.replace(/_/g, ' ')}</button>`;
             html += `<button ${canCraft ? '' : 'disabled'} onclick="window.game.craftMultiple('${key}',5)" class="craft-multi">x5</button>`;
-            html += `<button onclick="window.game.toggleCraftRepeat('${key}')" class="craft-multi" title="Auto-repeat"${repeatActive}>&#x27F3;</button>`;
+            html += `<button onclick="window.game.toggleCraftRepeat('${key}')" class="craft-multi ${repeatCls}" title="Auto-repeat">&#x27F3;</button>`;
             html += `<input type="number" min="0" max="999" value="${ct.target || 0}" onchange="window.game.setCraftTarget('${key}',this.value)" title="Maintain stock target (0=off)" style="width:35px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;padding:1px 2px;text-align:center;font-size:0.85em;">`;
             html += `<span>${inputStr} → ${outputStr}</span>`;
             if (!hasStation) {
