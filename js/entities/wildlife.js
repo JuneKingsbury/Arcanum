@@ -111,8 +111,14 @@ function isBeingTamed(animal, game) {
     return game.taskQueue.getAll().some(t => t.type === 'tame' && t.targetAnimalId === animal.id);
 }
 
+function isBeingHunted(animal, game) {
+    return game.taskQueue.getAll().some(t => t.type === 'hunt' && t.targetAnimalId === animal.id)
+        || game.colonists.some(c => c.state === 'hunting' && c.huntTargetId === animal.id);
+}
+
 function updatePassiveAnimal(animal, def, game, dur) {
     if (isBeingTamed(animal, game)) return;
+    if (isBeingHunted(animal, game)) return;
 
     const nearestColonist = findNearestColonist(animal, game);
     if (nearestColonist && manhattanDist(animal.x, animal.y, nearestColonist.x, nearestColonist.y) <= def.fleeRange) {

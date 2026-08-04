@@ -2154,6 +2154,16 @@ body {
     .event-choices { flex-direction: column; }
     .event-choices button { width: 100%; }
 
+    .research-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .research-tab-btn {
+        flex-shrink: 0;
+    }
+
     .craft-tabs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
