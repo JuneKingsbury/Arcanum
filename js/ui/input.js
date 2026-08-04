@@ -2,6 +2,7 @@ import { CONFIG, CROPS, BUILDINGS, BUILD_CATEGORIES, DRAG_BUILD_TYPES, SPELLS, A
 import { designateBuild, designateChop, designateMine, cancelDesignation } from '../systems/building.js';
 import { designateFarmZone, removeFarmZone, CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { isPassable } from '../world/map.js';
+import { manhattanDist } from '../world/pathfinding.js';
 
 export class InputHandler {
     constructor(game, preElement) {
@@ -716,7 +717,7 @@ export class InputHandler {
             return;
         }
 
-        const dist = Math.abs(colonist.x - pos.x) + Math.abs(colonist.y - pos.y);
+        const dist = manhattanDist(colonist.x, colonist.y, pos.x, pos.y);
         if (spell.range && dist > spell.range) {
             this.game.notifications.push({ text: `Target out of range (max ${spell.range})`, tick: this.game.tick, type: 'danger' });
             return;

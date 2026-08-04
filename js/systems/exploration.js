@@ -389,6 +389,9 @@ export class ExplorationSystem {
         }
     }
 
+    // Initiates an encounter from the pre-generated encounter list.
+    // Encounters are either 'loot' (immediate reward) or 'combat' (triggers
+    // the round-based combat loop in _updateCombat).
     _startEncounter(exp, game) {
         const encounter = exp.encounters[exp.currentEncounter];
         if (!encounter) return;
@@ -415,6 +418,11 @@ export class ExplorationSystem {
         };
     }
 
+    // Round-based combat: runs one round per EXPLORATION_CONFIG.combatRoundTicks.
+    // Each round: party attacks (multi-hit from low cooldown), party spell phase,
+    // then enemies attack. Damage = base weapon + rand(0,3), modified by
+    // equipment stats and difficulty multipliers. 15% flat miss chance on both sides.
+    // Enemy targeting uses artifact targetPriority (taunt mechanic).
     _updateCombat(exp, game) {
         const combat = exp.combat;
         if (game.tick < combat.roundTick) return;

@@ -1,3 +1,5 @@
+import { manhattanDist } from '../world/pathfinding.js';
+
 let nextTaskId = 1;
 
 export class TaskQueue {
@@ -78,7 +80,7 @@ export class TaskQueue {
 
             // Lower priority number = higher preference; multiplied to dominate over distance
             const prio = colonist.priorities[t.skillRequired];
-            const dist = Math.abs(colonist.x - t.x) + Math.abs(colonist.y - t.y);
+            const dist = manhattanDist(colonist.x, colonist.y, t.x, t.y);
             const score = prio * 10000 + dist;
 
             if (score < bestScore) {

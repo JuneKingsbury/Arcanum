@@ -4,6 +4,10 @@ import { CONFIG, PATHFINDING_CONFIG } from '../core/config.js';
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const MAX_NODES = PATHFINDING_CONFIG.maxNodes;
 
+// Binary min-heap keyed on f-score for A* open set.
+// Duplicate entries are allowed: when a node's g-score improves, we push a new
+// entry with the lower f. The stale duplicate is harmless — it will be popped
+// later and skipped because the node is already in the closed set.
 class MinHeap {
     constructor() {
         this.data = [];
@@ -56,30 +60,43 @@ class MinHeap {
     }
 }
 
-export function findPath(map, startX, startY, endX, endY) {
+// Packs (x, y) into a single integer for use as a Map/Set key.
+// Valid for coordinates 0..65535.
+export function tileKey(x, y) {
+    return (y << 16) | x;
+}
+
+export function manhattanDist(x1, y1, x2, y2) {
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+}
+
+// Core A* implementation. Accepts a passability/cost callback to support
+// different movement rules (colonists, enemies, animals) without duplication.
+// passabilityFn(map, x, y) => number|false:
+//   - returns false if tile is impassable
+//   - returns movement cost (>= 0) if passable
+function findPathGeneric(map, startX, startY, endX, endY, passabilityFn) {
     if (startX === endX && startY === endY) return [];
-    if (!isPassable(map, endX, endY)) return null;
 
     const open = new MinHeap();
-    const inOpen = new Set();
     const closed = new Set();
     const cameFrom = new Map();
     const gScore = new Map();
 
-    const key = (x, y) => (y << 16) | x;
-    const start = key(startX, startY);
-    const end = key(endX, endY);
+    const start = tileKey(startX, startY);
+    const end = tileKey(endX, endY);
 
     gScore.set(start, 0);
-    open.push({ x: startX, y: startY, f: heuristic(startX, startY, endX, endY) });
-    inOpen.add(start);
+    open.push({ x: startX, y: startY, f: manhattanDist(startX, startY, endX, endY) });
 
     let iterations = 0;
     while (open.length > 0 && iterations < MAX_NODES) {
         iterations++;
         const current = open.pop();
-        const currentKey = key(current.x, current.y);
-        inOpen.delete(currentKey);
+        const currentKey = tileKey(current.x, current.y);
+
+        // Skip stale duplicates that remained in the heap after a g-score update
+        if (closed.has(currentKey)) continue;
 
         if (currentKey === end) {
             return reconstructPath(cameFrom, current.x, current.y, startX, startY);
@@ -90,28 +107,41 @@ export function findPath(map, startX, startY, endX, endY) {
         for (const [dx, dy] of DIRS) {
             const nx = current.x + dx;
             const ny = current.y + dy;
-            const nKey = key(nx, ny);
+            const nKey = tileKey(nx, ny);
 
             if (closed.has(nKey)) continue;
-            if (!isPassable(map, nx, ny)) continue;
 
-            const tentativeG = gScore.get(currentKey) + getMoveCost(map, nx, ny);
+            const cost = passabilityFn(map, nx, ny);
+            if (cost === false) continue;
+
+            const tentativeG = gScore.get(currentKey) + cost;
             if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
                 cameFrom.set(nKey, currentKey);
                 gScore.set(nKey, tentativeG);
-                const f = tentativeG + heuristic(nx, ny, endX, endY);
-                if (!inOpen.has(nKey)) {
-                    open.push({ x: nx, y: ny, f });
-                    inOpen.add(nKey);
-                } else {
-                    // Update f score in heap by pushing duplicate (old one will be skipped via closed set)
-                    open.push({ x: nx, y: ny, f });
-                }
+                const f = tentativeG + manhattanDist(nx, ny, endX, endY);
+                open.push({ x: nx, y: ny, f });
             }
         }
     }
 
     return null;
+}
+
+function colonistPassability(map, x, y) {
+    if (!isPassable(map, x, y)) return false;
+    return getMoveCost(map, x, y);
+}
+
+function enemyPassability(map, x, y) {
+    if (x < 0 || x >= CONFIG.MAP_WIDTH || y < 0 || y >= CONFIG.MAP_HEIGHT) return false;
+    if (isBreakableByEnemies(map, x, y)) return getMoveCost(map, x, y) + PATHFINDING_CONFIG.breakableCostPenalty;
+    if (!isPassableForEnemies(map, x, y)) return false;
+    return getMoveCost(map, x, y);
+}
+
+export function findPath(map, startX, startY, endX, endY) {
+    if (!isPassable(map, endX, endY)) return null;
+    return findPathGeneric(map, startX, startY, endX, endY, colonistPassability);
 }
 
 export function findPathAdjacent(map, startX, startY, targetX, targetY) {
@@ -129,73 +159,13 @@ export function findPathAdjacent(map, startX, startY, targetX, targetY) {
 }
 
 export function findPathForEnemies(map, startX, startY, endX, endY) {
-    if (startX === endX && startY === endY) return [];
-
-    const open = new MinHeap();
-    const inOpen = new Set();
-    const closed = new Set();
-    const cameFrom = new Map();
-    const gScore = new Map();
-
-    const key = (x, y) => (y << 16) | x;
-    const start = key(startX, startY);
-    const end = key(endX, endY);
-
-    gScore.set(start, 0);
-    open.push({ x: startX, y: startY, f: heuristic(startX, startY, endX, endY) });
-    inOpen.add(start);
-
-    let iterations = 0;
-    while (open.length > 0 && iterations < MAX_NODES) {
-        iterations++;
-        const current = open.pop();
-        const currentKey = key(current.x, current.y);
-        inOpen.delete(currentKey);
-
-        if (currentKey === end) {
-            return reconstructPath(cameFrom, current.x, current.y, startX, startY);
-        }
-
-        closed.add(currentKey);
-
-        for (const [dx, dy] of DIRS) {
-            const nx = current.x + dx;
-            const ny = current.y + dy;
-            if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) continue;
-            const nKey = key(nx, ny);
-
-            if (closed.has(nKey)) continue;
-            if (!isPassableForEnemies(map, nx, ny) && !isBreakableByEnemies(map, nx, ny)) continue;
-
-            let cost = getMoveCost(map, nx, ny);
-            if (isBreakableByEnemies(map, nx, ny)) cost += PATHFINDING_CONFIG.breakableCostPenalty;
-
-            const tentativeG = gScore.get(currentKey) + cost;
-            if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
-                cameFrom.set(nKey, currentKey);
-                gScore.set(nKey, tentativeG);
-                const f = tentativeG + heuristic(nx, ny, endX, endY);
-                if (!inOpen.has(nKey)) {
-                    open.push({ x: nx, y: ny, f });
-                    inOpen.add(nKey);
-                } else {
-                    open.push({ x: nx, y: ny, f });
-                }
-            }
-        }
-    }
-
-    return null;
-}
-
-function heuristic(x1, y1, x2, y2) {
-    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    return findPathGeneric(map, startX, startY, endX, endY, enemyPassability);
 }
 
 function reconstructPath(cameFrom, endX, endY, startX, startY) {
     const path = [];
-    const startKey = (startY << 16) | startX;
-    let currentKey = (endY << 16) | endX;
+    const startKey = tileKey(startX, startY);
+    let currentKey = tileKey(endX, endY);
 
     while (currentKey !== startKey) {
         path.push({ x: currentKey & 0xFFFF, y: currentKey >> 16 });
@@ -206,8 +176,4 @@ function reconstructPath(cameFrom, endX, endY, startX, startY) {
 
     path.reverse();
     return path;
-}
-
-export function manhattanDist(x1, y1, x2, y2) {
-    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 }

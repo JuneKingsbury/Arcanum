@@ -1,4 +1,5 @@
 import { COMPLEX_STRUCTURES } from '../core/config.js';
+import { manhattanDist } from '../world/pathfinding.js';
 
 export function checkComplexStructures(game) {
     const active = [];
@@ -44,7 +45,7 @@ export function getCraftSpeedBonus(game, colonist) {
     if (!game.activeComplexStructures) return 1;
     for (const s of game.activeComplexStructures) {
         if (s.effect.craftSpeedMult && (s.effect.craftCategory || s.effect.craftCategories)) {
-            const dist = Math.abs(colonist.x - s.x) + Math.abs(colonist.y - s.y);
+            const dist = manhattanDist(colonist.x, colonist.y, s.x, s.y);
             if (dist <= 3) return s.effect.craftSpeedMult;
         }
     }
@@ -56,7 +57,7 @@ export function getSpellCooldownMult(game, colonist) {
     for (const s of game.activeComplexStructures) {
         if (s.effect.spellCooldownMult) {
             const radius = s.effect.radius || 6;
-            const dist = Math.abs(colonist.x - s.x) + Math.abs(colonist.y - s.y);
+            const dist = manhattanDist(colonist.x, colonist.y, s.x, s.y);
             if (dist <= radius) return s.effect.spellCooldownMult;
         }
     }

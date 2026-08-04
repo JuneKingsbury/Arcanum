@@ -279,10 +279,6 @@ export function hasSave() {
     return localStorage.getItem(SAVE_KEY) !== null;
 }
 
-export function deleteSave() {
-    localStorage.removeItem(SAVE_KEY);
-}
-
 export function exportSave() {
     const json = localStorage.getItem(SAVE_KEY);
     if (!json) return false;
@@ -381,7 +377,7 @@ function captureLayout() {
     };
 }
 
-export function restoreLayout(layout) {
+function restoreLayout(layout) {
     if (!layout) return;
     const container = document.getElementById('game-container');
     const footer = document.getElementById('game-footer');

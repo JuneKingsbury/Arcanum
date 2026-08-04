@@ -1,5 +1,14 @@
 import { RECIPES, WORK_CONFIG } from '../core/config.js';
 
+// Cached recipe availability — invalidated when resources, research, structures,
+// or the task queue change. Uses a version counter on game to detect staleness.
+let _recipeCache = null;
+let _recipeCacheVersion = -1;
+
+export function invalidateRecipeCache() {
+    _recipeCacheVersion = -1;
+}
+
 export function queueCraftingOrder(game, recipeKey) {
     const recipe = RECIPES[recipeKey];
     if (!recipe) return false;
@@ -26,6 +35,7 @@ export function queueCraftingOrder(game, recipeKey) {
         recipe,
     });
 
+    _recipeCacheVersion = -1;
     return true;
 }
 
@@ -36,31 +46,28 @@ function findAvailableStation(game, stationType) {
     const taskCountAt = (x, y) => pendingTasks.filter(t => t.x === x && t.y === y).length;
 
     if (usePowered) {
+        const stations = game.mapIndex.findAll('enchanting_table');
         let best = null, bestCount = Infinity;
-        for (let y = 0; y < game.map.length; y++) {
-            for (let x = 0; x < game.map[y].length; x++) {
-                if (game.map[y][x].structure === 'enchanting_table') {
-                    const count = taskCountAt(x, y);
-                    if (count < bestCount) { best = { x, y, powered: true }; bestCount = count; }
-                }
-            }
+        for (const { x, y } of stations) {
+            const count = taskCountAt(x, y);
+            if (count < bestCount) { best = { x, y, powered: true }; bestCount = count; }
         }
         if (best) return best;
     }
 
+    const stations = game.mapIndex.findAll(stationType);
     let best = null, bestCount = Infinity;
-    for (let y = 0; y < game.map.length; y++) {
-        for (let x = 0; x < game.map[y].length; x++) {
-            if (game.map[y][x].structure === stationType) {
-                const count = taskCountAt(x, y);
-                if (count < bestCount) { best = { x, y, powered: false }; bestCount = count; }
-            }
-        }
+    for (const { x, y } of stations) {
+        const count = taskCountAt(x, y);
+        if (count < bestCount) { best = { x, y, powered: false }; bestCount = count; }
     }
     return best;
 }
 
 export function getAvailableRecipes(game) {
+    const version = game._recipeCacheVersion || 0;
+    if (_recipeCache && _recipeCacheVersion === version) return _recipeCache;
+
     const available = [];
     for (const [key, recipe] of Object.entries(RECIPES)) {
         if (recipe.research && !game.research.isResearched(recipe.research)) continue;
@@ -68,6 +75,8 @@ export function getAvailableRecipes(game) {
         const hasStation = findAvailableStation(game, recipe.station) !== null;
         available.push({ key, recipe, hasResources, hasStation, canCraft: hasResources && hasStation });
     }
+    _recipeCache = available;
+    _recipeCacheVersion = version;
     return available;
 }
 

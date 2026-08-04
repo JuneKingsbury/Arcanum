@@ -30,6 +30,7 @@ import { initResizeHandles } from '../ui/resize.js';
 import { SpatialHash } from '../world/spatial.js';
 import { MapIndex } from '../world/mapindex.js';
 import { teleportEntity, getEntityRenderPos } from '../systems/movement-lerp.js';
+import { manhattanDist } from '../world/pathfinding.js';
 import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
@@ -121,6 +122,7 @@ class Game {
         this.selectedColonists = [];
         this.followingColonist = null;
         this.roomsDirty = true;
+        this._recipeCacheVersion = 0;
 
         this.spatial = {
             hostiles: new SpatialHash(),
@@ -167,7 +169,7 @@ class Game {
         for (const k of bedKeys) {
             const bx = k & 0xFFFF, by = k >> 16;
             if (occupied.has(`${bx},${by}`)) continue;
-            const d = Math.abs(colonist.x - bx) + Math.abs(colonist.y - by);
+            const d = manhattanDist(colonist.x, colonist.y, bx, by);
             if (d < bestDist) { bestDist = d; bestBed = { x: bx, y: by }; }
         }
         if (bestBed) colonist.assignedBed = bestBed;
@@ -407,6 +409,8 @@ class Game {
         this.exploration.update(this);
         this.events.update(this);
         updateFires(this);
+
+        this._recipeCacheVersion++;
 
         if (!this._gameOver && this.colonists.length > 0 && this.colonists.every(c => c.hp <= 0)) {
             this._gameOver = true;
@@ -1258,12 +1262,7 @@ class Game {
     }
 
     findBuilding(type) {
-        for (let y = 0; y < this.map.length; y++) {
-            for (let x = 0; x < this.map[y].length; x++) {
-                if (this.map[y][x].structure === type) return { x, y };
-            }
-        }
-        return null;
+        return this.mapIndex.findFirst(type);
     }
 
     logEvent(text, type, linkedEntity) {
@@ -1389,6 +1388,31 @@ class Game {
     }
 }
 
+function applyAuraToColonists(game, pedestal, radius, centerX, centerY, auraLabel) {
+    for (const c of game.colonists) {
+        if (c.hp <= 0) continue;
+        if (manhattanDist(c.x, c.y, centerX, centerY) > radius) continue;
+        if (pedestal.workSpeedBonus) c.pedestalWorkBonus += pedestal.workSpeedBonus;
+        if (pedestal.damageBonusMult) c.pedestalDamageBonus *= pedestal.damageBonusMult;
+        if (pedestal.skillGrowthBonus) c.pedestalSkillBonus += pedestal.skillGrowthBonus;
+        c.activeAuras.push(auraLabel);
+    }
+}
+
+function applyBlightImmunity(game, radius, centerX, centerY) {
+    const mapHeight = game.map.length;
+    const mapWidth = game.map[0].length;
+    for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.abs(dx) + Math.abs(dy) > radius) continue;
+            const ty = centerY + dy, tx = centerX + dx;
+            if (ty < 0 || ty >= mapHeight || tx < 0 || tx >= mapWidth) continue;
+            const cropTile = game.map[ty][tx];
+            if (cropTile.crop) cropTile.blightImmune = true;
+        }
+    }
+}
+
 function updatePedestals(game) {
     const pedestals = game.mapIndex.getAllStructurePositions().filter(({ x, y }) => {
         const tile = game.map[y][x];
@@ -1404,35 +1428,16 @@ function updatePedestals(game) {
             continue;
         }
         tile.pedestalInactive = false;
+        const auraLabel = { name: def.name, key: tile.pedestalArtifact, sourceType: 'pedestal', x, y };
         if (def.pedestal.radius === 'global') {
             for (const c of game.colonists) {
-                if (c.hp <= 0) continue;
-                c.activeAuras.push({ name: def.name, key: tile.pedestalArtifact, sourceType: 'pedestal', x, y });
+                if (c.hp > 0) c.activeAuras.push(auraLabel);
             }
             continue;
         }
         const radius = def.pedestal.radius;
-        for (const c of game.colonists) {
-            if (c.hp <= 0) continue;
-            const dist = Math.abs(c.x - x) + Math.abs(c.y - y);
-            if (dist <= radius) {
-                if (def.pedestal.workSpeedBonus) c.pedestalWorkBonus = (c.pedestalWorkBonus || 0) + def.pedestal.workSpeedBonus;
-                if (def.pedestal.damageBonusMult) c.pedestalDamageBonus = (c.pedestalDamageBonus || 1) * def.pedestal.damageBonusMult;
-                if (def.pedestal.skillGrowthBonus) c.pedestalSkillBonus = (c.pedestalSkillBonus || 0) + def.pedestal.skillGrowthBonus;
-                c.activeAuras.push({ name: def.name, key: tile.pedestalArtifact, sourceType: 'pedestal', x, y });
-            }
-        }
-        if (def.pedestal.blightImmunity) {
-            for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                    if (Math.abs(dx) + Math.abs(dy) > radius) continue;
-                    const ty = y + dy, tx = x + dx;
-                    if (ty < 0 || ty >= game.map.length || tx < 0 || tx >= game.map[0].length) continue;
-                    const cropTile = game.map[ty][tx];
-                    if (cropTile.crop) cropTile.blightImmune = true;
-                }
-            }
-        }
+        applyAuraToColonists(game, def.pedestal, radius, x, y, auraLabel);
+        if (def.pedestal.blightImmunity) applyBlightImmunity(game, radius, x, y);
     }
 
     for (const carrier of game.colonists) {
@@ -1441,27 +1446,9 @@ function updatePedestals(game) {
         if (!art?.pedestal) continue;
         if (art.pedestal.radius === 'global' || typeof art.pedestal.radius !== 'number') continue;
         const radius = art.pedestal.radius;
-        for (const c of game.colonists) {
-            if (c.hp <= 0) continue;
-            const dist = Math.abs(c.x - carrier.x) + Math.abs(c.y - carrier.y);
-            if (dist <= radius) {
-                if (art.pedestal.workSpeedBonus) c.pedestalWorkBonus = (c.pedestalWorkBonus || 0) + art.pedestal.workSpeedBonus;
-                if (art.pedestal.damageBonusMult) c.pedestalDamageBonus = (c.pedestalDamageBonus || 1) * art.pedestal.damageBonusMult;
-                if (art.pedestal.skillGrowthBonus) c.pedestalSkillBonus = (c.pedestalSkillBonus || 0) + art.pedestal.skillGrowthBonus;
-                c.activeAuras.push({ name: art.name, key: art.key, sourceType: 'colonist', colonistId: carrier.id });
-            }
-        }
-        if (art.pedestal.blightImmunity) {
-            for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                    if (Math.abs(dx) + Math.abs(dy) > radius) continue;
-                    const ty = carrier.y + dy, tx = carrier.x + dx;
-                    if (ty < 0 || ty >= game.map.length || tx < 0 || tx >= game.map[0].length) continue;
-                    const cropTile = game.map[ty][tx];
-                    if (cropTile.crop) cropTile.blightImmune = true;
-                }
-            }
-        }
+        const auraLabel = { name: art.name, key: art.key, sourceType: 'colonist', colonistId: carrier.id };
+        applyAuraToColonists(game, art.pedestal, radius, carrier.x, carrier.y, auraLabel);
+        if (art.pedestal.blightImmunity) applyBlightImmunity(game, radius, carrier.x, carrier.y);
     }
 }
 

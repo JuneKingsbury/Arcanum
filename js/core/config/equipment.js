@@ -98,7 +98,7 @@ export const TOOLS = {
     stone_mattock: { name: 'Stone Mattock', miningSpeed: 1.15, choppingSpeed: 1.15, tier: 1, description: 'A versatile tool for mining and chopping.', recipe: { input: { stone: 3, planks: 2 }, ticks: 18 } },
     iron_mattock: { name: 'Iron Mattock', miningSpeed: 1.3, choppingSpeed: 1.3, tier: 2, description: 'An iron mattock. Good at both mining and chopping.', recipe: { input: { iron: 3, planks: 2 }, ticks: 26, station: 'anvil' } },
     runic_mattock: { name: 'Runic Mattock', miningSpeed: 1.5, choppingSpeed: 1.5, tier: 3, description: 'A runic mattock. Excellent at mining and chopping.', recipe: { input: { runite: 3, planks: 2 }, ticks: 40, research: 'runeforging', station: 'anvil' } },
-    lantern: { name: 'Lantern', lightRadius: 3, tier: 1, description: 'A handheld lantern. Illuminates the area around the carrier.', recipe: { input: { iron: 1, planks: 2 }, ticks: 12, station: 'anvil' } },
+    lantern: { name: 'Lantern', lightRadius: 4, tier: 1, description: 'A handheld lantern. Illuminates the area around the carrier.', recipe: { input: { iron: 1, planks: 2 }, ticks: 12, station: 'anvil' } },
 };
 
 export const ARTIFACTS = {

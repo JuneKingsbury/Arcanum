@@ -446,7 +446,7 @@ const EFFECT_HANDLERS = {
             const radius = effect.radius || 4;
             for (const c of game.colonists) {
                 if (c.hp <= 0) continue;
-                const dist = Math.abs(c.x - entity.x) + Math.abs(c.y - entity.y);
+                const dist = manhattanDist(c.x, c.y, entity.x, entity.y);
                 if (dist <= radius) c.mood = Math.min(100, c.mood + bonus);
             }
         },
@@ -481,20 +481,7 @@ function findAnchor(entity, game) {
 }
 
 function findPen(entity, game) {
-    if (game.mapIndex) {
-        return game.mapIndex.findNearest('beast_circle', entity.x, entity.y);
-    }
-    let bestDist = Infinity;
-    let bestPen = null;
-    for (let y = 0; y < game.map.length; y++) {
-        for (let x = 0; x < game.map[y].length; x++) {
-            if (game.map[y][x].structure === 'beast_circle') {
-                const dist = Math.abs(entity.x - x) + Math.abs(entity.y - y);
-                if (dist < bestDist) { bestDist = dist; bestPen = { x, y }; }
-            }
-        }
-    }
-    return bestPen;
+    return game.mapIndex.findNearest('beast_circle', entity.x, entity.y);
 }
 
 function moveToward(entity, target, map, dur, game) {

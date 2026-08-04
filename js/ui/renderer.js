@@ -187,8 +187,14 @@ export class Renderer {
 
                     if (edgeDist >= depth) continue;
 
+                    // t=0 at the edge, t=1 at full depth. intensity peaks at 0.5
+                    // at the border and fades to 0 — this creates a gradient from
+                    // "half the pixels lit" at the seam to "none" deeper in.
                     const t = edgeDist / depth;
                     const intensity = 0.5 * (1 - t);
+                    // Bayer threshold: each pixel's ordered-dither threshold (0..1).
+                    // A pixel lights when its intensity exceeds its threshold,
+                    // producing a perceptually even dot pattern without randomness.
                     const threshold = (bayer[by % 4][bx % 4] + 0.5) / 16;
                     if (intensity > threshold) {
                         const idx = (y * cw + x) * 4;

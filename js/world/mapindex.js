@@ -130,4 +130,15 @@ export class MapIndex {
         }
         return best;
     }
+
+    // Returns all positions of a given structure type as an array of {x, y}.
+    findAll(type) {
+        const set = this.structures.get(type);
+        if (!set || set.size === 0) return [];
+        const results = [];
+        for (const k of set) {
+            results.push({ x: k & 0xFFFF, y: k >> 16 });
+        }
+        return results;
+    }
 }

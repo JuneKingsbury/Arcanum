@@ -3,6 +3,7 @@ import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
 import { getHarvestYield } from '../systems/farming.js';
+import { manhattanDist } from '../world/pathfinding.js';
 
 function applyQuality(item, colonist, ...statKeys) {
     const skill = colonist.skills.crafting || 1;
@@ -31,7 +32,7 @@ function autoAssignNewBed(game, x, y) {
     let nearest = null, bestDist = Infinity;
     for (const c of game.colonists) {
         if (c.hp <= 0 || c.golem || c.assignedBed) continue;
-        const d = Math.abs(c.x - x) + Math.abs(c.y - y);
+        const d = manhattanDist(c.x, c.y, x, y);
         if (d < bestDist) { bestDist = d; nearest = c; }
     }
     if (nearest) nearest.assignedBed = { x, y };
