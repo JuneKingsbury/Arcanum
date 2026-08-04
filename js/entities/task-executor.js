@@ -58,11 +58,18 @@ function advanceTomeStudy(colonist, game, rate) {
     if (!colonist._magicXpAccumulator) colonist._magicXpAccumulator = {};
     if (!colonist._magicXpAccumulator[school]) colonist._magicXpAccumulator[school] = 0;
     colonist._magicXpAccumulator[school] += MAGIC_STUDY_CONFIG.xpPerStudyTick;
-    if (colonist._magicXpAccumulator[school] >= 1.0) {
-        colonist._magicXpAccumulator[school] -= 1.0;
+    if (game.tick % 10 === 0) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
+    }
+    let magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
+    while (colonist._magicXpAccumulator[school] >= magicXpNeeded && colonist.magicSkills[school] < 10) {
+        colonist._magicXpAccumulator[school] -= magicXpNeeded;
         colonist.magicSkills[school] = Math.min(10, colonist.magicSkills[school] + 1);
         recalcMaxMana(colonist);
         game.notifications.push({ text: `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}`, tick: game.tick, type: 'success' });
+        game.eventLog.add(game, `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}!`, 'success', { type: 'colonist', id: colonist.id });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `${MAGIC_SKILLS[school].name} lvl ${colonist.magicSkills[school]}`, color: '#aa66ff', fontSize: 11, ttl: 20, maxTtl: 20 });
+        magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
     }
 
     if (colonist.tomeProgress[tomeKey] >= tomeDef.learningWork) {
@@ -71,6 +78,7 @@ function advanceTomeStudy(colonist, game, rate) {
         delete colonist.tomeProgress[tomeKey];
         applyThought(colonist, 'learned_spell', game.tick);
         game.notifications.push({ text: `${colonist.name} learned ${spellDef.name}!`, tick: game.tick, type: 'success' });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `Learned ${spellDef.name}!`, color: '#aa66ff', fontSize: 13, ttl: 25, maxTtl: 25 });
     }
 }
 
@@ -184,6 +192,8 @@ export function completeTask(colonist, task, game) {
                 }
                 applyThought(colonist, 'crafted', game.tick);
                 game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.craftCompleteChar, color: COMBAT_VISUALS.craftCompleteColor, ttl: COMBAT_VISUALS.craftCompleteTtl });
+                const craftedName = Object.keys(task.recipe.output)[0]?.replace(/_/g, ' ') || 'item';
+                game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `Crafted ${craftedName}`, color: '#ffcc00', fontSize: 10, ttl: 20, maxTtl: 20 });
                 window.soundManager?.playSFX('craft_complete');
             }
             break;
@@ -332,6 +342,26 @@ export function completeTask(colonist, task, game) {
                 applyThought(colonist, 'deconstructed', game.tick);
             }
             break;
+        }
+    }
+
+    if (task.skillRequired && colonist.skills[task.skillRequired] !== undefined) {
+        const maxLevel = COLONIST_CONFIG.skillMaxLevel;
+        if (colonist.skills[task.skillRequired] < maxLevel) {
+            if (!colonist.skillXp) colonist.skillXp = {};
+            if (!colonist.skillXp[task.skillRequired]) colonist.skillXp[task.skillRequired] = 0;
+            let xpGain = COLONIST_CONFIG.skillXpPerTask;
+            if (colonist.pedestalSkillBonus) xpGain *= (1 + colonist.pedestalSkillBonus);
+            colonist.skillXp[task.skillRequired] += xpGain;
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
+            let xpNeeded = COLONIST_CONFIG.skillXpToLevel + colonist.skills[task.skillRequired] * COLONIST_CONFIG.skillXpScalePerLevel;
+            while (colonist.skillXp[task.skillRequired] >= xpNeeded && colonist.skills[task.skillRequired] < maxLevel) {
+                colonist.skillXp[task.skillRequired] -= xpNeeded;
+                colonist.skills[task.skillRequired]++;
+                game.eventLog.add(game, `${colonist.name}'s ${task.skillRequired} skill increased to ${colonist.skills[task.skillRequired]}!`, 'success', { type: 'colonist', id: colonist.id });
+                game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `${task.skillRequired} lvl ${colonist.skills[task.skillRequired]}`, color: '#44ff44', fontSize: 11, ttl: 20, maxTtl: 20 });
+                xpNeeded = COLONIST_CONFIG.skillXpToLevel + colonist.skills[task.skillRequired] * COLONIST_CONFIG.skillXpScalePerLevel;
+            }
         }
     }
 

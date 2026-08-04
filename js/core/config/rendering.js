@@ -81,6 +81,9 @@ export const COMBAT_VISUALS = {
     sleepChar: 'z',
     sleepColor: '#6688cc',
     sleepTtl: 8,
+    healthRegenChar: '♥',
+    healthRegenColor: '#66ff66',
+    healthRegenTtl: 2,
     healTickChar: '+',
     healTickColor: '#44ff44',
     healTickTtl: 2,
@@ -125,6 +128,9 @@ export const COMBAT_VISUALS = {
     golemActivateChar: '⚡',
     golemActivateColor: '#44ffff',
     golemActivateTtl: 6,
+    xpGainChar: '·',
+    xpGainColor: '#88ff88',
+    xpGainTtl: 1,
 };
 
 export const LOG_COLORS = {

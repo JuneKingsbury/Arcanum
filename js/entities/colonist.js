@@ -1,4 +1,4 @@
-import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
+import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
 import { moveEntity, computeMoveDuration, computeMoveCooldown } from '../systems/movement-lerp.js';
@@ -9,8 +9,10 @@ import { completeTask } from './task-executor.js';
 
 export function createColonist(x, y, skillBias, existingNames = []) {
     const id = getNextId();
+    const gender = GENDERS[Math.floor(Math.random() * GENDERS.length)];
     const usedNames = new Set(existingNames);
-    const available = COLONIST_NAMES.filter(n => !usedNames.has(n));
+    const genderNames = COLONIST_NAMES[gender];
+    const available = genderNames.filter(n => !usedNames.has(n));
     let name = available.length > 0
         ? available[Math.floor(Math.random() * available.length)]
         : `Colonist ${id}`;
@@ -50,7 +52,7 @@ export function createColonist(x, y, skillBias, existingNames = []) {
     const maxMana = MANA_CONFIG.baseMana + combinedMagicLevel * MANA_CONFIG.manaPerMagicLevel;
 
     return {
-        id, name, x, y, skills, magicSkills, magicBias, traits,
+        id, name, gender, x, y, skills, skillXp: {}, magicSkills, magicBias, traits,
         nameColor: COLONIST_CONFIG.nameColors[(id - 1) % COLONIST_CONFIG.nameColors.length],
         priorities: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 3])),
         needs: { hunger: COLONIST_CONFIG.initialHunger[0] + Math.random() * (COLONIST_CONFIG.initialHunger[1] - COLONIST_CONFIG.initialHunger[0]), rest: COLONIST_CONFIG.initialRest[0] + Math.random() * (COLONIST_CONFIG.initialRest[1] - COLONIST_CONFIG.initialRest[0]) },
@@ -440,11 +442,14 @@ export function grantCastXp(colonist, spell, game) {
     if (!colonist._magicXpAccumulator) colonist._magicXpAccumulator = {};
     if (!colonist._magicXpAccumulator[school]) colonist._magicXpAccumulator[school] = 0;
     colonist._magicXpAccumulator[school] += MAGIC_STUDY_CONFIG.xpPerCast;
-    if (colonist._magicXpAccumulator[school] >= 1.0) {
-        colonist._magicXpAccumulator[school] -= 1.0;
+    let magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
+    while (colonist._magicXpAccumulator[school] >= magicXpNeeded && colonist.magicSkills[school] < 10) {
+        colonist._magicXpAccumulator[school] -= magicXpNeeded;
         colonist.magicSkills[school] = Math.min(10, colonist.magicSkills[school] + 1);
         recalcMaxMana(colonist);
         game.notifications.push({ text: `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}`, tick: game.tick, type: 'success' });
+        game.eventLog.add(game, `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}!`, 'success', { type: 'colonist', id: colonist.id });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `${MAGIC_SKILLS[school].name} lvl ${colonist.magicSkills[school]}`, color: '#aa66ff', fontSize: 11, ttl: 20, maxTtl: 20 });
         game.combatEffects.push({
             x: colonist.x, y: colonist.y,
             char: COMBAT_VISUALS.magicLevelUpChar,
@@ -452,6 +457,7 @@ export function grantCastXp(colonist, spell, game) {
             ttl: COMBAT_VISUALS.magicLevelUpTtl,
         });
         window.soundManager?.playSFX('magic_levelup');
+        magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
     }
 }
 
@@ -947,6 +953,7 @@ function updateSleeping(colonist, game) {
     colonist.needs.rest = Math.min(100, colonist.needs.rest + COLONIST_CONFIG.restPerTick);
     if (game.tick % 12 === 0) {
         game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.sleepChar, color: COMBAT_VISUALS.sleepColor, ttl: COMBAT_VISUALS.sleepTtl });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Zzz', color: '#8888ff', fontSize: 10, ttl: 11, maxTtl: 11 });
     }
     if (colonist.stateTimer <= 0 || colonist.needs.rest >= 100) {
         colonist.state = 'idle';
@@ -1007,10 +1014,11 @@ function updateFighting(colonist, game) {
             if (item !== weapon && item.damage) weaponDmg += item.damage;
         }
         let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+        if (colonist.pedestalDamageBonus > 1) dmg = Math.floor(dmg * colonist.pedestalDamageBonus);
         const critChance = getEquipmentStat(colonist, 'critChance');
         if (critChance > 0 && Math.random() < critChance) {
             dmg *= 2;
-            game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
+            game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
         }
         target.hp -= dmg;
         target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
@@ -1041,10 +1049,11 @@ function updateFighting(colonist, game) {
             if (item !== weapon && item.damage) weaponDmg += item.damage;
         }
         let dmg = weaponDmg + Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+        if (colonist.pedestalDamageBonus > 1) dmg = Math.floor(dmg * colonist.pedestalDamageBonus);
         const critChance = getEquipmentStat(colonist, 'critChance');
         if (critChance > 0 && Math.random() < critChance) {
             dmg *= 2;
-            game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: '#ffdd00', ttl: 5 });
+            game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: COMBAT_VISUALS.hitColor, ttl: COMBAT_VISUALS.hitTtl });
         }
         target.hp -= dmg;
         target._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
@@ -1108,6 +1117,7 @@ function updateHunting(colonist, game) {
         if (item !== weapon && item.damage) huntDmg += item.damage;
     }
     huntDmg += Math.floor(Math.random() * COLONIST_CONFIG.combatDamageVariance);
+    if (colonist.pedestalDamageBonus > 1) huntDmg = Math.floor(huntDmg * colonist.pedestalDamageBonus);
 
     animal.hp -= huntDmg;
     animal._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
@@ -1243,6 +1253,9 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
     const actualDmg = Math.floor(damage * mult);
     colonist.hp -= actualDmg;
     colonist._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+    if (actualDmg >= 5) {
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `-${actualDmg}`, color: '#ff4444', fontSize: 12, ttl: 15, maxTtl: 15 });
+    }
     window.soundManager?.playSFX('colonist_damaged');
 
     const thornsDamage = getEquipmentStat(colonist, 'thornsDamage');

@@ -102,14 +102,26 @@ export class SkinManager {
         return url;
     }
 
-    getColonistSprite(colonistId, drafted) {
+    getColonistSprite(colonistId, drafted, gender) {
         if (drafted) {
+            if (gender) {
+                const s = this._sprites.get('entities:colonist_' + gender + '_drafted');
+                if (s) return s;
+            }
             const s = this._sprites.get('entities:colonist_drafted');
             if (s) return s;
         }
         if (this._colonistVariantCount > 0) {
             const variant = ((colonistId - 1) % this._colonistVariantCount) + 1;
+            if (gender) {
+                const s = this._sprites.get('entities:colonist_' + gender + '_' + variant);
+                if (s) return s;
+            }
             const s = this._sprites.get('entities:colonist_' + variant);
+            if (s) return s;
+        }
+        if (gender) {
+            const s = this._sprites.get('entities:colonist_' + gender);
             if (s) return s;
         }
         return this._sprites.get('entities:colonist') || null;
@@ -119,13 +131,13 @@ export class SkinManager {
         return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
-    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey) {
-        if (!armorKey && !helmetKey) return this.getColonistSprite(colonistId, drafted);
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender) {
+        if (!armorKey && !helmetKey) return this.getColonistSprite(colonistId, drafted, gender);
 
-        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}`;
+        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}`;
         if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
 
-        const base = this.getColonistSprite(colonistId, drafted);
+        const base = this.getColonistSprite(colonistId, drafted, gender);
         if (!base) return null;
 
         const armorSprite = armorKey ? this._sprites.get('equipment_worn:' + armorKey) : null;

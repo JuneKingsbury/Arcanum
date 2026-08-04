@@ -60,7 +60,7 @@ export const ROLE_HANDLERS = {
                 if (dist <= 1) {
                     if (canAttack(entity, game)) {
                         target.hp -= damage;
-                        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
+                        game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: entity.color, ttl: COMBAT_VISUALS.hitTtl });
                     }
                 } else {
                     moveToward(entity, target, game.map, dur);
@@ -199,7 +199,7 @@ export const ROLE_HANDLERS = {
                     const dmg = entity.damage + bonus;
                     if (target.hp !== undefined) {
                         target.hp -= dmg;
-                        game.combatEffects.push({ x: target.x, y: target.y, char: '!', color: entity.color, ttl: 2 });
+                        game.combatEffects.push({ x: target.x, y: target.y, char: COMBAT_VISUALS.hitChar, color: entity.color, ttl: COMBAT_VISUALS.hitTtl });
                     } else {
                         colonistTakeDamage(target, dmg, game, entity);
                     }
@@ -240,7 +240,7 @@ export const ROLE_HANDLERS = {
             if (dist <= 1) {
                 if (canAttack(entity, game)) {
                     game.waves.nexusHp -= entity.damage;
-                    game.combatEffects.push({ x: nexus.x, y: nexus.y, char: '!', color: '#aa33ff', ttl: 2 });
+                    game.combatEffects.push({ x: nexus.x, y: nexus.y, char: COMBAT_VISUALS.hitChar, color: '#aa33ff', ttl: COMBAT_VISUALS.hitTtl });
                 }
                 return;
             }
@@ -296,7 +296,7 @@ export const ROLE_HANDLERS = {
                 rs.enraged = true;
                 entity.damage = Math.floor(entity.damage * (role.enrageDamageMult || 1.5));
                 entity.speed = Math.min(1, entity.speed * 1.2);
-                game.combatEffects.push({ x: entity.x, y: entity.y, char: '!', color: '#ff0000', ttl: 5 });
+                game.combatEffects.push({ x: entity.x, y: entity.y, char: COMBAT_VISUALS.hitChar, color: '#ff0000', ttl: COMBAT_VISUALS.hitTtl });
             }
         },
     },

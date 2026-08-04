@@ -457,7 +457,13 @@ class SkinEditor {
             case 'Entities':
                 for (let i = 1; i <= this.colonistVariants; i++) {
                     const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
-                    items.push({ key: `colonist_${i}`, char: '@', color, desc: `Colonist variant ${i}`, category: 'entities', isVariant: i > 1 });
+                    items.push({ key: `colonist_${i}`, char: '@', color, desc: `Colonist variant ${i} (legacy)`, category: 'entities', isVariant: i > 1 });
+                }
+                for (const gender of ['man', 'woman', 'nonbinary']) {
+                    for (let i = 1; i <= this.colonistVariants; i++) {
+                        const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
+                        items.push({ key: `colonist_${gender}_${i}`, char: '@', color, desc: `Colonist ${gender} variant ${i}`, category: 'entities' });
+                    }
                 }
                 items.push({ key: '__add_variant__', char: '+', color: '#888888', desc: 'Add another colonist variant', category: 'entities', isAction: true });
                 for (const e of ENTITY_SPECIALS) {

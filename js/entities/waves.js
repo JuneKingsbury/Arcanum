@@ -163,7 +163,7 @@ export class WaveSystem {
             if (c.hp <= 0) continue;
             if (manhattanDist(enemy.x, enemy.y, c.x, c.y) > 1) continue;
             const priority = (c.artifact && !c.artifactBroken) ? (c.artifact.combat?.targetPriority || 0) : 0;
-            const score = -priority;
+            const score = priority;
             if (score > bestScore) { bestScore = score; bestTarget = c; }
         }
         if (bestTarget) {

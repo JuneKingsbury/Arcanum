@@ -80,10 +80,10 @@ export class Renderer {
                     if (s) return s;
                 }
                 if (entity.armorKey || entity.helmetKey) {
-                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey);
+                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey, entity.gender);
                     if (comp) return comp;
                 }
-                return sm.getColonistSprite(entity.colonistId, entity.drafted);
+                return sm.getColonistSprite(entity.colonistId, entity.drafted, entity.gender);
             }
             if (entity.type === 'golem') {
                 if (entity.golemType) {
@@ -293,13 +293,14 @@ export class Renderer {
         if (e.char === COMBAT_VISUALS.freezingChar && e.color === COMBAT_VISUALS.freezingColor) return this.skinManager.getSprite('effects', 'freezing');
         if (e.char === COMBAT_VISUALS.mineDustChar && e.color === COMBAT_VISUALS.mineDustColor) return this.skinManager.getSprite('effects', 'mine_dust');
         if (e.char === COMBAT_VISUALS.shieldBlockChar) return this.skinManager.getSprite('effects', 'shield_block');
-        if (e.char === COMBAT_VISUALS.healthRegenChar) return this.skinManager.getSprite('effects', 'health_regen');
+        if (e.char === COMBAT_VISUALS.healthRegenChar && e.color === COMBAT_VISUALS.healthRegenColor) return this.skinManager.getSprite('effects', 'health_regen');
         if (e.char === COMBAT_VISUALS.manaRegenChar) return this.skinManager.getSprite('effects', 'mana_regen');
         if (e.char === COMBAT_VISUALS.deathChar && e.color === COMBAT_VISUALS.deathColor) return this.skinManager.getSprite('effects', 'death');
         if (e.char === COMBAT_VISUALS.summonArriveChar) return this.skinManager.getSprite('effects', 'summon_arrive');
         if (e.char === COMBAT_VISUALS.lootDropChar && e.color === COMBAT_VISUALS.lootDropColor) return this.skinManager.getSprite('effects', 'loot_drop');
         if (e.char === COMBAT_VISUALS.fireIgniteChar && e.color === COMBAT_VISUALS.fireIgniteColor) return this.skinManager.getSprite('effects', 'fire_ignite');
         if (e.char === COMBAT_VISUALS.golemActivateChar) return this.skinManager.getSprite('effects', 'golem_activate');
+        if (e.char === COMBAT_VISUALS.xpGainChar && e.color === COMBAT_VISUALS.xpGainColor) return this.skinManager.getSprite('effects', 'xp_gain');
         if (e.char === COMBAT_VISUALS.needCriticalChar && e.color === COMBAT_VISUALS.needCriticalColor) return this.skinManager.getSprite('effects', 'need_critical');
         if (e.char === COMBAT_VISUALS.researchCompleteChar && e.color === COMBAT_VISUALS.researchCompleteColor) return this.skinManager.getSprite('effects', 'research_complete');
         if (e.char === COMBAT_VISUALS.healTickChar && e.color === COMBAT_VISUALS.healTickColor) return this.skinManager.getSprite('effects', 'heal_tick');
@@ -407,7 +408,7 @@ export class Renderer {
                 const showEq = game.settings.showEquipmentOverlays;
                 const isSleeping = c.state === 'sleeping';
                 const sleepingInBed = isSleeping && c.assignedBed && c.x === c.assignedBed.x && c.y === c.assignedBed.y;
-                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, drafted, golemType: c.golemType, sleeping: isSleeping, sleepingInBed, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
+                const entData = { char: c.golem ? 'G' : '@', color, type: c.golem ? 'golem' : 'colonist', colonistId: c.id, gender: c.gender, drafted, golemType: c.golemType, sleeping: isSleeping, sleepingInBed, _dmgFlashUntil: c._dmgFlashUntil, _atkShakeUntil: c._atkShakeUntil, armorKey: showEq ? (c.armor?.key || null) : null, helmetKey: showEq ? (c.helmet?.key || null) : null };
                 if (isEntityMoving(c)) {
                     movingEntities.push({ entity: c, ...entData });
                 } else {
@@ -544,8 +545,9 @@ export class Renderer {
                             const entitySprite = this._resolveSprite(tile, entity, game.weather.season);
                             if (entitySprite) {
                                 const shakeActive = game.settings.showOverlays && game.settings.enableScreenShake && entity._atkShakeUntil > game.tick;
-                                const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
-                                const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+                                const sPx = COMBAT_VISUALS.atkShakePx || 2;
+                                const shakeX = shakeActive ? ((game.tick * 7) % (sPx * 2 + 1)) - sPx : 0;
+                                const shakeY = shakeActive ? ((game.tick * 13) % (sPx + 1)) - Math.floor(sPx / 2) : 0;
                                 ctx.drawImage(entitySprite, px + shakeX, py + shakeY, cw, ch);
                                 if (game.settings.showOverlays && game.settings.showDamageFlash && entity._dmgFlashUntil > game.tick) {
                                     const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
@@ -584,8 +586,9 @@ export class Renderer {
                                 }
                             }
                             const shakeActive = game.settings.showOverlays && game.settings.enableScreenShake && entity && entity._atkShakeUntil > game.tick;
-                            const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
-                            const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+                            const shakePx = COMBAT_VISUALS.atkShakePx || 2;
+                            const shakeX = shakeActive ? ((game.tick * 7) % (shakePx * 2 + 1)) - shakePx : 0;
+                            const shakeY = shakeActive ? ((game.tick * 13) % (shakePx + 1)) - Math.floor(shakePx / 2) : 0;
                             ctx.drawImage(sprite, px + shakeX, py + shakeY, cw, ch);
                             if (!entity && canDither) {
                                 this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map, game);
@@ -631,6 +634,11 @@ export class Renderer {
                                     ctx.drawImage(itemSprite, px + iOff, py + iOff, iSize, iSize);
                                 }
                             }
+                            if (effect) {
+                                ctx.fillStyle = effect.color;
+                                ctx.fillText(effect.char, px + this._textOffsetX, py);
+                                lastColor = '';
+                            }
                             spriteDrawn = true;
                         }
                         if (tile.designation) {
@@ -664,8 +672,9 @@ export class Renderer {
 
                 if (!spriteDrawn) {
                     const asciiShake = game.settings.showOverlays && game.settings.enableScreenShake && entity && entity._atkShakeUntil > game.tick;
-                    const asx = asciiShake ? ((game.tick * 7) % 5) - 2 : 0;
-                    const asy = asciiShake ? ((game.tick * 13) % 3) - 1 : 0;
+                    const asciiShakePx = COMBAT_VISUALS.atkShakePx || 2;
+                    const asx = asciiShake ? ((game.tick * 7) % (asciiShakePx * 2 + 1)) - asciiShakePx : 0;
+                    const asy = asciiShake ? ((game.tick * 13) % (asciiShakePx + 1)) - Math.floor(asciiShakePx / 2) : 0;
                     if (char === '█' || char === '▓' || char === '▒') {
                         if (color !== lastColor) {
                             ctx.fillStyle = color;
@@ -714,8 +723,9 @@ export class Renderer {
             if (sx < -1 || sx >= CONFIG.VIEWPORT_WIDTH + 1 || sy < -1 || sy >= CONFIG.VIEWPORT_HEIGHT + 1) continue;
             const ent = me.entity;
             const shakeActive = game.settings.showOverlays && game.settings.enableScreenShake && ent._atkShakeUntil > game.tick;
-            const shakeX = shakeActive ? ((game.tick * 7) % 5) - 2 : 0;
-            const shakeY = shakeActive ? ((game.tick * 13) % 3) - 1 : 0;
+            const sPxE = COMBAT_VISUALS.atkShakePx || 2;
+            const shakeX = shakeActive ? ((game.tick * 7) % (sPxE * 2 + 1)) - sPxE : 0;
+            const shakeY = shakeActive ? ((game.tick * 13) % (sPxE + 1)) - Math.floor(sPxE / 2) : 0;
             const rpx = Math.round(sx * cw) + shakeX;
             const rpy = Math.round(sy * ch) + shakeY;
             if (this.skinManager.isActive) {

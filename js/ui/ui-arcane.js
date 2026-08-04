@@ -562,7 +562,7 @@ const arcaneMethods = {
                 ctx.globalAlpha = 0.4;
             }
             if (useSkins) {
-                const sprite = skinMgr.getColonistSprite(p.id, false);
+                const sprite = skinMgr.getColonistSprite(p.id, false, p.gender);
                 if (sprite) {
                     ctx.drawImage(sprite, px - 7, py - 7, 14, 14);
                 } else {

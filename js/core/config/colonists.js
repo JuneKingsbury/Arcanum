@@ -95,15 +95,28 @@ export const COLONIST_CONFIG = {
     baseHealthRegen: 0.03,
     healthRegenWhileIdle: 2.0,
     healthRegenWhileSleeping: 3.0,
+    skillMaxLevel: 10,
+    skillXpPerTask: 1,
+    skillXpToLevel: 4,
+    skillXpScalePerLevel: 2,
 };
 
-export const COLONIST_NAMES = [
-    'Ada', 'Bob', 'Cal', 'Dee', 'Eve', 'Finn', 'Gail', 'Hank',
-    'Iris', 'Jake', 'Kit', 'Lena', 'Max', 'Nora', 'Otto', 'Pia',
-    'Davis', 'Morgan', 'Hugh', 'Matt', 'Sam', 'Paul', 'Jim', 'Mia',
-    'Quinn', 'Rex', 'Sage', 'Tara', 'Uma', 'Vex', 'Wren', 'Xia',
-    'Perry', 'Harper', 'Jules', 'Kris', 'Liam', 'Noah', 'Owen',
-];
+export const GENDERS = ['man', 'woman', 'nonbinary'];
+
+export const COLONIST_NAMES = {
+    man: [
+        'Bob', 'Cal', 'Finn', 'Hank', 'Jake', 'Max', 'Otto',
+        'Davis', 'Hugh', 'Matt', 'Paul', 'Jim', 'Rex', 'Liam', 'Noah', 'Owen',
+    ],
+    woman: [
+        'Ada', 'Dee', 'Eve', 'Gail', 'Iris', 'Lena', 'Nora', 'Pia',
+        'Mia', 'Tara', 'Uma', 'Xia', 'Wren', 'Faye', 'Opal', 'Ruth',
+    ],
+    nonbinary: [
+        'Kit', 'Quinn', 'Sage', 'Vex', 'Morgan', 'Sam',
+        'Perry', 'Harper', 'Jules', 'Kris', 'Ash', 'Rowan', 'Ember', 'Lux',
+    ],
+};
 
 export const NEED_DECAY = {
     hunger: 0.25,
@@ -145,6 +158,8 @@ export const MAGIC_STUDY_CONFIG = {
     tomeStudyBonus: 2,
     xpPerStudyTick: 0.05,
     xpPerCast: 0.02,
+    magicXpToLevel: 0.5,
+    magicXpScalePerLevel: 0.15,
 };
 
 export const TASK_CONFIG = {

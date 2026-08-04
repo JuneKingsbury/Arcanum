@@ -72,6 +72,9 @@ export class OverlayRenderer {
                 case 'screenFlash':
                     this._renderScreenFlash(ctx, overlay);
                     break;
+                case 'floating_text':
+                    this._renderFloatingText(ctx, overlay, cw, ch, camera);
+                    break;
             }
         }
     }
@@ -252,6 +255,30 @@ export class OverlayRenderer {
         ctx.globalAlpha = overlay.alpha || 0.2;
         ctx.fillStyle = overlay.color || '#ff0000';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.restore();
+    }
+
+    _renderFloatingText(ctx, overlay, cw, ch, camera) {
+        const progress = 1 - (overlay.ttl / overlay.maxTtl);
+        const floatOffset = progress * 30;
+        const alpha = 1 - progress;
+
+        const sx = (overlay.x - camera.x) * cw + cw / 2;
+        const sy = (overlay.y - camera.y) * ch - floatOffset;
+        if (sx < -100 || sx > this.canvas.width + 100 || sy < -50 || sy > this.canvas.height + 50) return;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${overlay.fontSize || 12}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.strokeText(overlay.text, sx, sy);
+
+        ctx.fillStyle = overlay.color || '#ffffff';
+        ctx.fillText(overlay.text, sx, sy);
         ctx.restore();
     }
 
