@@ -78,6 +78,9 @@ export class PowerSystem {
                     if (artDef?.pedestal?.manaCost) {
                         this.totalConsumed += artDef.pedestal.manaCost;
                     }
+                    if (artDef?.pedestal?.lightRadius) {
+                        this.poweredLamps.push({ x, y, radius: artDef.pedestal.lightRadius });
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-import { CONFIG, TILE_COLORS, BUILDINGS, RENDER_CONFIG, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, TILE_COLORS, BUILDINGS, ARTIFACTS, RENDER_CONFIG, COMBAT_VISUALS } from '../core/config.js';
 import { getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { OverlayRenderer } from './overlay-renderer.js';
 import { SkinManager } from './skin-manager.js';
@@ -895,6 +895,32 @@ export class Renderer {
             if (!bDef || !bDef.lightRadius) continue;
             if (bDef.power && bDef.power.consumes && noPower) continue;
             sources.push({ x, y, radius: bDef.lightRadius });
+        }
+
+        for (const { x, y, type } of allStructures) {
+            if (type !== 'artifact_pedestal') continue;
+            if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+            const tile = game.map[y][x];
+            if (!tile.pedestalArtifact || tile.pedestalInactive) continue;
+            const artDef = ARTIFACTS[tile.pedestalArtifact];
+            if (artDef?.pedestal?.lightRadius) {
+                sources.push({ x, y, radius: artDef.pedestal.lightRadius });
+            }
+        }
+
+        for (const c of game.colonists) {
+            if (c.hp <= 0 || c.onExpedition) continue;
+            if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+            let radius = 0;
+            if (c.artifact && !c.artifactBroken && c.artifact.pedestal?.lightRadius) {
+                radius = Math.max(radius, c.artifact.pedestal.lightRadius);
+            }
+            if (c.tool?.lightRadius) {
+                radius = Math.max(radius, c.tool.lightRadius);
+            }
+            if (radius > 0) {
+                sources.push({ x: c.x, y: c.y, radius });
+            }
         }
 
         const firePositions = game.mapIndex ? game.mapIndex.getFirePositions() : null;
