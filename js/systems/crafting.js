@@ -32,24 +32,32 @@ export function queueCraftingOrder(game, recipeKey) {
 function findAvailableStation(game, stationType) {
     let usePowered = stationType === 'workbench' && game.research.isResearched('arcane_infusion') && game.power.hasPower();
 
+    const pendingTasks = game.taskQueue.getAll().filter(t => t.type === 'craft' || t.type === 'cook');
+    const taskCountAt = (x, y) => pendingTasks.filter(t => t.x === x && t.y === y).length;
+
     if (usePowered) {
+        let best = null, bestCount = Infinity;
         for (let y = 0; y < game.map.length; y++) {
             for (let x = 0; x < game.map[y].length; x++) {
                 if (game.map[y][x].structure === 'enchanting_table') {
-                    return { x, y, powered: true };
+                    const count = taskCountAt(x, y);
+                    if (count < bestCount) { best = { x, y, powered: true }; bestCount = count; }
                 }
             }
         }
+        if (best) return best;
     }
 
+    let best = null, bestCount = Infinity;
     for (let y = 0; y < game.map.length; y++) {
         for (let x = 0; x < game.map[y].length; x++) {
             if (game.map[y][x].structure === stationType) {
-                return { x, y, powered: false };
+                const count = taskCountAt(x, y);
+                if (count < bestCount) { best = { x, y, powered: false }; bestCount = count; }
             }
         }
     }
-    return null;
+    return best;
 }
 
 export function getAvailableRecipes(game) {

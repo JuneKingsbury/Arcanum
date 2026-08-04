@@ -1625,7 +1625,7 @@ export class UI {
                 return (aDef?.tier || 0) - (bDef?.tier || 0);
             });
         }
-        for (const { key, recipe, canCraft } of filtered) {
+        for (const { key, recipe, canCraft, hasStation } of filtered) {
             const inputStr = Object.entries(recipe.input).map(([k, v]) => {
                 if (k === 'foodstuffs') return `${v} foodstuffs (have ${this.game.resources.getFoodstuffTotal()})`;
                 return `${k}:${v}`;
@@ -1644,6 +1644,10 @@ export class UI {
             html += `<button onclick="window.game.toggleCraftRepeat('${key}')" class="craft-multi" title="Auto-repeat"${repeatActive}>&#x27F3;</button>`;
             html += `<input type="number" min="0" max="999" value="${ct.target || 0}" onchange="window.game.setCraftTarget('${key}',this.value)" title="Maintain stock target (0=off)" style="width:35px;background:#1a1a2e;color:#ccc;border:1px solid #444;border-radius:3px;padding:1px 2px;text-align:center;font-size:0.85em;">`;
             html += `<span>${inputStr} → ${outputStr}</span>`;
+            if (!hasStation) {
+                const stationName = (recipe.station || 'workbench').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                html += `<span style="color:#ff4444;font-size:0.85em;margin-left:auto;">Needs ${stationName}</span>`;
+            }
             html += `</div>`;
         }
         if (filtered.length === 0) {
