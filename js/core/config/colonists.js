@@ -90,7 +90,7 @@ export const COLONIST_CONFIG = {
     sleptOnGroundMoodDuration: 400,
     deathMoodPenalty: -40,
     deathMoodDuration: 2000,
-    nameColors: ['#ffff00', '#00ffff', '#00ff00'],
+    nameColors: ['#ff3300', '#00ff00', '#00ffff', '#ffff00', '#a600ff', '#ababab'],
     magicBiasChance: 0.3,
     baseHealthRegen: 0.03,
     healthRegenWhileIdle: 2.0,

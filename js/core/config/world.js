@@ -8,13 +8,13 @@ export const SEASON_EFFECTS = {
 };
 
 export const TERRAIN = {
-    grass:  { char: '.', color: '#6aad44', bg: '#1a2a12', moveCost: 1, passable: { colonist: true, animal: true, enemy: true } },
-    dirt:   { char: ',', color: '#bb8850', bg: '#2a1e14', moveCost: 1, passable: { colonist: true, animal: true, enemy: true } },
-    sand:   { char: '∙', color: '#e0c878', bg: '#2a2618', moveCost: 1, passable: { colonist: true, animal: true, enemy: true } },
-    gravel: { char: ':', color: '#a09888', bg: '#1e1c1a', moveCost: 1, passable: { colonist: true, animal: true, enemy: true } },
-    rock:      { char: '#', color: '#999', bg: '#222', moveCost: 4, passable: { colonist: true, animal: false, enemy: true } },
+    grass:  { char: '.', color: '#6aad44', bg: '#1a2a12', moveCost: 10, passable: { colonist: true, animal: true, enemy: true } },
+    dirt:   { char: ',', color: '#bb8850', bg: '#2a1e14', moveCost: 10, passable: { colonist: true, animal: true, enemy: true } },
+    sand:   { char: '∙', color: '#e0c878', bg: '#2a2618', moveCost: 12, passable: { colonist: true, animal: true, enemy: true } },
+    gravel: { char: ':', color: '#a09888', bg: '#1e1c1a', moveCost: 10, passable: { colonist: true, animal: true, enemy: true } },
+    rock:      { char: '#', color: '#999', bg: '#222', moveCost: 20, passable: { colonist: true, animal: false, enemy: true } },
     tall_rock: { char: '▲', color: '#777', bg: '#1a1a1a', moveCost: Infinity, passable: { colonist: false, animal: false, enemy: false } },
-    water:     { char: '~', color: '#55aaff', bg: '#0a1a2e', moveCost: 3, passable: { colonist: true, animal: false, enemy: true } },
+    water:     { char: '~', color: '#55aaff', bg: '#0a1a2e', moveCost: 16, passable: { colonist: true, animal: false, enemy: true } },
 };
 
 export const RESOURCES = {

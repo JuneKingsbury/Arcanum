@@ -46,10 +46,14 @@ export function isEntityMoving(entity) {
     return entity._prevX != null;
 }
 
-export function computeMoveDuration(terrainCost, moveBonus, gameSpeed) {
-    let effectiveCost = Math.max(1, terrainCost);
-    if (moveBonus > 0 && effectiveCost > 1) {
-        effectiveCost = Math.max(1, Math.round(effectiveCost * (1 - moveBonus)));
+export function computeMoveCooldown(terrainCost, moveBonus) {
+    let cooldown = Math.max(0, Math.floor((terrainCost - 1) / 2));
+    if (moveBonus > 0 && cooldown > 0) {
+        cooldown = Math.max(0, Math.round(cooldown * (1 - moveBonus)));
     }
-    return CONFIG.TICK_RATE * effectiveCost / gameSpeed;
+    return cooldown;
+}
+
+export function computeMoveDuration(terrainCost, moveBonus, gameSpeed) {
+    return CONFIG.TICK_RATE / gameSpeed;
 }

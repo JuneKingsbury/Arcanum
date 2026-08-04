@@ -1,7 +1,7 @@
 import { CONFIG, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost } from '../world/map.js';
-import { moveEntity, computeMoveDuration } from '../systems/movement-lerp.js';
+import { moveEntity, computeMoveDuration, computeMoveCooldown } from '../systems/movement-lerp.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { spawnSummon } from './summons.js';
 import { getNextId } from './entity-factory.js';
@@ -821,11 +821,7 @@ function updateMoving(colonist, game) {
         const dur = computeMoveDuration(cost, moveBonus, game.speed);
         moveEntity(colonist, next.x, next.y, dur);
         colonist.path.shift();
-        if (cost > 1) {
-            let moveCost = cost - 1;
-            if (moveBonus > 0) moveCost = Math.max(0, Math.round(moveCost * (1 - moveBonus)));
-            colonist.moveCooldown = moveCost;
-        }
+        colonist.moveCooldown = computeMoveCooldown(cost, moveBonus);
     } else {
         const task = game.taskQueue.getById(colonist.currentTaskId);
         if (task) {
@@ -1181,11 +1177,7 @@ function updateDrafted(colonist, game) {
                 const moveBonus = getMoveSpeedBonus(colonist);
                 const dur = computeMoveDuration(cost, moveBonus, game.speed);
                 moveEntity(colonist, next.x, next.y, dur);
-                if (cost > 1) {
-                    let moveCost = cost - 1;
-                    if (moveBonus > 0) moveCost = Math.max(0, Math.round(moveCost * (1 - moveBonus)));
-                    colonist.moveCooldown = moveCost;
-                }
+                colonist.moveCooldown = computeMoveCooldown(cost, moveBonus);
             }
         }
         if (colonist.x === colonist.draftTarget.x && colonist.y === colonist.draftTarget.y) {

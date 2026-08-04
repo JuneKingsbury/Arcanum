@@ -108,7 +108,7 @@ export class SkinManager {
             if (s) return s;
         }
         if (this._colonistVariantCount > 0) {
-            const variant = (colonistId % this._colonistVariantCount) + 1;
+            const variant = ((colonistId - 1) % this._colonistVariantCount) + 1;
             const s = this._sprites.get('entities:colonist_' + variant);
             if (s) return s;
         }
