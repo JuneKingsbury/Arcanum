@@ -47,7 +47,7 @@ export function isEntityMoving(entity) {
 }
 
 export function computeMoveCooldown(terrainCost, moveBonus) {
-    let cooldown = Math.max(0, Math.floor((terrainCost - 1) / 2));
+    let cooldown = Math.max(0, Math.floor((terrainCost - 1) / 3));
     if (moveBonus > 0 && cooldown > 0) {
         cooldown = Math.max(0, Math.round(cooldown * (1 - moveBonus)));
     }
@@ -55,5 +55,6 @@ export function computeMoveCooldown(terrainCost, moveBonus) {
 }
 
 export function computeMoveDuration(terrainCost, moveBonus, gameSpeed) {
-    return CONFIG.TICK_RATE / gameSpeed;
+    const cooldown = computeMoveCooldown(terrainCost, moveBonus);
+    return (1 + cooldown) * CONFIG.TICK_RATE / gameSpeed;
 }
