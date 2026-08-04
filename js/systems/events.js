@@ -89,6 +89,9 @@ export class EventSystem {
                 chance *= Math.max(0.05, avgMood / 70);
                 chance *= getPedestalEffect(game, 'wandererChanceMult');
             }
+            if (eventKey === 'caravan') {
+                chance *= getPedestalEffect(game, 'traderChanceMult');
+            }
 
             for (const m of mods) {
                 if (m.eventBoost === eventKey) chance *= m.eventMult;

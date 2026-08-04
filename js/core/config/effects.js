@@ -29,6 +29,7 @@ export const STAT_META = {
     skillGrowthBonus:   { label: 'Skill Growth',     format: 'plus_percent' },
     damageBonusMult:    { label: 'Damage Bonus',     format: 'mult_as_percent' },
     wandererChanceMult: { label: 'Wanderer Chance',  format: 'mult_as_percent' },
+    traderChanceMult:   { label: 'Trader Chance',    format: 'mult_as_percent' },
     cookingBonusFood:   { label: 'Bonus Food',       format: 'plus_flat', suffix: '/cook' },
     tradeMarkupMult:    { label: 'Trade Discount',   format: 'inverse_percent' },
     lootMult:           { label: 'Loot',             format: 'mult_as_percent' },

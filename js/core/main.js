@@ -542,7 +542,7 @@ class Game {
         const key = tile.pedestalArtifact;
         tile.pedestalArtifact = null;
         tile.pedestalInactive = false;
-        this.resources.addArtifact(key);
+        this.resources.addArtifact({ ...ARTIFACTS[key], key });
         this.notifications.push({ text: `Retrieved ${ARTIFACTS[key]?.name || key} from pedestal`, tick: this.tick, type: 'success' });
         this.ui.showTileInfo(tile, x, y);
     }
