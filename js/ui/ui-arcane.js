@@ -71,7 +71,7 @@ const arcaneMethods = {
         html += `<div class="arcane-section">`;
         html += `<div class="info-row" style="color:#9933ff;font-weight:bold;font-size:1.1em;">Wave Defense</div>`;
         html += `<div class="info-row">Highest Wave Completed: <span style="color:#ffcc00">${waves.highestWaveCompleted}</span></div>`;
-        html += `<div class="info-row">Colony Cap: <span style="color:#88ff88">${waves.getColonistCap()}</span></div>`;
+        html += `<div class="info-row">Colony Cap: <span style="color:#88ff88">${waves.getColonistCap(this.game)}</span></div>`;
 
         if (waves.active) {
             html += `<div class="info-row" style="color:#ff4444;font-weight:bold;margin-top:8px;">Wave ${waves.currentWave} In Progress</div>`;

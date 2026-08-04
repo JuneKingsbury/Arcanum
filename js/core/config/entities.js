@@ -19,8 +19,8 @@ export const ENTITIES = {
     combat_golem:  { name: 'Combat Golem', char: 'G', color: '#cc4444', hp: 250, speed: 0.35, category: 'golem', damage: 20, roles: [{ type: 'worker', specialty: 'combat', skillLevel: 6 }], cost: { stone: 15, runite: 5, void_essence: 4 }, craftTicks: 110 },
 
     // === Enemies ===
-    raider_brute:    { name: 'Raider', char: 'R', color: '#ff3333', hp: 50, speed: 0.19, category: 'enemy', hostile: true, damage: 5, aggroRange: 10, roles: [{ type: 'melee_charger' }], loot: [] },
-    raider_archer:   { name: 'Raider Archer', char: 'R', color: '#ff6633', hp: 35, speed: 0.21, category: 'enemy', hostile: true, damage: 4, aggroRange: 12, roles: [{ type: 'ranged_attacker', range: 7, preferDistance: 5 }], ranged: true, projectileChar: '-', projectileColor: '#ffaa33', loot: [] },
+    raider_brute:    { name: 'Raider', char: 'R', color: '#ff3333', hp: 50, speed: 0.28, category: 'enemy', hostile: true, damage: 5, aggroRange: 10, roles: [{ type: 'melee_charger' }], loot: [] },
+    raider_archer:   { name: 'Raider Archer', char: 'R', color: '#ff6633', hp: 35, speed: 0.30, category: 'enemy', hostile: true, damage: 4, aggroRange: 12, roles: [{ type: 'ranged_attacker', range: 7, preferDistance: 5 }], ranged: true, projectileChar: '-', projectileColor: '#ffaa33', loot: [] },
     void_walker:     { name: 'Void Walker', char: 'V', color: '#aa33ff', hp: 30, speed: 0.21, category: 'enemy', hostile: true, damage: 4, roles: [{ type: 'nexus_target' }], loot: [] },
     void_brute:      { name: 'Void Brute', char: 'V', color: '#7722cc', hp: 80, speed: 0.14, category: 'enemy', hostile: true, damage: 10, roles: [{ type: 'nexus_target' }, { type: 'structure_breaker', breakSpeed: 2 }], loot: [] },
 };
@@ -99,9 +99,9 @@ export const RAID_CONFIG = {
     raiderHp: 50,
     raiderDamage: 5,
     raiderSpeed: 0.35,
-    fleeHpFraction: 0.3,
-    routThreshold: 0.65,
-    timeout: 600,
+    fleeHpFraction: 0.15,
+    routThreshold: 0.8,
+    timeout: 900,
 };
 
 // Base gold value per unit. Used by both buy and sell calculations.

@@ -210,7 +210,7 @@ export class EventSystem {
 
     eventWanderer(game) {
         const aliveColonists = game.colonists.filter(c => c.hp > 0 && !c.golem);
-        const cap = game.waves.getColonistCap();
+        const cap = game.waves.getColonistCap(game);
         if (aliveColonists.length >= cap) {
             return;
         }
@@ -238,7 +238,7 @@ export class EventSystem {
     resolveWanderer(game, accept) {
         if (accept && this.pendingEvent?.data) {
             const aliveColonists = game.colonists.filter(c => c.hp > 0 && !c.golem);
-            const cap = game.waves.getColonistCap();
+            const cap = game.waves.getColonistCap(game);
             if (aliveColonists.length >= cap) {
                 game.notifications.push({ text: `Colony is at capacity (${cap})! Complete more waves to expand.`, tick: game.tick, type: 'danger' });
                 this.pendingEvent = null;
@@ -491,6 +491,13 @@ export function updateFires(game) {
                 tile.resource = null;
             } else if (tile.structure && tile.structure !== 'wall') {
                 const oldStructure = tile.structure;
+                if (oldStructure === 'bed') {
+                    for (const c of game.colonists) {
+                        if (c.assignedBed && c.assignedBed.x === x && c.assignedBed.y === y) {
+                            c.assignedBed = null;
+                        }
+                    }
+                }
                 tile.structure = null;
                 game.mapIndex.removeStructure(x, y, oldStructure);
             }

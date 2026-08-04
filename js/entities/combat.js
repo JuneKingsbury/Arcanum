@@ -160,14 +160,14 @@ function updateRaider(raider, game) {
     if (raider.moveCooldown > 0) return;
     raider.moveCooldown = 1;
 
-    if (raider.roles && raider.roles.length > 0) {
-        updateEntityRoles(raider, game);
-    }
-
     const dur = CONFIG.TICK_RATE / (raider.speed * game.speed);
     if (raider.fleeing) {
         moveToEdge(raider, game, dur);
         return;
+    }
+
+    if (raider.roles && raider.roles.length > 0) {
+        updateEntityRoles(raider, game);
     }
 
     if (raider.roles && raider.roles.some(r => r.type === 'ranged_attacker' || r.type === 'melee_charger')) return;
@@ -297,6 +297,13 @@ export function attackStructure(game, x, y, damage) {
         tile.passable = true;
         if (game.mapIndex) game.mapIndex.removeStructure(x, y, oldStructure);
         game.roomsDirty = true;
+        if (oldStructure === 'bed') {
+            for (const c of game.colonists) {
+                if (c.assignedBed && c.assignedBed.x === x && c.assignedBed.y === y) {
+                    c.assignedBed = null;
+                }
+            }
+        }
         if (game.waves && game.waves.enemies) {
             for (const enemy of game.waves.enemies) { enemy.path = null; }
             game.waves.invalidatePathPreview();

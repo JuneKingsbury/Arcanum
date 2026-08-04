@@ -331,6 +331,13 @@ export function completeTask(colonist, task, game) {
                     game.resources.add(partial);
                 }
                 if (tile.structure) {
+                    if (tile.structure === 'bed') {
+                        for (const c of game.colonists) {
+                            if (c.assignedBed && c.assignedBed.x === task.x && c.assignedBed.y === task.y) {
+                                c.assignedBed = null;
+                            }
+                        }
+                    }
                     if (game.mapIndex) game.mapIndex.removeStructure(task.x, task.y, tile.structure);
                     tile.structure = null;
                     tile.passable = true;

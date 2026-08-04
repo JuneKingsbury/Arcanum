@@ -1,4 +1,4 @@
-import { CONFIG, WAVE_CONFIG, WAVE_TYPES, COMBAT_VISUALS, COLONIST_CONFIG } from '../core/config.js';
+import { CONFIG, WAVE_CONFIG, WAVE_TYPES, COMBAT_VISUALS, COLONIST_CONFIG, BUILDINGS } from '../core/config.js';
 import { isPassableForEnemies, isBreakableByEnemies } from '../world/map.js';
 import { manhattanDist } from '../world/pathfinding.js';
 import { colonistTakeDamage } from './colonist.js';
@@ -25,10 +25,19 @@ export class WaveSystem {
         this.lastWaveResult = null;
     }
 
-    getColonistCap() {
-        if (this.highestWaveCompleted === 0) return WAVE_CONFIG.colonistCapBase;
-        const bonus = Math.floor(WAVE_CONFIG.colonistCapScale * Math.log2(this.highestWaveCompleted + 1));
-        return Math.min(WAVE_CONFIG.colonistCapMax, WAVE_CONFIG.colonistCapBase + bonus);
+    getColonistCap(game) {
+        let base = WAVE_CONFIG.colonistCapBase;
+        if (game && game.mapIndex) {
+            for (const [key, def] of Object.entries(BUILDINGS)) {
+                if (def.colonistCapBonus) {
+                    const count = game.mapIndex.getStructurePositions(key).size;
+                    base += def.colonistCapBonus * count;
+                }
+            }
+        }
+        if (this.highestWaveCompleted === 0) return base;
+        const bonus = Math.floor(this.highestWaveCompleted / 2);
+        return Math.min(WAVE_CONFIG.colonistCapMax, base + bonus);
     }
 
     canStartWave(game) {
@@ -246,8 +255,8 @@ export class WaveSystem {
             this.highestWaveCompleted = this.currentWave;
             const bonusEssence = this.currentWave * WAVE_CONFIG.bonusEssencePerWave;
             game.resources.add({ void_essence: bonusEssence });
-            game.notifications.push({ text: `Wave ${this.currentWave} complete! +${bonusEssence} bonus void essence. Colony cap: ${this.getColonistCap()}`, tick: game.tick, type: 'success' });
-            game.eventLog.add(game, `Wave ${this.currentWave} defeated! Colony can now support ${this.getColonistCap()} colonists.`, 'success', null);
+            game.notifications.push({ text: `Wave ${this.currentWave} complete! +${bonusEssence} bonus void essence. Colony cap: ${this.getColonistCap(game)}`, tick: game.tick, type: 'success' });
+            game.eventLog.add(game, `Wave ${this.currentWave} defeated! Colony can now support ${this.getColonistCap(game)} colonists.`, 'success', null);
             game.story.checkMilestone('first_wave_completed', game);
         } else {
             game.notifications.push({ text: `Wave ${this.currentWave} failed — the Void Nexus was destroyed!`, tick: game.tick, type: 'danger' });

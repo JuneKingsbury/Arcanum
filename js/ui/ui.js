@@ -387,7 +387,7 @@ export class UI {
         const pendingTasks = this.game.taskQueue.getPending().length;
 
         const waves = this.game.waves;
-        const cap = waves.getColonistCap();
+        const cap = waves.getColonistCap(this.game);
         const voidEssence = r.void_essence || 0;
         const waveStr = waves.active ? `Wave:${waves.currentWave}` : '';
 
@@ -1222,7 +1222,7 @@ export class UI {
         let html = '';
         const waves = this.game.waves;
         html += `<div class="info-row" style="color:#9933ff;font-weight:bold;">Void Nexus</div>`;
-        html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap()}</div>`;
+        html += `<div class="info-row">Highest Wave: ${waves.highestWaveCompleted} | Cap: ${waves.getColonistCap(this.game)}</div>`;
         if (waves.active) {
             html += `<div class="info-row" style="color:#ff4444;">Wave ${waves.currentWave} — ${waves.enemies.length} enemies alive</div>`;
         }
@@ -2273,7 +2273,7 @@ export class UI {
         html += `<div class="settings-row">`;
         html += `<label for="set-autosave">Auto-save interval:</label>`;
         html += `<select id="set-autosave" onchange="window.game.settings.autoSaveInterval=parseInt(this.value);window.game.saveSettingsToStorage()" style="background:#1a1a2e;color:#ccc;border:1px solid #444;padding:2px 4px;">`;
-        for (const [val, label] of [[0, 'Off'], [30, '30s'], [60, '1 min'], [120, '2 min'], [300, '5 min']]) {
+        for (const [val, label] of [[0, 'Off'], [12, 'Every 12 hours'], [24, 'Every 24 hours'], [48, 'Every 48 hours']]) {
             html += `<option value="${val}" ${s.autoSaveInterval === val ? 'selected' : ''}>${label}</option>`;
         }
         html += `</select></div>`;

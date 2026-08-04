@@ -58,7 +58,7 @@ class Game {
             showColonistNames: 'selected',
             showMinimap: true,
             showFps: false,
-            autoSaveInterval: 60,
+            autoSaveInterval: 24,
             activeSkin: localStorage.getItem('convocation_skin') || '16x16_tiny_world',
             demoMode: false,
             darkenOnPause: true,
@@ -279,9 +279,10 @@ class Game {
             }
 
             if (this.settings.autoSaveInterval > 0) {
-                if (!this._lastAutoSaveTime) this._lastAutoSaveTime = timestamp;
-                if (timestamp - this._lastAutoSaveTime >= this.settings.autoSaveInterval * 1000) {
-                    this._lastAutoSaveTime = timestamp;
+                const intervalTicks = Math.round(this.settings.autoSaveInterval / 24 * CONFIG.TICKS_PER_DAY);
+                if (this._lastAutoSaveTick === undefined) this._lastAutoSaveTick = this.tick;
+                if (this.tick - this._lastAutoSaveTick >= intervalTicks) {
+                    this._lastAutoSaveTick = this.tick;
                     if (saveGame(this)) {
                         this.notifications.push({ text: 'Auto-saved', tick: this.tick, type: 'success' });
                     }
@@ -1899,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-peaceful-check').checked = false;
         document.getElementById('start-demo-mode').checked = false;
         document.getElementById('start-autocook').value = '0';
-        document.getElementById('start-autosave').value = '60';
+        document.getElementById('start-autosave').value = '24';
         document.getElementById('start-overlays').checked = true;
         document.getElementById('start-damage-flash').checked = true;
         document.getElementById('start-screen-shake').checked = true;
