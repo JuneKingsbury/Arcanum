@@ -221,7 +221,7 @@ const arcaneMethods = {
     },
 
     _buildExpeditionSetupHtml(realmKey) {
-        const available = this.game.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted);
+        const available = this.game.colonists.filter(c => c.hp > 0 && !c.onExpedition && !c.drafted && !(c.traits && c.traits.includes('pacifist')));
         let html = `<div class="arcane-section">`;
         html += `<div class="info-row" style="color:#33ccff;font-weight:bold;">Select Party</div>`;
         html += `<div class="info-row" style="color:#888;">Choose up to 5 colonists:</div>`;
@@ -231,7 +231,7 @@ const arcaneMethods = {
             const priority = c.artifact?.expedition?.targetPriority || c.artifact?.combat?.targetPriority || 0;
             const priorityStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'}">${priority > 0 ? '▲' : '▼'}Thr</span>` : '';
             const defStr = def > 0 ? ` Def:${def}%` : '';
-            html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}" data-max="5"> ${c.name} <span style="color:#888;font-size:0.85em;">HP:${c.hp}/${c.maxHp} Dmg:${dmg}${defStr}${priorityStr}</span></label></div>`;
+            html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}" data-max="5"> ${c.name} <span style="color:#888;font-size:0.85em;">Dmg:${dmg}${defStr}${priorityStr}</span></label></div>`;
         }
         const packAnimals = this.game.entities.filter(a => {
             if (!a.tamed || a.hp <= 0 || a.onExpedition) return false;
@@ -555,7 +555,7 @@ const arcaneMethods = {
         const useSkins = skinMgr && skinMgr.isActive;
         for (let i = 0; i < party.length; i++) {
             const p = party[i];
-            const py = H / 2 + (i - party.length / 2) * 16;
+            const py = H / 2 + (i - party.length / 2) * 16 + 6;
             const px = partyX + (py - H / 2) * diagSlope;
             const hpPct = p.maxHp > 0 ? p.hp / p.maxHp : 0;
             if (p.hp <= 0) {

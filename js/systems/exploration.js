@@ -43,6 +43,7 @@ export class ExplorationSystem {
         for (const id of cappedColonists) {
             const c = game.getColonist(id);
             if (!c || c.hp <= 0 || c.onExpedition || c.drafted) continue;
+            if (c.traits && c.traits.includes('pacifist')) continue;
             party.push(c);
         }
 
@@ -223,6 +224,8 @@ export class ExplorationSystem {
             const dist = manhattanDist(c.x, c.y, gx, gy);
             if (dist <= 1) {
                 if (!c.onExpedition) {
+                    c.hp = c.maxHp;
+                    if (c.maxMana) c.mana = c.maxMana;
                     c.onExpedition = true;
                     c.state = 'idle';
                     c.path = [];
@@ -253,6 +256,7 @@ export class ExplorationSystem {
                 const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
                 return {
                     id: c.id, name: c.name, gender: c.gender, hp: c.hp, maxHp: c.maxHp,
+                    golem: c.golem, golemType: c.golemType,
                     weapon: c.weapon, armor: c.armor, helmet: c.helmet,
                     artifact: c.artifactBroken ? null : c.artifact,
                     knownSpells: c.knownSpells ? [...c.knownSpells] : [],
@@ -791,7 +795,7 @@ export function estimatePartyStrength(game, colonistIds, realmKey, difficulty) {
         const effCd = Math.max(1, Math.round(baseCd / atkSpeed));
         const hitsPerRound = Math.max(1, Math.round(baseCd / effCd));
         totalDmg += dmg * hitsPerRound;
-        totalHp += c.hp;
+        totalHp += c.maxHp;
         let dr = 1;
         for (const item of items) {
             if (item.damageReduction) dr *= (1 - item.damageReduction);
