@@ -1,7 +1,7 @@
 import { isPassable, getMoveCost, isPassableForEnemies, isBreakableByEnemies } from './map.js';
 import { CONFIG, PATHFINDING_CONFIG } from '../core/config.js';
 
-const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];//, [-1, -1], [1, 1], [1, -1], [-1, 1]];
 const MAX_NODES = PATHFINDING_CONFIG.maxNodes;
 
 // Binary min-heap keyed on f-score for A* open set.
