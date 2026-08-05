@@ -120,19 +120,3 @@ export const TRADE_VALUES = {
 // Modified at runtime by: Trade Routes research (see getTradeRates), pedestal artifacts (tradeMarkupMult).
 export const TRADER_MARKUP = 1.2;
 export const TRADER_DISCOUNT = 0.8;
-
-// Exclusive items the trader may carry (30% chance per caravan, see eventCaravan).
-// tradeValue is flat gold cost (not affected by markup/discount).
-// Effects defined here are for the trade panel tooltip; full artifact effects are in equipment.js.
-export const TRADER_EXCLUSIVE_ITEMS = {
-    amulet_of_fortune: { type: 'artifact', name: 'Amulet of Fortune', xpBonus: 0.2, tradeValue: 40 },
-    enchanted_blade: { type: 'weapon', name: 'Enchanted Blade', damage: 18, spellDamageBonus: 0.15, tradeValue: 50 },
-    wanderers_cloak: { type: 'armor', name: "Wanderer's Cloak", damageReduction: 0.15, moveSpeedBonus: 0.2, tradeValue: 45 },
-    merchants_ring: { type: 'artifact', name: "Merchant's Ring", tradeBonus: 0.1, tradeValue: 35 },
-    seedkeepers_locket: { type: 'artifact', name: "Seedkeeper's Locket", tradeValue: 55 },
-    hourglass_of_diligence: { type: 'artifact', name: 'Hourglass of Diligence', tradeValue: 50 },
-    lodestone_of_prosperity: { type: 'artifact', name: 'Lodestone of Prosperity', tradeValue: 45 },
-    hagglers_coin: { type: 'artifact', name: "Haggler's Coin", tradeValue: 40 },
-    aegis_of_the_vanguard: { type: 'artifact', name: 'Aegis of the Vanguard', tradeValue: 60 },
-    crystal_capacitor: { type: 'consumable', name: 'Crystal Capacitor', tradeValue: 65, char: '◆', charColor: '#aa44ff', description: 'Use to permanently increase your mana crystal limit by 1.' },
-};

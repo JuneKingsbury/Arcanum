@@ -1,4 +1,4 @@
-import { CONFIG, EVENTS, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, FIRE_CONFIG, COMBAT_VISUALS } from '../core/config.js';
+import { CONFIG, EVENTS, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, FIRE_CONFIG, COMBAT_VISUALS, ARMORS, HELMETS, WEAPONS, ARTIFACTS, POTIONS } from '../core/config.js';
 import { createColonist, addThought } from '../entities/colonist.js';
 import { createWildAnimal } from '../entities/entity-factory.js';
 import { getPedestalEffect } from './artifacts.js';
@@ -353,10 +353,12 @@ export class EventSystem {
         for (const [res, amt] of Object.entries(requesting)) {
             if (res === '__exclusive') {
                 const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
-                if (item.type === 'weapon') game.resources.addWeapon({ ...item, key: data.exclusiveItem });
-                else if (item.type === 'armor') game.resources.addArmor({ ...item, key: data.exclusiveItem });
-                else if (item.type === 'artifact') game.resources.addArtifact({ ...item, key: data.exclusiveItem });
-                else if (item.type === 'consumable') game.resources.addConsumable({ key: data.exclusiveItem, name: item.name });
+                if (item.type === 'weapon') game.resources.addWeapon({ ...WEAPONS[item.name], type: item.name });
+                else if (item.type === 'armor') game.resources.addArmor({ ...ARMORS[item.name], type: item.name });
+                else if (item.type === 'helmet') game.resources.addHelmet({ ...HELMETS[item.name], type: item.name });
+                else if (item.type === 'artifact') game.resources.addArtifact({ ...ARTIFACTS[item.name], type: item.name });
+                else if (item.type === 'tome') game.resources.addTome({ ...TOMES[item.name], type: item.name });
+                else if (item.type === 'consumable') game.resources.addConsumable({ ...POTIONS[item.name], type: item.name });
                 data.exclusiveItem = null;
             } else if (res === '__gold') {
                 const goldAmt = Math.min(amt, data.traderGold);

@@ -162,6 +162,21 @@ const ARMOR_PAIRS = [
     ['runic_helm', HELMETS], ['runic_plate', ARMORS],
     ['void_crown', HELMETS], ['void_armor', ARMORS],
 ];
+
+// Exclusive items the trader may carry (30% chance per caravan, see eventCaravan).
+// tradeValue is flat gold cost (not affected by markup/discount).
+// Effects defined here are for the trade panel tooltip.
+export const TRADER_EXCLUSIVE_ITEMS = {
+    amulet_of_fortune: { type: 'artifact', name: 'amulet_of_fortune', tradeValue: 40 },
+    merchants_ring: { type: 'artifact', name: "merchants_ring", tradeValue: 35 },
+    seedkeepers_locket: { type: 'artifact', name: "seedkeepers_locket", tradeValue: 55 },
+    hourglass_of_diligence: { type: 'artifact', name: 'hourglass_of_diligence', tradeValue: 50 },
+    lodestone_of_prosperity: { type: 'artifact', name: 'lodestone_of_prosperity', tradeValue: 45 },
+    hagglers_coin: { type: 'artifact', name: "hagglers_coin", tradeValue: 40 },
+    aegis_of_the_vanguard: { type: 'artifact', name: 'aegis_of_the_vanguard', tradeValue: 60 },
+    crystal_capacitor: { type: 'consumable', name: 'crystal_capacitor', tradeValue: 65, char: '◆', charColor: '#aa44ff', description: 'Use to permanently increase your mana crystal limit by 1.' },
+};
+
 const EQUIPMENT_RECIPE_SOURCES = [
     { items: WEAPONS, category: 'Weapons', prefix: 'craft_', defaults: { skill: 'crafting', station: 'workbench' } },
     { items: ARMOR_PAIRS, category: 'Armor', prefix: 'craft_', defaults: { skill: 'crafting', station: 'workbench' }, paired: true },
