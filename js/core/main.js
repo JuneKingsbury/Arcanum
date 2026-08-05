@@ -1217,8 +1217,9 @@ class Game {
         const c = this.getColonist(colonistId);
         if (!c) return;
         if (this.resources.weapons.length > 0) {
-            this.resources.weapons.sort((a, b) => b.damage - a.damage);
-            if (!c.weapon || this.resources.weapons[0].damage > c.weapon.damage) {
+            const weaponDps = w => w.damage / (w.attackCooldown || COLONIST_CONFIG.baseAttackCooldown);
+            this.resources.weapons.sort((a, b) => weaponDps(b) - weaponDps(a));
+            if (!c.weapon || weaponDps(this.resources.weapons[0]) > weaponDps(c.weapon)) {
                 this.equipWeapon(colonistId, 0);
             }
         }

@@ -201,7 +201,11 @@ export class WaveSystem {
 
         if (!enemy.path || enemy.path.length === 0 || (enemy.pathAge || 0) > WAVE_CONFIG.repathInterval) {
             enemy.path = findEnemyPath(game.map, enemy.x, enemy.y, this.nexusPosition.x, this.nexusPosition.y);
-            enemy.pathAge = 0;
+            if (!enemy.path) {
+                enemy.pathAge = WAVE_CONFIG.repathInterval - 3;
+            } else {
+                enemy.pathAge = 0;
+            }
         }
 
         if (enemy.path && enemy.path.length > 0) {
@@ -223,8 +227,6 @@ export class WaveSystem {
             } else {
                 enemy.path = null;
             }
-        } else {
-            moveTowardDirect(enemy, this.nexusPosition, game.map, dur, game);
         }
     }
 
@@ -285,25 +287,6 @@ function pickFromComposition(composition, currentWave) {
         if (roll <= 0) return entry.entity;
     }
     return eligible[eligible.length - 1].entity;
-}
-
-function moveTowardDirect(entity, target, map, dur, game) {
-    const dx = Math.sign(target.x - entity.x);
-    const dy = Math.sign(target.y - entity.y);
-    const candidates = [];
-    if (dx !== 0 && isPassableForEnemies(map, entity.x + dx, entity.y)) candidates.push([entity.x + dx, entity.y]);
-    if (dy !== 0 && isPassableForEnemies(map, entity.x, entity.y + dy)) candidates.push([entity.x, entity.y + dy]);
-    if (candidates.length === 0) return;
-    if (game) {
-        const unoccupied = candidates.filter(([cx, cy]) => !game.isTileOccupied(cx, cy));
-        if (unoccupied.length > 0) {
-            const pick = unoccupied[Math.floor(Math.random() * unoccupied.length)];
-            moveEntity(entity, pick[0], pick[1], dur);
-            return;
-        }
-    }
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    moveEntity(entity, pick[0], pick[1], dur);
 }
 
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];

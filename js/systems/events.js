@@ -353,12 +353,12 @@ export class EventSystem {
         for (const [res, amt] of Object.entries(requesting)) {
             if (res === '__exclusive') {
                 const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
-                if (item.type === 'weapon') game.resources.addWeapon({ ...WEAPONS[item.name], type: item.name });
-                else if (item.type === 'armor') game.resources.addArmor({ ...ARMORS[item.name], type: item.name });
-                else if (item.type === 'helmet') game.resources.addHelmet({ ...HELMETS[item.name], type: item.name });
-                else if (item.type === 'artifact') game.resources.addArtifact({ ...ARTIFACTS[item.name], type: item.name });
-                else if (item.type === 'tome') game.resources.addTome({ ...TOMES[item.name], type: item.name });
-                else if (item.type === 'consumable') game.resources.addConsumable({ ...POTIONS[item.name], type: item.name });
+                if (item.type === 'weapon') game.resources.addWeapon({ ...WEAPONS[item.name], key: item.name });
+                else if (item.type === 'armor') game.resources.addArmor({ ...ARMORS[item.name], key: item.name });
+                else if (item.type === 'helmet') game.resources.addHelmet({ ...HELMETS[item.name], key: item.name });
+                else if (item.type === 'artifact') game.resources.addArtifact({ ...ARTIFACTS[item.name], key: item.name });
+                else if (item.type === 'tome') game.resources.addTome({ ...TOMES[item.name], key: item.name });
+                else if (item.type === 'consumable') game.resources.addConsumable({ ...POTIONS[item.name], key: item.name });
                 data.exclusiveItem = null;
             } else if (res === '__gold') {
                 const goldAmt = Math.min(amt, data.traderGold);

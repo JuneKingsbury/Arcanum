@@ -1,6 +1,6 @@
 import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
-import { isPassable, getMoveCost } from '../world/map.js';
+import { isPassable, getMoveCost, hasLineOfSight } from '../world/map.js';
 import { moveEntity, computeMoveDuration, computeMoveCooldown } from '../systems/movement-lerp.js';
 import { FOODSTUFFS } from '../systems/resources.js';
 import { spawnSummon } from './summons.js';
@@ -1031,7 +1031,7 @@ function updateFighting(colonist, game) {
     }
     const effectiveCooldown = Math.max(1, Math.round(baseCooldown / atkSpeed));
 
-    if (isRanged && dist <= weaponRange && dist >= 2) {
+    if (isRanged && dist <= weaponRange && dist >= 2 && hasLineOfSight(game.map, colonist.x, colonist.y, target.x, target.y)) {
         if (game.tick - (colonist._lastAttackTick || 0) < effectiveCooldown) return;
         colonist._lastAttackTick = game.tick;
         let weaponDmg = weapon.damage;
