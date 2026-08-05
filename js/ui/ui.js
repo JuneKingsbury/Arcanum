@@ -1740,6 +1740,8 @@ export class UI {
     updateCraftPanel() {
         if (!this._craftTab) this._craftTab = RECIPE_CATEGORIES[0];
         const recipes = getAvailableRecipes(this.game);
+        const tabsContainer = this.elements.craftPanel.querySelector('.craft-tabs');
+        const craftTabsScroll = tabsContainer ? tabsContainer.scrollLeft : 0;
         let html = '<div class="panel-close" data-panel-close="craft">&times;</div><h3>Crafting Orders</h3>';
         html += '<div class="craft-tabs">';
         for (const cat of RECIPE_CATEGORIES) {
@@ -1864,6 +1866,10 @@ export class UI {
         if (html !== this._lastCraftHtml) {
             this._lastCraftHtml = html;
             this.elements.craftPanel.innerHTML = html;
+            const newTabsContainer = this.elements.craftPanel.querySelector('.craft-tabs');
+            if (newTabsContainer) {
+                newTabsContainer.scrollLeft = craftTabsScroll;
+            }
         }
     }
 

@@ -18,6 +18,11 @@ const researchMethods = {
     updateResearchPanel() {
         const research = this.game.research;
         const activeTab = this._researchTab || 'foundations';
+        if (!this._researchTabScrolls) this._researchTabScrolls = {};
+        const tabsContainer = this.elements.researchPanel.querySelector('.research-tabs');
+        if (tabsContainer) {
+            this._researchTabsScroll = tabsContainer.scrollLeft;
+        }
         let html = '<div class="panel-close" data-panel-close="research">&times;</div><h3>Research</h3>';
 
         if (research.activeResearch) {
@@ -108,6 +113,10 @@ const researchMethods = {
         if (html !== this._lastResearchHtml) {
             this._lastResearchHtml = html;
             this.elements.researchPanel.innerHTML = html;
+            const tabsContainer = this.elements.researchPanel.querySelector('.research-tabs');
+            if (tabsContainer && this._researchTabsScroll) {
+                tabsContainer.scrollLeft = this._researchTabsScroll;
+            }
             requestAnimationFrame(() => this._drawResearchLines());
             this._initResearchHover();
         }
