@@ -344,9 +344,12 @@ export class UI {
         if (this._viewingColonistId != null) this._refreshColonistInfo();
         const hasNew = this.game.story.hasUnviewed();
         const researchNeedsAtt = !this.game.research.activeResearch && this.game.research.hasAvailableResearch();
-        if (hasNew !== this._lastStoryHasNew || researchNeedsAtt !== this._lastResearchNeedsAttention) {
+        const currentManaCrystalBonus = this.game.manaCrystalBonus || 0;
+        const buildModeChanged = hasNew !== this._lastStoryHasNew || researchNeedsAtt !== this._lastResearchNeedsAttention || currentManaCrystalBonus !== this._lastManaCrystalBonus;
+        if (buildModeChanged) {
             this._lastStoryHasNew = hasNew;
             this._lastResearchNeedsAttention = researchNeedsAtt;
+            this._lastManaCrystalBonus = currentManaCrystalBonus;
             this.updateModeDisplay(this.game.input);
         }
     }

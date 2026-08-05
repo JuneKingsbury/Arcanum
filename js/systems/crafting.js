@@ -111,13 +111,14 @@ export function updateAutoCraft(game) {
         if (!findAvailableStation(game, recipe.station)) continue;
         if (!game.resources.has(recipe.input)) continue;
 
+        const outputKey = Object.keys(recipe.output)[0];
         const pendingForRecipe = game.taskQueue.getAll().filter(t =>
-            t.recipe && Object.keys(t.recipe.output)[0] === Object.keys(recipe.output)[0]
+            (t.type === 'craft' || t.type === 'cook') && t.recipe &&
+            Object.keys(t.recipe.output)[0] === outputKey
         ).length;
 
         let shouldQueue = false;
         if (config.target > 0) {
-            const outputKey = Object.keys(recipe.output)[0];
             const current = game.resources.stockpile[outputKey] || 0;
             const expected = current + pendingForRecipe * (recipe.output[outputKey] || 1);
             shouldQueue = expected < config.target;
