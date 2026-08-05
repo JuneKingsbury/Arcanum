@@ -42,6 +42,7 @@ export const TRAITS = {
     optimist: { name: 'Optimist', positiveThoughtMult: 1.5, description: 'Positive thoughts 50% stronger' },
     pessimist: { name: 'Pessimist', negativeThoughtMult: 1.5, description: 'Negative thoughts 50% stronger' },
     tough: { name: 'Tough', damageTakenMult: 0.7, description: 'Takes 30% less damage' },
+    pacifist: { name: 'Pacifist', description: 'Refuses to attack enemies, only flees' },
     pyromaniac: { name: 'Pyromaniac', fireChance: 0.001, description: 'Rare chance to start fires' },
     gourmand: { name: 'Gourmand', cookedFoodMoodBonus: 8, rawFoodMoodPenalty: -12, description: 'Loves cooked food, hates raw' },
 };

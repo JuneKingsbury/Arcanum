@@ -94,7 +94,7 @@ export function createGolem(type, x, y) {
     return {
         id, name: def.name, x, y, skills,
         magicSkills: Object.fromEntries(Object.keys(MAGIC_SKILLS).map(k => [k, { level: 0, xp: 0 }])),
-        magicBias: null, traits: [],
+        magicBias: null, traits: def.traits || [],
         nameColor: def.color,
         priorities: Object.fromEntries(Object.keys(SKILLS).map(k => [k, k === def.specialty ? 1 : 5])),
         needs: { hunger: 100, rest: 100 },
@@ -668,7 +668,7 @@ function updateIdle(colonist, game) {
 
     const waveActive = game.waves && game.waves.active && game.waves.enemies.length > 0;
     const threat = findNearestHostile(colonist, game);
-    if (threat) {
+    if (threat && !colonist.traits.includes('pacifist')) {
         const dist = manhattanDist(colonist.x, colonist.y, threat.x, threat.y);
         const wpnRange = colonist.weapon && colonist.weapon.ranged ? colonist.weapon.range : 0;
         const autoEngageDist = Math.max(COLONIST_CONFIG.fightEngageDistance, wpnRange);
@@ -1013,7 +1013,7 @@ function updateFighting(colonist, game) {
         return;
     }
 
-    if (colonist.hp < COLONIST_CONFIG.fleeHpThreshold) {
+    if (colonist.hp < COLONIST_CONFIG.fleeHpThreshold || colonist.traits.includes('pacifist')) {
         colonist.state = 'fleeing';
         return;
     }

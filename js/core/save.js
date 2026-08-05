@@ -3,7 +3,7 @@ import { syncEntityIdCounter } from '../entities/entity-factory.js';
 import { initEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 
 function migrateTomeKey(key) {
     if (!key || key.startsWith('tome_of_')) return key;
@@ -38,6 +38,16 @@ function migrateTomeKeys(data) {
             newTargets[newKey] = v;
         }
         data.settings.craftTargets = newTargets;
+    }
+}
+
+function migrateGolemTypes(data) {
+    if (data.colonists) {
+        for (const c of data.colonists) {
+            if (c.golemType === 'miner_golem') {
+                c.golemType = 'builder_golem';
+            }
+        }
     }
 }
 
@@ -152,6 +162,11 @@ export function loadGame(game) {
         if (data.version < 4) {
             migrateTomeKeys(data);
             data.version = 4;
+        }
+
+        if (data.version < 5) {
+            migrateGolemTypes(data);
+            data.version = 5;
         }
 
         CONFIG.PEACEFUL_MODE = data.peaceful;

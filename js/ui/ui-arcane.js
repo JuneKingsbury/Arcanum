@@ -562,7 +562,12 @@ const arcaneMethods = {
                 ctx.globalAlpha = 0.4;
             }
             if (useSkins) {
-                const sprite = skinMgr.getColonistSprite(p.id, false, p.gender);
+                let sprite;
+                if (p.golem && p.golemType) {
+                    sprite = skinMgr.getSprite('entities', p.golemType);
+                } else {
+                    sprite = skinMgr.getColonistSprite(p.id, false, p.gender);
+                }
                 if (sprite) {
                     ctx.drawImage(sprite, px - 7, py - 7, 14, 14);
                 } else {
@@ -583,7 +588,7 @@ const arcaneMethods = {
                 } else {
                     ctx.fillStyle = '#44ff44';
                 }
-                ctx.fillText('@', px, py);
+                ctx.fillText(p.golem ? 'G' : '@', px, py);
             }
             ctx.globalAlpha = 1;
         }

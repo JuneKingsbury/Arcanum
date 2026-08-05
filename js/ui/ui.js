@@ -371,7 +371,10 @@ export class UI {
         const temp = useF ? Math.round(tempC * 9 / 5 + 32) : tempC;
         const tempUnit = useF ? 'F' : 'C';
         const speed = this.game.paused ? 'PAUSED' : `${this.game.speed}x`;
-        const aliveColonists = this.game.colonists.filter(c => c.hp > 0);
+        const colonists = this.game.colonists.filter(c => !c.golem);
+        const golems = this.game.colonists.filter(c => c.golem);
+        const aliveColonists = colonists.filter(c => c.hp > 0);
+        const aliveGolems = golems.filter(c => c.hp > 0);
         const alive = aliveColonists.length;
         const avgMood = alive > 0 ? Math.round(aliveColonists.reduce((sum, c) => sum + c.mood, 0) / alive) : 0;
         const dayProgress = Math.floor((this.game.timeOfDay / CONFIG.TICKS_PER_DAY) * 24);
@@ -428,6 +431,7 @@ export class UI {
             `<span class="info">${timeStr}</span>` +
             `<span class="sep status-extra">|</span>` +
             `<span class="info status-extra">Pop:${alive}/${cap}</span>` +
+            (aliveGolems.length > 0 ? `<span class="info status-extra" style="color:#aaaaaa">Golems:${aliveGolems.length}</span>` : '') +
             `<span class="info status-extra">Mood:${avgMood}%</span>` +
             (waveStr ? `<span class="info" style="color:#cc00ff">${waveStr}</span>` : '') +
             (pendingTasks > 0 ? `<span class="info status-extra" style="color:#ccaa44">Tasks:${pendingTasks}</span>` : '') +
@@ -1708,12 +1712,15 @@ export class UI {
             for (const s of skills) {
                 const val = c.priorities[s];
                 const display = val === 0 ? '-' : val;
-                html += `<td class="prio-cell" data-colonist-id="${c.id}" data-skill="${s}">${display}</td>`;
+                const isGolem = c.golem;
+                const cellClass = isGolem ? 'prio-cell golem-locked' : 'prio-cell';
+                const cellStyle = isGolem ? 'opacity: 0.6; cursor: not-allowed;' : '';
+                html += `<td class="${cellClass}" data-colonist-id="${c.id}" data-skill="${s}" style="${cellStyle}">${display}</td>`;
             }
             html += '</tr>';
         }
         html += '</table>';
-        const fullHtml = '<div class="panel-close" data-panel-close="priority">&times;</div><h3>Work Priorities (click to cycle, -=disabled)</h3>' + html;
+        const fullHtml = '<div class="panel-close" data-panel-close="priority">&times;</div><h3>Work Priorities (click to cycle, -=disabled)</h3><div style="color: #888; font-size: 0.9em; margin-bottom: 8px;">Note: Golem priorities are locked to their specialization</div>' + html;
         if (fullHtml !== this._lastPrioHtml) {
             this._lastPrioHtml = fullHtml;
             this.elements.priorityPanel.innerHTML = fullHtml;
@@ -1861,9 +1868,12 @@ export class UI {
     }
 
     updateColonistHud() {
+        const colonists = this.game.colonists.filter(c => !c.golem);
+        const golems = this.game.colonists.filter(c => c.golem);
+
         let html = '<div class="footer-panel-header">Colonists</div>';
         // Show alive colonists first, dead at the bottom
-        const sorted = [...this.game.colonists].sort((a, b) => (b.hp > 0 ? 1 : 0) - (a.hp > 0 ? 1 : 0));
+        const sorted = [...colonists].sort((a, b) => (b.hp > 0 ? 1 : 0) - (a.hp > 0 ? 1 : 0));
         for (const c of sorted) {
             if (c.hp <= 0) {
                 html += `<div class="hud-colonist dead"><span class="hud-name" style="color:${c.nameColor || '#ffff00'}">${c.name}</span> <span style="color:#cc4444">DEAD</span></div>`;
@@ -1886,6 +1896,29 @@ export class UI {
             html += `<div class="hud-bars">Mood: <span style="color:${moodColor}">${c.mood.toFixed(0)} (${moodLevel})</span> | Hunger: <span style="color:${hungerColor}">${c.needs.hunger.toFixed(0)}</span> | Rest: <span style="color:${restColor}">${c.needs.rest.toFixed(0)}</span> | HP: <span style="color:${hpColor}">${Math.round(c.hp)}/${c.maxHp}</span></div>`;
             html += `</div>`;
         }
+
+        if (golems.length > 0) {
+            html += '<div class="footer-panel-header" style="margin-top: 12px;">Golems</div>';
+            const sortedGolems = [...golems].sort((a, b) => (b.hp > 0 ? 1 : 0) - (a.hp > 0 ? 1 : 0));
+            for (const g of sortedGolems) {
+                if (g.hp <= 0) {
+                    html += `<div class="hud-colonist dead"><span class="hud-name" style="color:${g.nameColor || '#ffff00'}">${g.name}</span> <span style="color:#cc4444">DESTROYED</span></div>`;
+                    continue;
+                }
+                if (g.onExpedition) {
+                    html += `<div class="hud-colonist" data-colonist-id="${g.id}"><span class="hud-name" style="color:${g.nameColor || '#ffff00'}">${g.name}</span> <span style="color:#33ccff">EXPLORING</span></div>`;
+                    continue;
+                }
+                const hpColor = statColor(g.maxHp > 0 ? (g.hp / g.maxHp) * 100 : 100);
+                const weaponIcon = g.weapon ? this._itemIcon(g.weapon.key, 'weapon') : '';
+                const weapon = g.weapon?.name || 'None';
+                html += `<div class="hud-colonist" data-colonist-id="${g.id}">`;
+                html += `<span class="hud-name" style="color:${g.nameColor || '#ffff00'}">${g.name}</span> <span class="hud-dots"><span style="color:${hpColor}">●</span></span> <span class="hud-weapon">${weaponIcon}${weapon}</span> <span class="hud-state">${g.state}${g.drafted ? ' [D]' : ''}</span>`;
+                html += `<div class="hud-bars">HP: <span style="color:${hpColor}">${Math.round(g.hp)}/${g.maxHp}</span></div>`;
+                html += `</div>`;
+            }
+        }
+
         if (html !== this._lastHudHtml) {
             this._lastHudHtml = html;
             if (this._colonistHudHovered) {

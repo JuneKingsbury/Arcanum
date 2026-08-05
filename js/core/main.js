@@ -471,7 +471,7 @@ class Game {
 
     cyclePriority(colonistId, skill) {
         const c = this.getColonist(colonistId);
-        if (!c) return;
+        if (!c || c.golem) return;
         c.priorities[skill] = (c.priorities[skill] + 1) % 6;
     }
 
