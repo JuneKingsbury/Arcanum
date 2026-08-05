@@ -1,8 +1,8 @@
 export const GAME_VERSION = '0.1.0';
 
 export const CONFIG = {
-    MAP_WIDTH: 256,
-    MAP_HEIGHT: 256,
+    MAP_WIDTH: 128,
+    MAP_HEIGHT: 128,
     VIEWPORT_WIDTH: 80,
     VIEWPORT_HEIGHT: 40,
     TICK_RATE: 200,
@@ -100,7 +100,7 @@ export const CARAVAN_TRADES = [
 ];
 
 export const PATHFINDING_CONFIG = {
-    maxNodes: 1500,
+    maxNodes: 20000,
     raiderRepathInterval: 15,
     raiderSearchRadius: 100,
     breakableCostPenalty: 10,
