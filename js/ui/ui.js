@@ -2577,17 +2577,34 @@ export class UI {
     _getExclusiveItemTooltip(key) {
         const item = TRADER_EXCLUSIVE_ITEMS[key];
         if (!item) return '';
-        if (item.type === 'artifact' && ARTIFACTS[key]) {
-            return this._getArtifactTooltip(ARTIFACTS[key]);
+        if (item.type === 'artifact' && ARTIFACTS[item.name]) {
+            return this._getArtifactTooltip(ARTIFACTS[item.name]);
         }
-        if (item.type === 'consumable') {
+        if (item.type === 'consumable' && POTIONS[item.name]) {
             return item.description || '';
         }
         const lines = [];
         if (item.description) lines.push(item.description);
         const stats = getItemStatLines(item);
         if (stats.length) lines.push(stats.join(', '));
-        return lines.join(' | ') || item.name;
+        if (item.type == 'artifact' && ARTIFACTS[item.name]) {
+            return lines.join(' | ') || ARTIFACTS[item.name].name;
+        }
+        else if (item.type == 'weapon' && WEAPONS[item.name]) {
+            return lines.join(' | ') || WEAPONS[item.name].name;
+        }
+        else if (item.type == 'armor' && ARMORS[item.name]) {
+            return lines.join(' | ') || ARMORS[item.name].name;
+        }
+        else if (item.type == 'helmet' && HELMETS[item.name]) {
+            return lines.join(' | ') || HELMETS[item.name].name;
+        }
+        else if (item.type == 'consumable' && POTIONS[item.name]) {
+            return lines.join(' | ') || POTIONS[item.name].name;
+        }
+        else {
+            return lines.join(' | ') || item.name;
+        }
     }
 
     _updateTradePanel(evt) {
@@ -2662,7 +2679,23 @@ export class UI {
             const tip = this._getExclusiveItemTooltip(data.exclusiveItem);
             const exIcon = this._itemIcon(data.exclusiveItem, item.type === 'consumable' ? 'artifact' : item.type);
             html += `<div class="trade-exclusive-row skill-tip" data-tip="${tip.replace(/"/g, '&quot;')}">`;
-            html += `<div class="trade-item-name">${exIcon}${item.name}</div>`;
+            if (item.type === 'artifact' && ARTIFACTS[item.name]) {
+                html += `<div class="trade-item-name">${exIcon}${ARTIFACTS[item.name].name}</div>`;
+            }
+            else if (item.type === 'weapon' && WEAPONS[item.name]) {
+                html += `<div class="trade-item-name">${exIcon}${WEAPONS[item.name].name}</div>`;
+            }
+            else if (item.type === 'armor' && ARMOR[item.name]) {
+                html += `<div class="trade-item-name">${exIcon}${ARMOR[item.name].name}</div>`;
+            }
+            else if (item.type === 'helmet' && HELMETS[item.name]) {
+                html += `<div class="trade-item-name">${exIcon}${HELMETS[item.name].name}</div>`;
+            }
+            else if (item.type === 'consumable' && POTIONS[item.name]) {
+                html += `<div class="trade-item-name">${exIcon}${POTIONS[item.name].name}</div>`;
+            } else {
+                html += `<div class="trade-item-name">${exIcon}${item.name}</div>`;
+            }
             html += `<div class="trade-item-value">${item.tradeValue}g</div>`;
             html += `<button class="trade-exclusive-toggle${isSelected}" onclick="window.game.${request.__exclusive ? 'tradeRemoveRequest' : 'tradeRequest'}('__exclusive',1)">${request.__exclusive ? 'Remove' : 'Buy'}</button>`;
             html += `</div>`;
