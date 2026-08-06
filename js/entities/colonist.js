@@ -18,14 +18,20 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         ? available[Math.floor(Math.random() * available.length)]
         : `Colonist ${id}`;
     // Pick 1–3 traits via weighted random, respecting exclusion pairs.
+    // Constraints: cumulative value never goes below 0, total value never exceeds 5.
+    const TRAIT_BUDGET = 5;
     const numTraits = 1 + Math.floor(Math.random() * 3);
     const traits = [];
     for (let i = 0; i < numTraits; i++) {
-        const pool = Object.entries(TRAITS).filter(([key]) => {
+        const currentSum = traits.reduce((s, t) => s + (TRAITS[t]?.value || 0), 0);
+        const pool = Object.entries(TRAITS).filter(([key, def]) => {
             if (traits.includes(key)) return false;
             for (const pair of TRAIT_EXCLUSIONS) {
                 if (pair.includes(key) && traits.some(t => pair.includes(t))) return false;
             }
+            const newSum = currentSum + (def.value || 0);
+            if (newSum < 0) return false;           // never let running total go negative
+            if (newSum > TRAIT_BUDGET) return false; // never exceed budget
             return true;
         });
         if (pool.length === 0) break;
@@ -38,10 +44,19 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         if (traits.length < i + 1) traits.push(pool[pool.length - 1][0]); // fallback
     }
 
+    // Allocate skill points randomly up to SKILL_POINT_TOTAL, respecting per-skill max.
+    const SKILL_POINT_TOTAL = 22;
+    const SKILL_MAX_LEVEL = 8;
     const skills = {};
-    for (const [key, def] of Object.entries(SKILLS)) {
-        const [min, max] = def.baseLevel;
-        skills[key] = min + Math.floor(Math.random() * (max - min + 1));
+    const skillKeys = Object.keys(SKILLS);
+    for (const key of skillKeys) skills[key] = SKILLS[key].baseLevel[0];
+    let remaining = SKILL_POINT_TOTAL - skillKeys.reduce((s, k) => s + skills[k], 0);
+    // Shuffle to avoid always favouring earlier skills
+    const shuffled = [...skillKeys].sort(() => Math.random() - 0.5);
+    for (let pass = 0; pass < remaining; pass++) {
+        const eligible = shuffled.filter(k => skills[k] < SKILL_MAX_LEVEL);
+        if (eligible.length === 0) break;
+        skills[eligible[Math.floor(Math.random() * eligible.length)]]++;
     }
     if (skillBias && skills[skillBias] !== undefined) {
         skills[skillBias] = Math.min(10, skills[skillBias] + (SKILLS[skillBias].biasBonus || 3));
@@ -52,12 +67,17 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         const [min, max] = def.baseLevel;
         magicSkills[key] = min + Math.floor(Math.random() * (max - min + 1));
     }
+    const magicKeys = Object.keys(MAGIC_SKILLS);
     let magicBias = null;
-    if (Math.random() < COLONIST_CONFIG.magicBiasChance) {
-        const magicKeys = Object.keys(MAGIC_SKILLS);
+    if (traits.includes('magically_gifted') || Math.random() < COLONIST_CONFIG.magicBiasChance) {
         magicBias = magicKeys[Math.floor(Math.random() * magicKeys.length)];
         magicSkills[magicBias] = Math.min(10, magicSkills[magicBias] + (MAGIC_SKILLS[magicBias].biasBonus || 2));
     }
+
+    // Magically Gifted colonists start knowing the level-0 spell for their magic school.
+    const starterSpell = (traits.includes('magically_gifted') && magicBias)
+        ? Object.entries(SPELLS).find(([, s]) => s.school === magicBias && s.minLevel === 0)?.[0] ?? null
+        : null;
 
     const combinedMagicLevel = Object.values(magicSkills).reduce((sum, lvl) => sum + lvl, 0);
     const maxMana = MANA_CONFIG.baseMana + combinedMagicLevel * MANA_CONFIG.manaPerMagicLevel;
@@ -71,7 +91,7 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         thoughts: [],
         hp: COLONIST_CONFIG.maxHp, maxHp: COLONIST_CONFIG.maxHp,
         mana: maxMana, maxMana,
-        knownSpells: [],
+        knownSpells: starterSpell ? [starterSpell] : [],
         disabledSpells: [],
         equippedTome: null,
         tomeProgress: {},

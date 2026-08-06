@@ -64,7 +64,7 @@ export const TRAITS = {
     loner:         { name: 'Loner',         weight: 10, value:  0, aloneMoodBonus: 8,   nearOthersMoodPenalty: -5, description: 'Happy alone, stressed near others' },
     optimist:      { name: 'Optimist',      weight: 10, value:  2, positiveThoughtMult: 1.5, description: 'Positive thoughts 50% stronger' },
     pessimist:     { name: 'Pessimist',     weight: 10, value: -2, negativeThoughtMult: 1.5, description: 'Negative thoughts 50% stronger' },
-    gourmand:      { name: 'Gourmand',      weight: 10, value: -1, cookedFoodMoodBonus: 8, rawFoodMoodPenalty: -12, description: 'Loves cooked food, hates raw' },
+    gourmand:      { name: 'Gourmand',      weight: 10, value: -1, cookedFoodMoodBonus: 8, rawFoodMoodPenalty: -12, description: '+8 mood from cooked meals, -12 mood from raw food' },
     // ── Uncommon ────────────────────────────────────────────────────────────
     green_thumb:   { name: 'Green Thumb',   weight: 7,  value:  2, farmingSpeedMult: 1.3, description: '+30% farming speed' },
     iron_stomach:  { name: 'Iron Stomach',  weight: 7,  value:  2, hungerDecayMult: 0.5,  description: 'Gets hungry half as fast' },
@@ -81,8 +81,9 @@ export const TRAITS = {
     lucky:         { name: 'Lucky',         weight: 3,  value:  4, qualityBonus: 2, description: '+2 quality tier chance on all crafted items' },
     pyromaniac:    { name: 'Pyromaniac',    weight: 2,  value: -3, fireChance: 0.001, description: 'Rare chance to start fires' },
     // ── Very Rare ───────────────────────────────────────────────────────────
-    pacifist:      { name: 'Pacifist',      weight: 1,  value: -2, description: 'Refuses to attack enemies, only flees' },
-    prodigy:       { name: 'Prodigy',       weight: 1,  value:  5, allSkillXpMult: 1.2, magicXpMult: 1.2, description: 'Gains all XP 20% faster' },
+    pacifist:         { name: 'Pacifist',         weight: 1, value: -2, description: 'Refuses to attack enemies, only flees' },
+    prodigy:          { name: 'Prodigy',          weight: 1, value:  5, allSkillXpMult: 1.2, magicXpMult: 1.2, description: 'Gains all XP 20% faster' },
+    magically_gifted: { name: 'Magically Gifted', weight: 2, value:  3, description: 'Starts with 2 levels in a random magic school and knows its starter spell' },
 };
 
 export const COLONIST_CONFIG = {

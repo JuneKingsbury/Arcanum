@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
 import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
@@ -134,7 +134,6 @@ class Game {
         };
         this.mapIndex = new MapIndex();
 
-        this.spawnStartingColonists();
         this.spawnStartingWildlife();
 
         this.skinManager = window._sharedSkinManager || new SkinManager();
@@ -185,13 +184,20 @@ class Game {
     }
 
 
-    spawnStartingColonists() {
+    spawnStartingColonists(customDefs = null) {
         const cx = Math.floor(CONFIG.MAP_WIDTH / 2);
         const cy = Math.floor(CONFIG.MAP_HEIGHT / 2);
         const biases = ['building', 'farming', 'crafting'];
         for (let i = 0; i < 3; i++) {
             const existingNames = this.colonists.map(c => c.name);
+            const custom = customDefs?.[i];
             const c = createColonist(cx + i - 1, cy, biases[i], existingNames);
+            if (custom) {
+                if (custom.name) c.name = custom.name;
+                if (custom.gender) c.gender = custom.gender;
+                if (custom.skills) Object.assign(c.skills, custom.skills);
+                if (custom.traits) c.traits = [...custom.traits];
+            }
             c.priorities[biases[i]] = 1;
             this.addColonist(c);
         }
@@ -209,6 +215,9 @@ class Game {
     }
 
     start() {
+        if (this.colonists.length === 0) {
+            this.spawnStartingColonists(this._pendingCustomColonists || null);
+        }
         this.paused = true;
         document.getElementById('game').classList.add('paused');
         document.getElementById('pause-overlay').style.display = 'block';
@@ -1811,6 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('convocation_skin', skinName);
             await sharedSkinManager.switchSkin(skinName);
             renderStartBackground();
+            refreshColonistPanelSprites();
         });
     } else {
         sharedSkinManager.init().then(() => renderStartBackground());
@@ -1848,6 +1858,8 @@ document.addEventListener('DOMContentLoaded', () => {
         creditsPanel.style.display = 'none';
         changelogPanel.style.display = 'none';
         devtoolsPanel.style.display = 'none';
+        const colonistsPanelEl = document.getElementById('colonists-panel');
+        if (colonistsPanelEl) colonistsPanelEl.style.display = 'none';
         modalBackdrop.style.display = 'none';
     }
 
@@ -1892,6 +1904,478 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModals();
         if (opening) {
             devtoolsPanel.style.display = 'block';
+            modalBackdrop.style.display = 'block';
+        }
+    });
+
+    // ── Colonist Customization Panel ─────────────────────────────────────────
+
+    const colonistsPanel = document.getElementById('colonists-panel');
+    const colonistSlotsContainer = document.getElementById('colonist-slots-container');
+
+    const SKILL_POINT_TOTAL = 18;
+    const SKILL_MAX = 8;
+    const TRAIT_VALUE_BUDGET = 3;
+    const MAX_TRAITS = 3;
+
+    const COLONIST_SLOTS_KEY = 'convocation_colonist_slots';
+
+    function saveColonistSlots() {
+        try {
+            localStorage.setItem(COLONIST_SLOTS_KEY, JSON.stringify(colonistSlotStates));
+        } catch (e) {}
+    }
+
+    function loadColonistSlots() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(COLONIST_SLOTS_KEY));
+            if (!Array.isArray(saved) || saved.length !== 3) return;
+            for (let i = 0; i < 3; i++) {
+                const s = saved[i];
+                if (!s || typeof s !== 'object') continue;
+                colonistSlotStates[i].custom = !!s.custom;
+                colonistSlotStates[i].gender = GENDERS.includes(s.gender) ? s.gender : colonistSlotStates[i].gender;
+                colonistSlotStates[i].name = typeof s.name === 'string' ? s.name : '';
+                colonistSlotStates[i].skills = (s.skills && typeof s.skills === 'object') ? { ...s.skills } : {};
+                colonistSlotStates[i].traits = Array.isArray(s.traits) ? s.traits.filter(t => TRAITS[t]) : [];
+            }
+        } catch (e) {}
+    }
+
+    // Holds the 3 slot states
+    const colonistSlotStates = [
+        { custom: false, name: '', gender: 'man', skills: {}, traits: [] },
+        { custom: false, name: '', gender: 'woman', skills: {}, traits: [] },
+        { custom: false, name: '', gender: 'nonbinary', skills: {}, traits: [] },
+    ];
+    loadColonistSlots();
+
+    function initSlotState(idx) {
+        const state = colonistSlotStates[idx];
+        const skills = {};
+        for (const key of Object.keys(SKILLS)) skills[key] = 2;
+        state.skills = skills;
+        state.traits = [];
+        if (!state.name) {
+            const names = COLONIST_NAMES[state.gender];
+            state.name = names[idx % names.length] || `Colonist ${idx + 1}`;
+        }
+    }
+
+    function getSlotTraitValueSum(state) {
+        return state.traits.reduce((sum, t) => sum + (TRAITS[t]?.value || 0), 0);
+    }
+
+    function getSlotSkillSum(state) {
+        return Object.values(state.skills).reduce((s, v) => s + v, 0);
+    }
+
+    const COLONIST_COLORS = ['#ff3300', '#00ff00', '#00ffff', '#ffff00', '#a600ff', '#ababab'];
+
+    function renderSlotSprite(canvas, slotIdx, gender) {
+        const size = canvas.width;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, size, size);
+        const sprite = sharedSkinManager.isActive
+            ? sharedSkinManager.getColonistSprite(slotIdx + 1, false, gender)
+            : null;
+        if (sprite) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(sprite, 0, 0, size, size);
+        } else {
+            ctx.fillStyle = COLONIST_COLORS[slotIdx % COLONIST_COLORS.length];
+            ctx.font = `bold ${Math.floor(size * 0.65)}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('@', size / 2, size / 2);
+        }
+    }
+
+    function buildColonistSlotHTML(idx) {
+        const state = colonistSlotStates[idx];
+        const slotEl = document.createElement('div');
+        slotEl.id = `colonist-slot-${idx}`;
+        slotEl.style.cssText = 'flex:1; min-width:200px; max-width:220px; border:1px solid #444; border-radius:6px; padding:10px; background:#151528; display:flex; flex-direction:column;';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex; align-items:center; gap:6px; margin-bottom:8px;';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `slot-custom-${idx}`;
+        checkbox.checked = state.custom;
+        checkbox.style.cssText = 'cursor:pointer; margin:0;';
+
+        const label = document.createElement('label');
+        label.htmlFor = `slot-custom-${idx}`;
+        label.textContent = `Colonist ${idx + 1}`;
+        label.style.cssText = 'color:#ffcc00; font-weight:bold; cursor:pointer; flex:1;';
+
+        header.appendChild(checkbox);
+        header.appendChild(label);
+        slotEl.appendChild(header);
+
+        // Random preview (shown when not custom)
+        const randomView = document.createElement('div');
+        randomView.id = `slot-random-${idx}`;
+        randomView.style.cssText = 'text-align:center; padding:12px 0; display:' + (state.custom ? 'none' : 'block') + ';';
+        const randomCanvas = document.createElement('canvas');
+        randomCanvas.width = 48;
+        randomCanvas.height = 48;
+        randomCanvas.style.cssText = 'display:block; margin:0 auto; image-rendering:pixelated;';
+        const randomHint = document.createElement('div');
+        randomHint.style.cssText = 'font-size:11px; color:#666; margin-top:6px;';
+        randomHint.textContent = 'Random';
+        randomView.appendChild(randomCanvas);
+        randomView.appendChild(randomHint);
+        // Draw the ? fallback immediately; sprite may not exist
+        (function() {
+            const ctx = randomCanvas.getContext('2d');
+            ctx.fillStyle = '#777';
+            ctx.font = 'bold 32px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', 24, 24);
+        })();
+        slotEl.appendChild(randomView);
+
+        // Custom editor (shown when custom)
+        const customView = document.createElement('div');
+        customView.id = `slot-custom-view-${idx}`;
+        customView.style.display = state.custom ? 'block' : 'none';
+        customView.style.flex = '1';
+        slotEl.appendChild(customView);
+
+        // Swap arrow row — sits below the card content
+        const arrowRow = document.createElement('div');
+        arrowRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:4px;';
+        const leftArrow = document.createElement('button');
+        leftArrow.textContent = '◀';
+        leftArrow.title = 'Shift left';
+        leftArrow.style.cssText = 'flex:1; padding:3px 0; background:#2a2a40; border:1px solid #444; color:#ccc; border-radius:3px; cursor:pointer; font-size:11px;';
+        leftArrow.disabled = idx === 0;
+        leftArrow.style.opacity = idx === 0 ? '0.3' : '1';
+        const rightArrow = document.createElement('button');
+        rightArrow.textContent = '▶';
+        rightArrow.title = 'Shift right';
+        rightArrow.style.cssText = 'flex:1; padding:3px 0; background:#2a2a40; border:1px solid #444; color:#ccc; border-radius:3px; cursor:pointer; font-size:11px;';
+        rightArrow.disabled = idx === colonistSlotStates.length - 1;
+        rightArrow.style.opacity = idx === colonistSlotStates.length - 1 ? '0.3' : '1';
+        leftArrow.addEventListener('click', () => {
+            if (idx === 0) return;
+            [colonistSlotStates[idx - 1], colonistSlotStates[idx]] = [colonistSlotStates[idx], colonistSlotStates[idx - 1]];
+            buildColonistSlotsPanel();
+        });
+        rightArrow.addEventListener('click', () => {
+            if (idx === colonistSlotStates.length - 1) return;
+            [colonistSlotStates[idx], colonistSlotStates[idx + 1]] = [colonistSlotStates[idx + 1], colonistSlotStates[idx]];
+            buildColonistSlotsPanel();
+        });
+        arrowRow.appendChild(leftArrow);
+        arrowRow.appendChild(rightArrow);
+        slotEl.appendChild(arrowRow);
+
+        function rebuildCustomView() {
+            customView.innerHTML = '';
+
+            // Sprite preview at top of custom view
+            const spriteRow = document.createElement('div');
+            spriteRow.style.cssText = 'text-align:center; margin-bottom:8px;';
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = 48;
+            spriteCanvas.height = 48;
+            spriteCanvas.style.cssText = 'display:block; margin:0 auto; image-rendering:pixelated;';
+            spriteCanvas.dataset.slotSprite = idx;
+            renderSlotSprite(spriteCanvas, idx, state.gender);
+            spriteRow.appendChild(spriteCanvas);
+            customView.appendChild(spriteRow);
+
+            // Name
+            const nameRow = document.createElement('div');
+            nameRow.style.cssText = 'margin-bottom:8px;';
+            const nameLabel = document.createElement('div');
+            nameLabel.textContent = 'Name';
+            nameLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:2px;';
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = state.name;
+            nameInput.maxLength = 20;
+            nameInput.style.cssText = 'width:100%; box-sizing:border-box; background:#1a1a2e; color:#ccc; border:1px solid #444; border-radius:3px; padding:3px 5px; font-family:inherit; font-size:11px;';
+            nameInput.addEventListener('input', () => { state.name = nameInput.value.trim() || `Colonist ${idx + 1}`; saveColonistSlots(); });
+            nameRow.appendChild(nameLabel);
+            nameRow.appendChild(nameInput);
+            customView.appendChild(nameRow);
+
+            // Gender
+            const genderRow = document.createElement('div');
+            genderRow.style.cssText = 'margin-bottom:8px;';
+            const genderLabel = document.createElement('div');
+            genderLabel.textContent = 'Gender';
+            genderLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:2px;';
+            const genderSelect = document.createElement('select');
+            genderSelect.style.cssText = 'width:100%; background:#1a1a2e; color:#ccc; border:1px solid #444; border-radius:3px; padding:2px 4px; font-family:inherit; font-size:11px;';
+            for (const g of GENDERS) {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g.charAt(0).toUpperCase() + g.slice(1);
+                if (g === state.gender) opt.selected = true;
+                genderSelect.appendChild(opt);
+            }
+            genderSelect.addEventListener('change', () => {
+                state.gender = genderSelect.value;
+                renderSlotSprite(spriteCanvas, idx, state.gender);
+                const gnames = COLONIST_NAMES[state.gender];
+                if (!state.name || COLONIST_NAMES.man.includes(state.name) || COLONIST_NAMES.woman.includes(state.name) || COLONIST_NAMES.nonbinary.includes(state.name)) {
+                    state.name = gnames[idx % gnames.length];
+                    nameInput.value = state.name;
+                }
+                saveColonistSlots();
+            });
+            genderRow.appendChild(genderLabel);
+            genderRow.appendChild(genderSelect);
+            customView.appendChild(genderRow);
+
+            // Skills
+            const skillsSection = document.createElement('div');
+            skillsSection.style.cssText = 'margin-bottom:8px;';
+            const skillsHeader = document.createElement('div');
+            skillsHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;';
+            const skillsLabel = document.createElement('div');
+            skillsLabel.textContent = 'Skills';
+            skillsLabel.style.cssText = 'font-size:10px; color:#888;';
+            const skillsCount = document.createElement('div');
+            skillsCount.id = `slot-skill-count-${idx}`;
+            skillsCount.style.cssText = 'font-size:10px; color:#aaa;';
+            skillsCount.textContent = `${getSlotSkillSum(state)} / ${SKILL_POINT_TOTAL}`;
+            skillsHeader.appendChild(skillsLabel);
+            skillsHeader.appendChild(skillsCount);
+            skillsSection.appendChild(skillsHeader);
+
+            for (const [skillKey, skillDef] of Object.entries(SKILLS)) {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; align-items:center; gap:4px; margin-bottom:3px;';
+                const sLabel = document.createElement('div');
+                sLabel.textContent = skillDef.name;
+                sLabel.style.cssText = 'font-size:10px; color:#ccc; flex:1; min-width:0;';
+                const decBtn = document.createElement('button');
+                decBtn.textContent = '-';
+                decBtn.style.cssText = 'width:18px; height:18px; padding:0; font-size:12px; line-height:1; background:#2a2a40; border:1px solid #444; color:#ccc; border-radius:2px; cursor:pointer; flex-shrink:0;';
+                const valEl = document.createElement('div');
+                valEl.style.cssText = 'width:18px; text-align:center; font-size:11px; color:#fff; flex-shrink:0;';
+                valEl.textContent = state.skills[skillKey];
+                const incBtn = document.createElement('button');
+                incBtn.textContent = '+';
+                incBtn.style.cssText = 'width:18px; height:18px; padding:0; font-size:12px; line-height:1; background:#2a2a40; border:1px solid #444; color:#ccc; border-radius:2px; cursor:pointer; flex-shrink:0;';
+
+                decBtn.addEventListener('click', () => {
+                    const minBase = SKILLS[skillKey].baseLevel[0];
+                    if (state.skills[skillKey] > minBase) {
+                        state.skills[skillKey]--;
+                        valEl.textContent = state.skills[skillKey];
+                        skillsCount.textContent = `${getSlotSkillSum(state)} / ${SKILL_POINT_TOTAL}`;
+                        incBtn.disabled = false;
+                        saveColonistSlots();
+                    }
+                    decBtn.disabled = state.skills[skillKey] <= minBase;
+                });
+                incBtn.addEventListener('click', () => {
+                    const remaining = SKILL_POINT_TOTAL - getSlotSkillSum(state);
+                    if (remaining > 0 && state.skills[skillKey] < SKILL_MAX) {
+                        state.skills[skillKey]++;
+                        valEl.textContent = state.skills[skillKey];
+                        skillsCount.textContent = `${getSlotSkillSum(state)} / ${SKILL_POINT_TOTAL}`;
+                        decBtn.disabled = false;
+                        saveColonistSlots();
+                    }
+                    incBtn.disabled = (SKILL_POINT_TOTAL - getSlotSkillSum(state)) <= 0 || state.skills[skillKey] >= SKILL_MAX;
+                });
+                decBtn.disabled = state.skills[skillKey] <= SKILLS[skillKey].baseLevel[0];
+                incBtn.disabled = (SKILL_POINT_TOTAL - getSlotSkillSum(state)) <= 0 || state.skills[skillKey] >= SKILL_MAX;
+
+                row.appendChild(sLabel);
+                row.appendChild(decBtn);
+                row.appendChild(valEl);
+                row.appendChild(incBtn);
+                skillsSection.appendChild(row);
+            }
+            customView.appendChild(skillsSection);
+
+            // Traits
+            const traitsSection = document.createElement('div');
+            const traitsHeader = document.createElement('div');
+            traitsHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;';
+            const traitsLabel = document.createElement('div');
+            traitsLabel.textContent = 'Traits';
+            traitsLabel.style.cssText = 'font-size:10px; color:#888;';
+            const traitsBudget = document.createElement('div');
+            traitsBudget.id = `slot-trait-budget-${idx}`;
+            traitsBudget.style.cssText = 'font-size:10px; color:#aaa;';
+            function updateTraitBudgetDisplay() {
+                const used = getSlotTraitValueSum(state);
+                traitsBudget.textContent = `${used} / ${TRAIT_VALUE_BUDGET} pts`;
+                traitsBudget.style.color = used > TRAIT_VALUE_BUDGET ? '#ff6666' : '#aaa';
+            }
+            updateTraitBudgetDisplay();
+            traitsHeader.appendChild(traitsLabel);
+            traitsHeader.appendChild(traitsBudget);
+            traitsSection.appendChild(traitsHeader);
+
+            // Selected traits
+            const selectedTraitsEl = document.createElement('div');
+            selectedTraitsEl.id = `slot-selected-traits-${idx}`;
+            selectedTraitsEl.style.cssText = 'display:flex; flex-wrap:wrap; gap:3px; min-height:20px; margin-bottom:4px;';
+
+            function rebuildSelectedTraits() {
+                selectedTraitsEl.innerHTML = '';
+                for (const traitKey of state.traits) {
+                    const def = TRAITS[traitKey];
+                    if (!def) continue;
+                    const chip = document.createElement('span');
+                    const col = def.value > 0 ? '#44cc66' : def.value < 0 ? '#ff6666' : '#888';
+                    chip.style.cssText = `background:#1a1a2e; border:1px solid ${col}; border-radius:3px; padding:1px 5px; font-size:10px; color:${col}; cursor:pointer; user-select:none;`;
+                    chip.title = def.description || '';
+                    chip.textContent = def.name + ' ×';
+                    chip.addEventListener('click', () => {
+                        state.traits = state.traits.filter(t => t !== traitKey);
+                        rebuildSelectedTraits();
+                        rebuildTraitPicker();
+                        updateTraitBudgetDisplay();
+                        saveColonistSlots();
+                    });
+                    selectedTraitsEl.appendChild(chip);
+                }
+                if (state.traits.length === 0) {
+                    const none = document.createElement('span');
+                    none.style.cssText = 'font-size:10px; color:#555; font-style:italic;';
+                    none.textContent = 'No traits';
+                    selectedTraitsEl.appendChild(none);
+                }
+            }
+            rebuildSelectedTraits();
+            traitsSection.appendChild(selectedTraitsEl);
+
+            // Trait picker dropdown
+            const pickerLabel = document.createElement('div');
+            pickerLabel.style.cssText = 'font-size:10px; color:#666; margin-bottom:2px;';
+            pickerLabel.textContent = 'Add trait:';
+            traitsSection.appendChild(pickerLabel);
+
+            const pickerSelect = document.createElement('select');
+            pickerSelect.style.cssText = 'width:100%; background:#1a1a2e; color:#ccc; border:1px solid #444; border-radius:3px; padding:2px 4px; font-family:inherit; font-size:10px;';
+
+            function rebuildTraitPicker() {
+                pickerSelect.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '— select —';
+                pickerSelect.appendChild(placeholder);
+
+                const usedBudget = getSlotTraitValueSum(state);
+                for (const [key, def] of Object.entries(TRAITS)) {
+                    if (state.traits.includes(key)) continue;
+                    if (state.traits.length >= MAX_TRAITS) continue;
+                    // Check exclusions
+                    const excluded = TRAIT_EXCLUSIONS.some(pair => pair.includes(key) && state.traits.some(t => pair.includes(t)));
+                    if (excluded) continue;
+                    // Check if adding this would exceed budget (only block strictly positive cost traits)
+                    const newBudget = usedBudget + def.value;
+                    if (newBudget > TRAIT_VALUE_BUDGET) continue;
+
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    const sign = def.value > 0 ? `+${def.value}` : `${def.value}`;
+                    const valStr = def.value !== 0 ? ` (${sign})` : ' (0)';
+                    opt.textContent = `${def.name}${valStr}`;
+                    pickerSelect.appendChild(opt);
+                }
+            }
+            rebuildTraitPicker();
+
+            pickerSelect.addEventListener('change', () => {
+                const key = pickerSelect.value;
+                if (!key) return;
+                const def = TRAITS[key];
+                if (!def) return;
+                const newBudget = getSlotTraitValueSum(state) + def.value;
+                if (newBudget > TRAIT_VALUE_BUDGET) return;
+                if (state.traits.length >= MAX_TRAITS) return;
+                state.traits.push(key);
+                pickerSelect.value = '';
+                rebuildSelectedTraits();
+                rebuildTraitPicker();
+                updateTraitBudgetDisplay();
+                saveColonistSlots();
+            });
+            traitsSection.appendChild(pickerSelect);
+
+            customView.appendChild(traitsSection);
+        }
+
+        rebuildCustomView();
+
+        // Expose a refresh hook so buildColonistSlotsPanel can update sprites after skin load
+        slotEl._refreshSprites = () => {
+            renderSlotSprite(randomCanvas, idx, state.gender);
+            const sc = customView.querySelector('[data-slot-sprite]');
+            if (sc) renderSlotSprite(sc, idx, state.gender);
+        };
+
+        checkbox.addEventListener('change', () => {
+            state.custom = checkbox.checked;
+            randomView.style.display = state.custom ? 'none' : 'block';
+            customView.style.display = state.custom ? 'block' : 'none';
+            if (state.custom) {
+                initSlotState(idx);
+                rebuildCustomView();
+            } else {
+                renderSlotSprite(randomCanvas, idx, state.gender);
+            }
+            saveColonistSlots();
+        });
+
+        return slotEl;
+    }
+
+    function buildColonistSlotsPanel() {
+        colonistSlotsContainer.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            colonistSlotsContainer.appendChild(buildColonistSlotHTML(i));
+        }
+        saveColonistSlots();
+    }
+
+    function refreshColonistPanelSprites() {
+        if (colonistsPanel.style.display === 'none') return;
+        for (const el of colonistSlotsContainer.children) {
+            el._refreshSprites?.();
+        }
+    }
+
+    function readCustomColonistDefs() {
+        const result = [];
+        let anyCustom = false;
+        for (const state of colonistSlotStates) {
+            if (state.custom) {
+                anyCustom = true;
+                result.push({
+                    name: state.name,
+                    gender: state.gender,
+                    skills: { ...state.skills },
+                    traits: [...state.traits],
+                });
+            } else {
+                result.push(null);
+            }
+        }
+        return anyCustom ? result : null;
+    }
+
+    document.getElementById('start-colonists').addEventListener('click', () => {
+        const opening = colonistsPanel.style.display === 'none';
+        closeModals();
+        if (opening) {
+            buildColonistSlotsPanel();
+            colonistsPanel.style.display = 'block';
             modalBackdrop.style.display = 'block';
         }
     });
@@ -2005,6 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
         RENDER_CONFIG.terrainDithering = document.getElementById('start-dither').checked;
+        const customDefs = readCustomColonistDefs();
         launchGame(game => {
             Object.assign(game.settings, startSettings);
             if (startSettings.colorblindMode !== 'none') {
@@ -2013,6 +2498,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (startSettings.layoutMode !== 'auto') {
                 game.setLayoutMode(startSettings.layoutMode);
             }
+            game._pendingCustomColonists = customDefs;
         });
     });
 
