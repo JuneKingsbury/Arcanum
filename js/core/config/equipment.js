@@ -188,45 +188,7 @@ for (const [type, dict] of _ITEM_SOURCES) {
     }
 }
 
-// Named merchants for the caravan event. Each has its own resource pool and exclusive item list.
-// exclusiveItems: pool to draw from. First item is always guaranteed; extraItemChances lists the
-// probability of each additional slot (drawn without replacement from remaining pool items).
-// buyCategories: item types this merchant will purchase from the player (null = anything).
-// The merchant will NOT buy items of the same category they sell as exclusives.
-export const MERCHANTS = [
-    {
-        name: 'Traveling Merchant',
-        resourcePool: null,
-        exclusiveItems: ['amulet_of_fortune', 'merchants_ring', 'hagglers_coin', 'seedkeepers_locket'],
-        extraItemChances: [0.3],        // 1 guaranteed + up to 1 extra (30%)
-        goldRange: [20, 49],
-        buyCategories: ['weapon', 'armor', 'helmet', 'tool', 'tome', 'consumable'],
-    },
-    {
-        name: 'Arms Dealer',
-        resourcePool: ['iron', 'planks', 'leather', 'iron_ore', 'runite'],
-        exclusiveItems: ['aegis_of_the_vanguard', 'iron_sword', 'runic_blade', 'iron_crossbow', 'runic_plate', 'runic_helm'],
-        extraItemChances: [0.6, 0.3],   // 1 guaranteed + up to 2 extras (60%, then 30%)
-        goldRange: [30, 60],
-        buyCategories: ['artifact', 'tome', 'consumable'],
-    },
-    {
-        name: 'Tome Peddler',
-        resourcePool: ['planks', 'runite', 'wood'],
-        exclusiveItems: ['tome_of_spark', 'tome_of_mend', 'tome_of_smite', 'tome_of_magic_missile', 'tome_of_heal'],
-        extraItemChances: [0.6, 0.3],   // 1 guaranteed + up to 2 extras (60%, then 30%)
-        goldRange: [15, 35],
-        buyCategories: ['weapon', 'armor', 'helmet', 'artifact', 'consumable'],
-    },
-    {
-        name: 'Wandering Alchemist',
-        resourcePool: ['berries', 'wheat', 'moonbloom', 'corn', 'potatoes', 'food'],
-        exclusiveItems: ['hourglass_of_diligence', 'lodestone_of_prosperity', 'crystal_capacitor'],
-        extraItemChances: [0.3],        // 1 guaranteed + up to 1 extra (30%)
-        goldRange: [20, 45],
-        buyCategories: ['weapon', 'armor', 'helmet', 'tool', 'tome'],
-    },
-];
+// MERCHANTS moved to ./trade.js (still re-exported via index.js).
 
 const EQUIPMENT_RECIPE_SOURCES = [
     { items: WEAPONS, category: 'Weapons', prefix: 'craft_', defaults: { skill: 'crafting', station: 'workbench' } },
