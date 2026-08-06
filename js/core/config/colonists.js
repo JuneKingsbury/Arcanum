@@ -42,21 +42,47 @@ export const THOUGHTS = {
     lover_died:        { text: 'My love has died', moodEffect: -100, duration: 5000 },
 };
 
+// Mutually exclusive trait pairs — colonists cannot spawn with both.
+export const TRAIT_EXCLUSIONS = [
+    ['hard_worker', 'lazy'],
+    ['night_owl', 'early_bird'],
+    ['socialite', 'loner'],
+    ['optimist', 'pessimist'],
+    ['brave', 'pacifist'],
+    ['iron_stomach', 'gluttonous'],
+    ['quick', 'sturdy'],
+    ['light_sleeper', 'deep_sleeper'],
+];
+
 export const TRAITS = {
-    hard_worker: { name: 'Hard Worker', workSpeedMult: 1.2, description: '+20% work speed' },
-    lazy: { name: 'Lazy', workSpeedMult: 0.85, idleMoodBonus: 5, description: '-15% work speed, happy when idle' },
-    night_owl: { name: 'Night Owl', nightSpeedMult: 1.2, daySpeedMult: 0.9, description: '+20% at night, -10% during day' },
-    early_bird: { name: 'Early Bird', daySpeedMult: 1.2, nightSpeedMult: 0.9, description: '+20% during day, -10% at night' },
-    green_thumb: { name: 'Green Thumb', farmingSpeedMult: 1.3, description: '+30% farming speed' },
-    iron_stomach: { name: 'Iron Stomach', hungerDecayMult: 0.5, description: 'Gets hungry half as fast' },
-    socialite: { name: 'Socialite', nearOthersMoodBonus: 8, aloneMoodPenalty: -5, description: 'Happy near others, sad alone' },
-    loner: { name: 'Loner', aloneMoodBonus: 8, nearOthersMoodPenalty: -5, description: 'Happy alone, stressed near others' },
-    optimist: { name: 'Optimist', positiveThoughtMult: 1.5, description: 'Positive thoughts 50% stronger' },
-    pessimist: { name: 'Pessimist', negativeThoughtMult: 1.5, description: 'Negative thoughts 50% stronger' },
-    tough: { name: 'Tough', damageTakenMult: 0.7, description: 'Takes 30% less damage' },
-    pacifist: { name: 'Pacifist', description: 'Refuses to attack enemies, only flees' },
-    pyromaniac: { name: 'Pyromaniac', fireChance: 0.001, description: 'Rare chance to start fires' },
-    gourmand: { name: 'Gourmand', cookedFoodMoodBonus: 8, rawFoodMoodPenalty: -12, description: 'Loves cooked food, hates raw' },
+    // ── Common ──────────────────────────────────────────────────────────────
+    hard_worker:   { name: 'Hard Worker',   weight: 10, value:  3, workSpeedMult: 1.2,  description: '+20% work speed' },
+    lazy:          { name: 'Lazy',          weight: 10, value: -2, workSpeedMult: 0.85, idleMoodBonus: 5, description: '-15% work speed, happy when idle' },
+    night_owl:     { name: 'Night Owl',     weight: 10, value:  1, nightSpeedMult: 1.2, daySpeedMult: 0.9, description: '+20% at night, -10% during day' },
+    early_bird:    { name: 'Early Bird',    weight: 10, value:  1, daySpeedMult: 1.2,   nightSpeedMult: 0.9, description: '+20% during day, -10% at night' },
+    socialite:     { name: 'Socialite',     weight: 10, value:  1, nearOthersMoodBonus: 8, aloneMoodPenalty: -5, description: 'Happy near others, sad alone' },
+    loner:         { name: 'Loner',         weight: 10, value:  0, aloneMoodBonus: 8,   nearOthersMoodPenalty: -5, description: 'Happy alone, stressed near others' },
+    optimist:      { name: 'Optimist',      weight: 10, value:  2, positiveThoughtMult: 1.5, description: 'Positive thoughts 50% stronger' },
+    pessimist:     { name: 'Pessimist',     weight: 10, value: -2, negativeThoughtMult: 1.5, description: 'Negative thoughts 50% stronger' },
+    gourmand:      { name: 'Gourmand',      weight: 10, value: -1, cookedFoodMoodBonus: 8, rawFoodMoodPenalty: -12, description: 'Loves cooked food, hates raw' },
+    // ── Uncommon ────────────────────────────────────────────────────────────
+    green_thumb:   { name: 'Green Thumb',   weight: 7,  value:  2, farmingSpeedMult: 1.3, description: '+30% farming speed' },
+    iron_stomach:  { name: 'Iron Stomach',  weight: 7,  value:  2, hungerDecayMult: 0.5,  description: 'Gets hungry half as fast' },
+    tough:         { name: 'Tough',         weight: 7,  value:  3, damageTakenMult: 0.7,  description: 'Takes 30% less damage' },
+    brave:         { name: 'Brave',         weight: 6,  value:  2, fleeHpMult: 0.3,       description: 'Only flees at very low HP' },
+    quick:         { name: 'Quick',         weight: 7,  value:  2, moveSpeedBonus: 0.25,  description: 'Moves 25% faster' },
+    sturdy:        { name: 'Sturdy',        weight: 6,  value:  1, damageTakenMult: 0.85, workSpeedMult: 0.9, description: 'Takes 15% less damage, -10% work speed' },
+    light_sleeper: { name: 'Light Sleeper', weight: 7,  value:  0, restDecayMult: 1.4, sleepRestMult: 1.5, description: 'Gets tired faster, but recovers faster while sleeping' },
+    deep_sleeper:  { name: 'Deep Sleeper',  weight: 7,  value:  0, restDecayMult: 0.7, sleepRestMult: 0.7, description: 'Gets tired slower, but recovers slower while sleeping' },
+    creative:      { name: 'Creative',      weight: 6,  value:  3, craftingSpeedMult: 1.2, qualityBonus: 1, description: '+20% crafting speed, +1 quality tier chance' },
+    scholar:       { name: 'Scholar',       weight: 6,  value:  3, researchSpeedMult: 1.3, magicXpMult: 1.2, description: '+30% research speed, +20% magic XP gain' },
+    gluttonous:    { name: 'Gluttonous',    weight: 6,  value: -2, hungerDecayMult: 1.6,  description: 'Gets hungry 60% faster' },
+    // ── Rare ────────────────────────────────────────────────────────────────
+    lucky:         { name: 'Lucky',         weight: 3,  value:  4, qualityBonus: 2, description: '+2 quality tier chance on all crafted items' },
+    pyromaniac:    { name: 'Pyromaniac',    weight: 2,  value: -3, fireChance: 0.001, description: 'Rare chance to start fires' },
+    // ── Very Rare ───────────────────────────────────────────────────────────
+    pacifist:      { name: 'Pacifist',      weight: 1,  value: -2, description: 'Refuses to attack enemies, only flees' },
+    prodigy:       { name: 'Prodigy',       weight: 1,  value:  5, allSkillXpMult: 1.2, magicXpMult: 1.2, description: 'Gains all XP 20% faster' },
 };
 
 export const COLONIST_CONFIG = {

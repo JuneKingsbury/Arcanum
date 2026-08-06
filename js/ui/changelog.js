@@ -1,4 +1,5 @@
 export const CHANGELOG = [
+    { date: '2026-08-06', message: 'Colonists can now socialize with each other and develop relationships. Also added more colonist trait options.' },
     { date: '2026-08-04', message: 'Room Quality system: enclosed rooms are now scored (0-100) based on size, flooring, lighting, decorations, and wall quality — nicer bedrooms give better mood bonuses when sleeping' },
     { date: '2026-08-04', message: 'Workshop Quality system: rooms with crafting stations score based on size, flooring, lighting, station focus (dedicated rooms score higher), and support furniture — grants up to +25% craft speed and +3 virtual skill for quality rolls' },
     { date: '2026-08-04', message: 'Station Focus bonus: rooms with a single workstation group (Smithy, Kitchen, Workshop, Scriptorium, Laboratory) get a large quality bonus — dedicated rooms outperform cluttered ones' },

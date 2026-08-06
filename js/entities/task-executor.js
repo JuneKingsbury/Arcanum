@@ -1,4 +1,4 @@
-import { COLONIST_CONFIG, THOUGHTS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH, ALL_ITEMS } from '../core/config.js';
+import { COLONIST_CONFIG, THOUGHTS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH, ALL_ITEMS, TRAITS } from '../core/config.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
@@ -13,6 +13,8 @@ function applyQuality(item, colonist, game, ...statKeys) {
             skill += game.workshopQualities[roomId].qualityBonus;
         }
     }
+    if (colonist.traits.includes('creative')) skill += TRAITS.creative.qualityBonus;
+    if (colonist.traits.includes('lucky')) skill += TRAITS.lucky.qualityBonus;
     const chances = QUALITY_TIERS.map(t => Math.max(0, t.baseChance + t.perSkill * skill));
     const total = chances.reduce((s, c) => s + c, 0);
     let roll = Math.random() * total;
@@ -64,7 +66,10 @@ function advanceTomeStudy(colonist, game, rate) {
 
     if (!colonist._magicXpAccumulator) colonist._magicXpAccumulator = {};
     if (!colonist._magicXpAccumulator[school]) colonist._magicXpAccumulator[school] = 0;
-    colonist._magicXpAccumulator[school] += MAGIC_STUDY_CONFIG.xpPerStudyTick;
+    let studyXpGain = MAGIC_STUDY_CONFIG.xpPerStudyTick;
+    if (colonist.traits.includes('scholar')) studyXpGain *= TRAITS.scholar.magicXpMult;
+    if (colonist.traits.includes('prodigy')) studyXpGain *= TRAITS.prodigy.magicXpMult;
+    colonist._magicXpAccumulator[school] += studyXpGain;
     if (game.tick % 10 === 0) {
         game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
     }
@@ -345,6 +350,7 @@ export function completeTask(colonist, task, game) {
             if (!colonist.skillXp[task.skillRequired]) colonist.skillXp[task.skillRequired] = 0;
             let xpGain = COLONIST_CONFIG.skillXpPerTask;
             if (colonist.pedestalSkillBonus) xpGain *= (1 + colonist.pedestalSkillBonus);
+            if (colonist.traits.includes('prodigy')) xpGain *= TRAITS.prodigy.allSkillXpMult;
             colonist.skillXp[task.skillRequired] += xpGain;
             game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
             let xpNeeded = COLONIST_CONFIG.skillXpToLevel + colonist.skills[task.skillRequired] * COLONIST_CONFIG.skillXpScalePerLevel;

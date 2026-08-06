@@ -1,4 +1,4 @@
-import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT, SOCIAL_CONFIG } from '../core/config.js';
+import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, TRAIT_EXCLUSIONS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT, SOCIAL_CONFIG } from '../core/config.js';
 import { getRelationshipTier } from '../systems/social-utils.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost, hasLineOfSight } from '../world/map.js';
@@ -17,15 +17,25 @@ export function createColonist(x, y, skillBias, existingNames = []) {
     let name = available.length > 0
         ? available[Math.floor(Math.random() * available.length)]
         : `Colonist ${id}`;
-    const traitKeys = Object.keys(TRAITS);
-    const numTraits = 1 + Math.floor(Math.random() * 2);
+    // Pick 1–3 traits via weighted random, respecting exclusion pairs.
+    const numTraits = 1 + Math.floor(Math.random() * 3);
     const traits = [];
-    const usedIndices = new Set();
     for (let i = 0; i < numTraits; i++) {
-        let idx;
-        do { idx = Math.floor(Math.random() * traitKeys.length); } while (usedIndices.has(idx));
-        usedIndices.add(idx);
-        traits.push(traitKeys[idx]);
+        const pool = Object.entries(TRAITS).filter(([key]) => {
+            if (traits.includes(key)) return false;
+            for (const pair of TRAIT_EXCLUSIONS) {
+                if (pair.includes(key) && traits.some(t => pair.includes(t))) return false;
+            }
+            return true;
+        });
+        if (pool.length === 0) break;
+        const totalWeight = pool.reduce((s, [, def]) => s + (def.weight || 1), 0);
+        let roll = Math.random() * totalWeight;
+        for (const [key, def] of pool) {
+            roll -= def.weight || 1;
+            if (roll <= 0) { traits.push(key); break; }
+        }
+        if (traits.length < i + 1) traits.push(pool[pool.length - 1][0]); // fallback
     }
 
     const skills = {};
@@ -184,10 +194,15 @@ export function updateColonist(colonist, game) {
 function updateNeeds(colonist, game) {
     let hungerMult = 1;
     if (colonist.traits.includes('iron_stomach')) hungerMult = TRAITS.iron_stomach.hungerDecayMult;
+    if (colonist.traits.includes('gluttonous')) hungerMult *= TRAITS.gluttonous.hungerDecayMult;
     const hungerReduction = getEquipmentStat(colonist, 'hungerReduction');
     if (hungerReduction > 0) hungerMult *= (1 - hungerReduction);
     colonist.needs.hunger = Math.max(0, colonist.needs.hunger - NEED_DECAY.hunger * hungerMult);
-    colonist.needs.rest = Math.max(0, colonist.needs.rest - NEED_DECAY.rest);
+
+    let restDecayMult = 1;
+    if (colonist.traits.includes('light_sleeper')) restDecayMult = TRAITS.light_sleeper.restDecayMult;
+    if (colonist.traits.includes('deep_sleeper')) restDecayMult = TRAITS.deep_sleeper.restDecayMult;
+    colonist.needs.rest = Math.max(0, colonist.needs.rest - NEED_DECAY.rest * restDecayMult);
 
     if (game.weather.season === 'winter' && !isIndoors(colonist, game.map)) {
         const warmed = game.power.isTileWarmed(game, colonist.x, colonist.y);
@@ -326,6 +341,7 @@ function getWorkSpeed(colonist, game) {
 
     if (colonist.traits.includes('hard_worker')) speed *= TRAITS.hard_worker.workSpeedMult;
     if (colonist.traits.includes('lazy')) speed *= TRAITS.lazy.workSpeedMult;
+    if (colonist.traits.includes('sturdy')) speed *= TRAITS.sturdy.workSpeedMult;
 
     const t = game.timeOfDay / CONFIG.TICKS_PER_DAY;
     const isNight = t > DAY_NIGHT.nightStart || t < DAY_NIGHT.dayStart;
@@ -359,6 +375,7 @@ function getMoveSpeedBonus(colonist) {
             if (e.type === 'speed' && e.moveSpeedBonus) bonus += e.moveSpeedBonus;
         }
     }
+    if (colonist.traits.includes('quick')) bonus += TRAITS.quick.moveSpeedBonus;
     return Math.min(bonus, 0.8);
 }
 
@@ -444,7 +461,10 @@ export function grantCastXp(colonist, spell, game) {
     if (!school || colonist.magicSkills[school] >= 10) return;
     if (!colonist._magicXpAccumulator) colonist._magicXpAccumulator = {};
     if (!colonist._magicXpAccumulator[school]) colonist._magicXpAccumulator[school] = 0;
-    colonist._magicXpAccumulator[school] += MAGIC_STUDY_CONFIG.xpPerCast;
+    let castXpGain = MAGIC_STUDY_CONFIG.xpPerCast;
+    if (colonist.traits.includes('scholar')) castXpGain *= TRAITS.scholar.magicXpMult;
+    if (colonist.traits.includes('prodigy')) castXpGain *= TRAITS.prodigy.magicXpMult;
+    colonist._magicXpAccumulator[school] += castXpGain;
     let magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
     while (colonist._magicXpAccumulator[school] >= magicXpNeeded && colonist.magicSkills[school] < 10) {
         colonist._magicXpAccumulator[school] -= magicXpNeeded;
@@ -919,6 +939,12 @@ function updateWorking(colonist, game) {
     if (task.skillRequired === 'farming' && colonist.traits.includes('green_thumb')) {
         speed *= TRAITS.green_thumb.farmingSpeedMult;
     }
+    if ((task.type === 'craft' || task.type === 'cook') && colonist.traits.includes('creative')) {
+        speed *= TRAITS.creative.craftingSpeedMult;
+    }
+    if (task.type === 'research' && colonist.traits.includes('scholar')) {
+        speed *= TRAITS.scholar.researchSpeedMult;
+    }
 
     speed *= getEquipmentWorkBonus(colonist, task);
 
@@ -998,7 +1024,10 @@ function startSleeping(colonist, game) {
 
 function updateSleeping(colonist, game) {
     colonist.stateTimer--;
-    colonist.needs.rest = Math.min(100, colonist.needs.rest + COLONIST_CONFIG.restPerTick);
+    let sleepRestMult = 1;
+    if (colonist.traits.includes('light_sleeper')) sleepRestMult = TRAITS.light_sleeper.sleepRestMult;
+    if (colonist.traits.includes('deep_sleeper')) sleepRestMult = TRAITS.deep_sleeper.sleepRestMult;
+    colonist.needs.rest = Math.min(100, colonist.needs.rest + COLONIST_CONFIG.restPerTick * sleepRestMult);
     if (game.tick % 12 === 0) {
         game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.sleepChar, color: COMBAT_VISUALS.sleepColor, ttl: COMBAT_VISUALS.sleepTtl });
         game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Zzz', color: '#8888ff', fontSize: 10, ttl: 11, maxTtl: 11 });
@@ -1039,7 +1068,10 @@ function updateFighting(colonist, game) {
         return;
     }
 
-    if (colonist.hp < COLONIST_CONFIG.fleeHpThreshold || colonist.traits.includes('pacifist')) {
+    const fleeThreshold = colonist.traits.includes('brave')
+        ? colonist.maxHp * TRAITS.brave.fleeHpMult
+        : COLONIST_CONFIG.fleeHpThreshold;
+    if (colonist.hp < fleeThreshold || colonist.traits.includes('pacifist')) {
         colonist.state = 'fleeing';
         return;
     }
@@ -1300,7 +1332,8 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
         return;
     }
     let mult = 1;
-    if (colonist.traits.includes('tough')) mult = TRAITS.tough.damageTakenMult;
+    if (colonist.traits.includes('tough')) mult *= TRAITS.tough.damageTakenMult;
+    if (colonist.traits.includes('sturdy')) mult *= TRAITS.sturdy.damageTakenMult;
     mult *= getEquipmentDamageReduction(colonist);
     let shieldAbsorbed = false;
     if (colonist.activeEffects) {
