@@ -1,4 +1,5 @@
-import { CONFIG, COLONIST_CONFIG, MAGIC_STUDY_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, ALL_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
+import { CONFIG, COLONIST_CONFIG, MAGIC_STUDY_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, ALL_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines, RELATIONSHIP_TIERS } from '../core/config.js';
+import { getRelationshipTier } from '../systems/social-utils.js';
 import { getTradeRates, computeTradeValues } from '../systems/events.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
@@ -1116,6 +1117,27 @@ export class UI {
                 }).join(', ');
                 html += `<div class="info-row">Auras: ${auraSpans}</div>`;
             }
+        }
+
+        // --- Relationships ---
+        const otherColonists = this.game.colonists.filter(c => c.id !== colonist.id && c.hp > 0);
+        const notableRelationships = otherColonists
+            .map(c => {
+                const opinion = colonist.opinions?.[c.id] ?? 0;
+                const tier = getRelationshipTier(opinion);
+                return { colonist: c, tier, opinion };
+            })
+            .filter(r => r.tier.key !== 'stranger');
+        notableRelationships.sort((a, b) => b.opinion - a.opinion);
+        html += `<div style="${sectionHdr}">Relationships</div>`;
+        if (notableRelationships.length === 0) {
+            html += `<div class="info-row" style="color:#555">No notable relationships</div>`;
+        } else {
+            const relHtml = notableRelationships.map(r => {
+                const tierDef = RELATIONSHIP_TIERS.find(t => t.key === r.tier.key) || r.tier;
+                return `<span style="color:${tierDef.color}">[${tierDef.name}]</span> <span style="cursor:pointer;text-decoration:underline" onclick="window.game.selectColonistById(${r.colonist.id})">${r.colonist.name}</span> <span style="color:#555;font-size:0.85em">(${r.opinion > 0 ? '+' : ''}${r.opinion})</span>`;
+            }).join('<br>');
+            html += `<div class="info-row">${relHtml}</div>`;
         }
 
         // --- Thoughts ---

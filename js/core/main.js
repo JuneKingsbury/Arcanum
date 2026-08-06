@@ -15,6 +15,7 @@ import { Weather } from '../world/weather.js';
 import { updateWildlife, designateHunt } from '../entities/wildlife.js';
 import { CombatSystem } from '../entities/combat.js';
 import { EventSystem, updateFires, getTradeRates, computeTradeValues } from '../systems/events.js';
+import { SocialSystem } from '../systems/social.js';
 import { UI } from '../ui/ui.js';
 import { Minimap } from '../ui/minimap.js';
 import { ResearchSystem, updateResearch } from '../systems/research.js';
@@ -97,6 +98,7 @@ class Game {
         this.weather = new Weather();
         this.combat = new CombatSystem();
         this.events = new EventSystem();
+        this.social = new SocialSystem();
         this.research = new ResearchSystem();
         this.power = new PowerSystem();
         this.waves = new WaveSystem();
@@ -414,6 +416,7 @@ class Game {
         this.waves.update(this);
         this.exploration.update(this);
         this.events.update(this);
+        this.social.update(this);
         updateFires(this);
 
         this._recipeCacheVersion++;

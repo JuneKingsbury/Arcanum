@@ -1,4 +1,5 @@
-import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT } from '../core/config.js';
+import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT, SOCIAL_CONFIG } from '../core/config.js';
+import { getRelationshipTier } from '../systems/social-utils.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost, hasLineOfSight } from '../world/map.js';
 import { moveEntity, computeMoveDuration, computeMoveCooldown } from '../systems/movement-lerp.js';
@@ -81,6 +82,8 @@ export function createColonist(x, y, skillBias, existingNames = []) {
         stateTimer: 0,
         wanderCooldown: 0,
         moveCooldown: 0,
+        opinions: {},
+        relationships: {},
     };
 }
 
@@ -727,6 +730,29 @@ function updateIdle(colonist, game) {
         return;
     }
 
+    if (colonist.traits.includes('socialite')) {
+        const socialRange = SOCIAL_CONFIG.interactionRange;
+        const alreadyNear = game.colonists.some(c =>
+            c.id !== colonist.id && c.hp > 0 && !c.onExpedition &&
+            manhattanDist(colonist.x, colonist.y, c.x, c.y) <= socialRange
+        );
+        if (!alreadyNear) {
+            const target = game.colonists.reduce((best, c) => {
+                if (c.id === colonist.id || c.hp <= 0 || c.onExpedition) return best;
+                const d = manhattanDist(colonist.x, colonist.y, c.x, c.y);
+                return (!best || d < best.dist) ? { c, dist: d } : best;
+            }, null);
+            if (target) {
+                const path = findPathAdjacent(game.map, colonist.x, colonist.y, target.c.x, target.c.y);
+                if (path && path.length > 0) {
+                    colonist.path = path;
+                    colonist.state = 'moving';
+                    return;
+                }
+            }
+        }
+    }
+
     colonist.wanderCooldown--;
     if (colonist.wanderCooldown <= 0) {
         wander(colonist, game);
@@ -1324,7 +1350,21 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
             }
             for (const other of game.colonists) {
                 if (other.id !== colonist.id && other.hp > 0) {
-                    addThought(other, `${colonist.name} died`, COLONIST_CONFIG.deathMoodPenalty, COLONIST_CONFIG.deathMoodDuration, game.tick);
+                    const opinion = other.opinions?.[colonist.id] ?? 0;
+                    const tier = getRelationshipTier(opinion).key;
+                    if (tier === 'lovers') {
+                        addThought(other, THOUGHTS.lover_died.text, THOUGHTS.lover_died.moodEffect, THOUGHTS.lover_died.duration, game.tick);
+                    } else if (tier === 'close_friend') {
+                        addThought(other, THOUGHTS.close_friend_died.text, THOUGHTS.close_friend_died.moodEffect, THOUGHTS.close_friend_died.duration, game.tick);
+                    } else if (tier === 'friend') {
+                        addThought(other, THOUGHTS.friend_died.text, THOUGHTS.friend_died.moodEffect, THOUGHTS.friend_died.duration, game.tick);
+                    } else if (tier === 'acquaintance') {
+                        addThought(other, THOUGHTS.acquaintance_died.text, THOUGHTS.acquaintance_died.moodEffect, THOUGHTS.acquaintance_died.duration, game.tick);
+                    } else if (tier === 'rival') {
+                        addThought(other, THOUGHTS.rival_died.text, THOUGHTS.rival_died.moodEffect, THOUGHTS.rival_died.duration, game.tick);
+                    } else {
+                        addThought(other, `${colonist.name} died`, COLONIST_CONFIG.deathMoodPenalty, COLONIST_CONFIG.deathMoodDuration, game.tick);
+                    }
                 }
             }
         }

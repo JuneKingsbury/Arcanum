@@ -75,6 +75,9 @@ export class OverlayRenderer {
                 case 'floating_text':
                     this._renderFloatingText(ctx, overlay, cw, ch, camera);
                     break;
+                case 'chat_bubble':
+                    this._renderChatBubble(ctx, overlay, cw, ch, camera);
+                    break;
             }
         }
     }
@@ -279,6 +282,51 @@ export class OverlayRenderer {
 
         ctx.fillStyle = overlay.color || '#ffffff';
         ctx.fillText(overlay.text, sx, sy);
+        ctx.restore();
+    }
+
+    _renderChatBubble(ctx, overlay, cw, ch, camera) {
+        const progress = 1 - (overlay.ttl / overlay.maxTtl);
+        const floatOffset = progress * 20;
+        const alpha = 1 - progress;
+
+        const sx = (overlay.x - camera.x) * cw + cw / 2;
+        const sy = (overlay.y - camera.y) * ch - ch * 0.8 - floatOffset;
+        if (sx < -100 || sx > this.canvas.width + 100 || sy < -50 || sy > this.canvas.height + 50) return;
+
+        const text = overlay.text || '...';
+        const fontSize = 11;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const textW = ctx.measureText(text).width;
+        const padX = 5;
+        const padY = 3;
+        const bubbleW = textW + padX * 2;
+        const bubbleH = fontSize + padY * 2;
+
+        // Bubble background
+        ctx.fillStyle = '#222233';
+        ctx.strokeStyle = overlay.color || '#ffffff';
+        ctx.lineWidth = 1.5;
+        const bx = sx - bubbleW / 2;
+        const by = sy - bubbleH / 2;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(bx, by, bubbleW, bubbleH, 4);
+        } else {
+            ctx.rect(bx, by, bubbleW, bubbleH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Text
+        ctx.fillStyle = overlay.color || '#ffffff';
+        ctx.fillText(text, sx, sy);
         ctx.restore();
     }
 
