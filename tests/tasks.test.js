@@ -63,4 +63,39 @@ describe('TaskQueue.findBestTask', () => {
         expect([craft, another]).not.toContain(q.findBestTask(c, 0));
         expect(q.findBestTask(c, 0)).toBeNull();
     });
+
+    it('skips tasks whose required skill is absent from the colonist priorities', () => {
+        // undefined <= 0 is false in JS, so an absent skill must still be
+        // excluded — this pins that a missing priority is treated as ineligible.
+        addTask(q, { x: 1, y: 0, skill: 'mining' });
+        const c = makeColonist({ priorities: { build: 3 } });   // no 'mining' key
+        expect(q.findBestTask(c, 0)).toBeNull();
+    });
+
+    it('reflects a task completed after the pending snapshot was built', () => {
+        const a = addTask(q, { x: 1, y: 0, skill: 'build' });
+        const b = addTask(q, { x: 2, y: 0, skill: 'build' });
+        const c = makeColonist({ x: 0, y: 0, priorities: { build: 3 } });
+        expect(q.findBestTask(c, 0)).toBe(a);   // builds the pending snapshot
+        q.complete(a.id);                       // mutate after snapshot
+        expect(q.findBestTask(c, 0)).toBe(b);   // dirty flag forces a rebuild
+    });
+
+    it('re-selects a released task on the next scan', () => {
+        const t = addTask(q, { x: 1, y: 0, skill: 'build' });
+        const c = makeColonist({ priorities: { build: 3 } });
+        q.claim(t.id, 'c1');
+        expect(q.findBestTask(c, 0)).toBeNull();
+        q.release(t.id);
+        expect(q.findBestTask(c, 0)).toBe(t);
+    });
+
+    it('picks the higher-priority skill across different task types', () => {
+        const build = addTask(q, { x: 1, y: 0, skill: 'build' });
+        const farm = addTask(q, { x: 1, y: 0, skill: 'farm' });
+        // farm priority 1 beats build priority 5 regardless of equal distance.
+        const c = makeColonist({ x: 0, y: 0, priorities: { build: 5, farm: 1 } });
+        expect(q.findBestTask(c, 0)).toBe(farm);
+        expect(q.findBestTask(c, 0)).not.toBe(build);
+    });
 });

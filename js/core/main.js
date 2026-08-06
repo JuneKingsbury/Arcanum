@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
 import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
@@ -35,6 +35,7 @@ import { manhattanDist } from '../world/pathfinding.js';
 import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
+import { updateAutoRepair } from '../systems/auto-repair.js';
 import { StorySystem } from '../systems/story.js';
 import { SoundManager } from './sound.js';
 import { TickProfiler } from './perf-probe.js';
@@ -1538,41 +1539,6 @@ function updatePedestals(game, structurePositions = game.mapIndex.getAllStructur
         const auraLabel = { name: art.name, key: art.key, sourceType: 'colonist', colonistId: carrier.id };
         applyAuraToColonists(game, art.pedestal, radius, carrier.x, carrier.y, auraLabel);
         if (art.pedestal.blightImmunity) applyBlightImmunity(game, radius, carrier.x, carrier.y);
-    }
-}
-
-function updateAutoRepair(game, structurePositions = game.mapIndex.getAllStructurePositions()) {
-    for (const { x, y } of structurePositions) {
-        const tile = game.map[y][x];
-        if (tile.structureHp === undefined) continue;
-        const maxHp = BUILDINGS[tile.structure]?.hp;
-        if (!maxHp || tile.structureHp >= maxHp) continue;
-        const existing = game.taskQueue.getByPosition(x, y);
-        if (existing) continue;
-        game.taskQueue.add({
-            type: 'repair',
-            skillRequired: 'building',
-            x, y,
-            workAmount: 15,
-        });
-    }
-    const anvils = structurePositions.filter(s => s.type === 'anvil');
-    if (anvils.length === 0) return;
-    for (const c of game.colonists) {
-        if (c.hp <= 0 || !c.artifactBroken || !c.artifact) continue;
-        if (c._repairQueued) continue;
-        const anvil = anvils[0];
-        const existing = game.taskQueue.getAll().find(t => t.type === 'repair_artifact' && t.colonistId === c.id);
-        if (existing) continue;
-        game.taskQueue.add({
-            type: 'repair_artifact',
-            skillRequired: 'crafting',
-            x: anvil.x, y: anvil.y,
-            workAmount: 40,
-            colonistId: c.id,
-            artifactKey: c.artifact,
-        });
-        c._repairQueued = true;
     }
 }
 

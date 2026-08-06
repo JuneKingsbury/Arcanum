@@ -3,6 +3,7 @@
 // modules (no browser/DOM) without booting the whole engine.
 import { CONFIG } from '../js/core/config.js';
 import { TaskQueue } from '../js/core/tasks.js';
+import { MapIndex } from '../js/world/mapindex.js';
 
 /**
  * Build a full MAP_HEIGHT x MAP_WIDTH grid of open floor tiles.
@@ -81,10 +82,16 @@ export function makeGame(mapSize = 4) {
         }
         map.push(row);
     }
+    // Real MapIndex, rebuilt from the fixture map so structure-scanning tick
+    // functions (auto-repair, pedestals) see the same {x,y,type} snapshot the
+    // engine produces. Call game.mapIndex.rebuild(game.map) after mutating
+    // structures in a test.
+    const mapIndex = new MapIndex();
+    mapIndex.rebuild(map);
     return {
         tick: 0, timeOfDay: 0.5, speed: 1,
         settings: {},
-        map,
+        map, mapIndex,
         colonists: [], entities: [], raiders: [],
         resources: {
             stockpile: {}, weapons: [], armors: [], helmets: [], tools: [],

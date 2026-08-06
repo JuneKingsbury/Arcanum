@@ -25,7 +25,7 @@ nothing here ships to the browser game.
 |---------|--------------|
 | `npm test` | Run the whole unit-test suite once and report pass/fail. This is the everyday command. |
 | `npm run test:watch` | Re-run tests automatically as you edit files. Handy while refactoring. |
-| `npm run test:e2e` | Run the headless browser smoke test (Playwright). *(added in Phase 7b)* |
+| `npm run test:e2e` | Run the headless browser smoke test (Playwright). Requires a one-time `npx playwright install chromium`; serves the site with vite and boots a real game. |
 
 Example:
 
@@ -45,10 +45,17 @@ the real modules — no mock game engine — using small plain-data fixtures fro
 
 | File | Guards |
 |------|--------|
-| `tasks.test.js` | `TaskQueue.findBestTask` scoring/selection (priority beats distance, cooldowns, claimed/busy tasks). |
+| `tasks.test.js` | `TaskQueue.findBestTask` scoring/selection (priority beats distance, cooldowns, claimed/busy/released tasks, dirty-snapshot re-check). |
 | `rooms.test.js` | `detectRooms` flood-fill + `calculateRoomQualities` scoring on hand-built maps. |
 | `roles.test.js` | `initEntityRoles` — role-handler state init and the "don't clobber existing state" guard. |
 | `save.test.js` | Full `saveGame` → `loadGame` round-trip, plus version-mismatch rejection. |
+| `building.test.js` | `getMaxCountBonus` — the research bonus + the `mana_crystal`/`mana_reservoir` +3 special case. |
+| `ui-utils.test.js` | `getTargetPriority` (expedition→combat fallback), `countByKey`, `getThreatDisplayHtml`. |
+| `auto-repair.test.js` | `updateAutoRepair` — damaged-structure repair tasks and the anvil broken-artifact path (regression guard for b7a49ef). |
+
+The Playwright smoke test lives in `tests/e2e/smoke.spec.js` (boots the page, starts a
+new game, asserts the map/colonists/canvas come up and ticks advance with no console
+errors). It's excluded from the vitest run by `vitest.config.js`.
 
 `helpers.js` provides the shared fixtures: `makeMap`, `enclose`, `makeColonist`,
 `makeGame`, and `installBrowserShims` (an in-memory `localStorage` + stub DOM so
