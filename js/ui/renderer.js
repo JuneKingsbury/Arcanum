@@ -975,27 +975,3 @@ export class Renderer {
         return sources;
     }
 }
-
-// Bresenham's line algorithm — returns the tile coordinates between two points
-// (exclusive of start, exclusive of end). Used for turret beam rendering to
-// determine which tiles a shot passes through.
-function getLinePoints(x0, y0, x1, y1) {
-    const points = [];
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    // Error term: accumulates the deviation from the ideal line. When it
-    // exceeds the threshold in a dimension, we step in that direction.
-    let err = dx - dy;
-    let cx = x0, cy = y0;
-    while (cx !== x1 || cy !== y1) {
-        if (cx !== x0 || cy !== y0) {
-            points.push({ x: cx, y: cy });
-        }
-        const e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; cx += sx; }
-        if (e2 < dx) { err += dx; cy += sy; }
-    }
-    return points;
-}
