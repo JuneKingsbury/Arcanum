@@ -4,6 +4,15 @@ import { OverlayRenderer } from './overlay-renderer.js';
 import { SkinManager } from './skin-manager.js';
 import { getEntityRenderPos, isEntityMoving } from '../systems/movement-lerp.js';
 
+// The four cardinal neighbors checked per tile when dithering terrain edges.
+// Hoisted to module scope so it isn't reallocated per tile, per frame.
+const DITHER_DIRECTIONS = [
+    { dir: 'north', dx: 0, dy: -1 },
+    { dir: 'south', dx: 0, dy: 1 },
+    { dir: 'west', dx: -1, dy: 0 },
+    { dir: 'east', dx: 1, dy: 0 },
+];
+
 export class Renderer {
     constructor(container, skinManager) {
         this.container = container;
@@ -249,14 +258,8 @@ export class Renderer {
         }
 
         const baseTerrain = tile.terrain;
-        const directions = [
-            { dir: 'north', dx: 0, dy: -1 },
-            { dir: 'south', dx: 0, dy: 1 },
-            { dir: 'west', dx: -1, dy: 0 },
-            { dir: 'east', dx: 1, dy: 0 },
-        ];
 
-        for (const { dir, dx, dy } of directions) {
+        for (const { dir, dx, dy } of DITHER_DIRECTIONS) {
             const nx = wx + dx;
             const ny = wy + dy;
             if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) continue;

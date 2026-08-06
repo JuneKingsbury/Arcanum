@@ -110,24 +110,27 @@ export function calculateRoomQualities(map, roomCount) {
     const roomQualities = {};
     const workshopQualities = {};
 
+    // Single pass over the grid: bucket tiles by room and collect light sources
+    // at the same time, instead of rescanning the whole map once per room.
     const lightSources = [];
+    const tilesByRoom = new Map();
     for (let y = 0; y < CONFIG.MAP_HEIGHT; y++) {
         for (let x = 0; x < CONFIG.MAP_WIDTH; x++) {
             const t = map[y][x];
             if (t.structure && BUILDINGS[t.structure] && BUILDINGS[t.structure].lightRadius) {
                 lightSources.push({ x, y, radius: BUILDINGS[t.structure].lightRadius });
             }
+            const id = t.roomId;
+            if (id === undefined || id === null || id < 0) continue;
+            let tiles = tilesByRoom.get(id);
+            if (!tiles) tilesByRoom.set(id, tiles = []);
+            tiles.push({ x, y, tile: t });
         }
     }
 
     for (let id = 0; id < roomCount; id++) {
-        const tiles = [];
-        for (let y = 0; y < CONFIG.MAP_HEIGHT; y++) {
-            for (let x = 0; x < CONFIG.MAP_WIDTH; x++) {
-                if (map[y][x].roomId === id) tiles.push({ x, y, tile: map[y][x] });
-            }
-        }
-        if (tiles.length === 0) continue;
+        const tiles = tilesByRoom.get(id);
+        if (!tiles || tiles.length === 0) continue;
 
         const analysis = analyzeRoom(map, tiles, lightSources);
 

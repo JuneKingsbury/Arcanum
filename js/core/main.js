@@ -379,14 +379,17 @@ class Game {
             updateTamedAnimals(this);
             updateAutoCook(this);
             updateAutoCraft(this);
-            updateAutoRepair(this);
+            // Structure positions are stable within a tick; compute once and
+            // share between auto-repair and pedestal scanning.
+            const structurePositions = this.mapIndex.getAllStructurePositions();
+            updateAutoRepair(this, structurePositions);
             for (const c of this.colonists) {
                 c.pedestalWorkBonus = 0;
                 c.pedestalDamageBonus = 1;
                 c.pedestalSkillBonus = 0;
                 c.activeAuras = [];
             }
-            updatePedestals(this);
+            updatePedestals(this, structurePositions);
         }
 
         if (this.power.hasPower()) {
@@ -1408,7 +1411,10 @@ class Game {
 }
 
 function applyAuraToColonists(game, pedestal, radius, centerX, centerY, auraLabel) {
-    for (const c of game.colonists) {
+    // Query the colonist spatial hash (rebuilt every tick) for a cell-granular
+    // superset, then keep the exact manhattan-radius filter. The 'global' radius
+    // case is handled by the caller with a full colonist loop.
+    for (const c of game.spatial.colonists.query(centerX, centerY, radius)) {
         if (c.hp <= 0) continue;
         if (manhattanDist(c.x, c.y, centerX, centerY) > radius) continue;
         if (pedestal.workSpeedBonus) c.pedestalWorkBonus += pedestal.workSpeedBonus;
@@ -1432,8 +1438,8 @@ function applyBlightImmunity(game, radius, centerX, centerY) {
     }
 }
 
-function updatePedestals(game) {
-    const pedestals = game.mapIndex.getAllStructurePositions().filter(({ x, y }) => {
+function updatePedestals(game, structurePositions = game.mapIndex.getAllStructurePositions()) {
+    const pedestals = structurePositions.filter(({ x, y }) => {
         const tile = game.map[y][x];
         return tile.structure === 'artifact_pedestal' && tile.pedestalArtifact;
     });
@@ -1471,9 +1477,8 @@ function updatePedestals(game) {
     }
 }
 
-function updateAutoRepair(game) {
-    const allStructures = game.mapIndex.getAllStructurePositions();
-    for (const { x, y } of allStructures) {
+function updateAutoRepair(game, structurePositions = game.mapIndex.getAllStructurePositions()) {
+    for (const { x, y } of structurePositions) {
         const tile = game.map[y][x];
         if (tile.structureHp === undefined) continue;
         const maxHp = BUILDINGS[tile.structure]?.hp;
