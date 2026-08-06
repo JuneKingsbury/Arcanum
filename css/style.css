@@ -158,10 +158,18 @@ body {
     background: #444;
     color: #fff;
 }
+.status-controls-sep {
+    width: 1px;
+    height: 14px;
+    background: #555;
+    margin: 0 2px;
+}
 .status-controls .speed-active {
-    background: #446;
-    color: #aaf;
-    border-color: #66a;
+    background: #335;
+    color: #ccf;
+    border-color: #88a;
+    box-shadow: 0 0 4px #446;
+    font-weight: bold;
 }
 
 #status-bar {
@@ -336,7 +344,7 @@ body {
 
 #minimap-container {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     height: 100%;
     align-items: center;
     justify-content: center;
@@ -351,7 +359,7 @@ body {
 
 #minimap-controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 3px;
     flex-shrink: 0;

@@ -282,11 +282,15 @@
         <div id="status-bar">
             <span id="status-info"></span>
             <span class="status-controls">
-                <span id="status-speed" class="info"></span>
-                <button id="btn-speed-down" title="Speed Down">&lt;</button>
-                <button id="btn-pause" title="Pause/Resume">||</button>
-                <button id="btn-speed-up" title="Speed Up">&gt;</button>
-                <button id="btn-settings" title="Settings" style="margin-left:6px;">&#9881;</button>
+                <button id="btn-zoom-in" title="Zoom In">[+]</button>
+                <button id="btn-zoom-out" title="Zoom Out">[-]</button>
+                <span class="status-controls-sep"></span>
+                <button id="btn-pause" title="Pause">||</button>
+                <button id="btn-speed-1" title="1x Speed">1x</button>
+                <button id="btn-speed-2" title="2x Speed">2x</button>
+                <button id="btn-speed-3" title="3x Speed">3x</button>
+                <span class="status-controls-sep"></span>
+                <button id="btn-settings" title="Settings">&#9881;</button>
             </span>
         </div>
         <div id="game-area">
@@ -317,15 +321,6 @@
                 <div id="event-log" class="footer-panel"></div>
                 <div id="minimap-container">
                     <canvas id="minimap"></canvas>
-                    <div id="minimap-controls">
-                        <button onclick="window.zoomIn()" title="Zoom In">[+]</button>
-                        <button onclick="window.zoomOut()" title="Zoom Out">[-]</button>
-                        <span class="minimap-controls-sep"></span>
-                        <button class="speed-btn" onclick="window.game?.togglePause()" data-speed="pause" title="Pause">P</button>
-                        <button class="speed-btn" onclick="window.game?.setSpeed(1)" data-speed="1" title="1x speed">1x</button>
-                        <button class="speed-btn" onclick="window.game?.setSpeed(2)" data-speed="2" title="2x speed">2x</button>
-                        <button class="speed-btn" onclick="window.game?.setSpeed(5)" data-speed="5" title="5x speed">5x</button>
-                    </div>
                 </div>
             </div>
         </div>

@@ -39,9 +39,12 @@ export class UI {
 
     initElements() {
         this.elements.statusBar = document.getElementById('status-bar');
-        document.getElementById('btn-speed-down').addEventListener('click', () => this.game.speedDown());
-        document.getElementById('btn-pause').addEventListener('click', () => this.game.togglePause());
-        document.getElementById('btn-speed-up').addEventListener('click', () => this.game.speedUp());
+        document.getElementById('btn-zoom-in').addEventListener('click', () => window.zoomIn());
+        document.getElementById('btn-zoom-out').addEventListener('click', () => window.zoomOut());
+        document.getElementById('btn-pause').addEventListener('click', () => { if (!this.game.paused) this.game.togglePause(); });
+        document.getElementById('btn-speed-1').addEventListener('click', () => this.game.setSpeed(1));
+        document.getElementById('btn-speed-2').addEventListener('click', () => this.game.setSpeed(2));
+        document.getElementById('btn-speed-3').addEventListener('click', () => this.game.setSpeed(3));
         document.getElementById('btn-settings').addEventListener('click', () => this.game.toggleSettingsPanel());
         this.elements.infoPanel = document.getElementById('info-content');
         this.elements.infoPanel.addEventListener('mouseleave', () => {
@@ -332,7 +335,6 @@ export class UI {
         this.updateStatusBar();
         this.updateNotifications();
         this.updateEventPanel();
-        this.updateMinimapControls();
         if (this.priorityPanelVisible) this.updatePriorityPanel();
         if (this.craftPanelVisible) this.updateCraftPanel();
         if (this.researchPanelVisible) this.updateResearchPanel();
@@ -352,17 +354,6 @@ export class UI {
             this._lastResearchNeedsAttention = researchNeedsAtt;
             this._lastManaCrystalBonus = currentManaCrystalBonus;
             this.updateModeDisplay(this.game.input);
-        }
-    }
-
-    updateMinimapControls() {
-        const controls = document.getElementById('minimap-controls');
-        if (!controls) return;
-        const btns = controls.querySelectorAll('.speed-btn');
-        for (const btn of btns) {
-            const sp = btn.dataset.speed;
-            const active = this.game.paused ? sp === 'pause' : sp === String(this.game.speed);
-            btn.classList.toggle('active', active);
         }
     }
 
@@ -445,8 +436,16 @@ export class UI {
             this._lastStatusHtml = html;
             document.getElementById('status-info').innerHTML = html;
         }
-        const speedEl = document.getElementById('status-speed');
-        if (speedEl && speedEl.textContent !== speed) speedEl.textContent = speed;
+        const speedButtons = [
+            { id: 'btn-pause', active: this.game.paused },
+            { id: 'btn-speed-1', active: !this.game.paused && this.game.speed === 1 },
+            { id: 'btn-speed-2', active: !this.game.paused && this.game.speed === 2 },
+            { id: 'btn-speed-3', active: !this.game.paused && this.game.speed === 3 },
+        ];
+        for (const { id, active } of speedButtons) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('speed-active', active);
+        }
     }
 
     _getWeatherIcon() {
