@@ -1510,7 +1510,7 @@ function updateAutoRepair(game, structurePositions = game.mapIndex.getAllStructu
             workAmount: 15,
         });
     }
-    const anvils = allStructures.filter(s => s.type === 'anvil');
+    const anvils = structurePositions.filter(s => s.type === 'anvil');
     if (anvils.length === 0) return;
     for (const c of game.colonists) {
         if (c.hp <= 0 || !c.artifactBroken || !c.artifact) continue;
