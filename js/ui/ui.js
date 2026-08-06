@@ -5,7 +5,7 @@ import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
 import { getMaxCountBonus } from '../systems/building.js';
-import { getTargetPriority, getThreatDisplayHtml } from './ui-utils.js';
+import { getTargetPriority, getThreatDisplayHtml, countByKey } from './ui-utils.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
@@ -2226,11 +2226,7 @@ export class UI {
         }
         if (potions.length > 0) {
             html += '<div class="info-row" style="color:#cc88aa;margin-top:8px;margin-bottom:4px;"><b>Potions:</b></div>';
-            const potionCounts = {};
-            for (const p of potions) {
-                const k = p.key ?? p.type;
-                potionCounts[k] = (potionCounts[k] || 0) + 1;
-            }
+            const potionCounts = countByKey(potions, p => p.key ?? p.type);
             for (const [type, count] of Object.entries(potionCounts)) {
                 const def = POTIONS[type];
                 const potionTip = this.getCraftOutputTip(type) || '';
@@ -2239,10 +2235,7 @@ export class UI {
         }
         if (tomes.length > 0) {
             html += '<div class="info-row" style="color:#bb88ff;margin-top:8px;margin-bottom:4px;"><b>Spell Tomes:</b></div>';
-            const tomeCounts = {};
-            for (const t of tomes) {
-                tomeCounts[t.key] = (tomeCounts[t.key] || 0) + 1;
-            }
+            const tomeCounts = countByKey(tomes, t => t.key);
             for (const [key, count] of Object.entries(tomeCounts)) {
                 const def = SPELL_TOMES[key];
                 const spell = def ? SPELLS[def.spell] : null;
@@ -2258,10 +2251,7 @@ export class UI {
     _buildInvAnimals(tamed) {
         let html = '';
         if (tamed.length > 0) {
-            const counts = {};
-            for (const a of tamed) {
-                counts[a.type] = (counts[a.type] || 0) + 1;
-            }
+            const counts = countByKey(tamed, a => a.type);
             for (const [type, count] of Object.entries(counts)) {
                 const def = TAMED_ANIMALS[type];
                 let role = def.produces ? `produces: ${def.produces}` : def.packAnimal ? 'pack animal' : def.happinessAura ? 'happiness aura' : def.guardAnimal ? 'guard' : '';

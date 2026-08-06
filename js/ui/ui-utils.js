@@ -9,6 +9,17 @@ export function getTargetPriority(x) {
     return x.artifact?.expedition?.targetPriority || x.artifact?.combat?.targetPriority || 0;
 }
 
+// Tally items into a plain { key: count } object. keyFn maps each item to its
+// grouping key; used for inventory stacks (potions, tomes, tamed animals).
+export function countByKey(items, keyFn) {
+    const counts = {};
+    for (const item of items) {
+        const k = keyFn(item);
+        counts[k] = (counts[k] || 0) + 1;
+    }
+    return counts;
+}
+
 // The `[▲Threat]` / `[▼Threat]` colored span shown next to expedition party
 // members. Returns '' for neutral (0) priority.
 export function getThreatDisplayHtml(priority) {
