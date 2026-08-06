@@ -4,6 +4,15 @@ import { OverlayRenderer } from './overlay-renderer.js';
 import { SkinManager } from './skin-manager.js';
 import { getEntityRenderPos, isEntityMoving } from '../systems/movement-lerp.js';
 
+// The four cardinal neighbors checked per tile when dithering terrain edges.
+// Hoisted to module scope so it isn't reallocated per tile, per frame.
+const DITHER_DIRECTIONS = [
+    { dir: 'north', dx: 0, dy: -1 },
+    { dir: 'south', dx: 0, dy: 1 },
+    { dir: 'west', dx: -1, dy: 0 },
+    { dir: 'east', dx: 1, dy: 0 },
+];
+
 export class Renderer {
     constructor(container, skinManager) {
         this.container = container;
@@ -249,14 +258,8 @@ export class Renderer {
         }
 
         const baseTerrain = tile.terrain;
-        const directions = [
-            { dir: 'north', dx: 0, dy: -1 },
-            { dir: 'south', dx: 0, dy: 1 },
-            { dir: 'west', dx: -1, dy: 0 },
-            { dir: 'east', dx: 1, dy: 0 },
-        ];
 
-        for (const { dir, dx, dy } of directions) {
+        for (const { dir, dx, dy } of DITHER_DIRECTIONS) {
             const nx = wx + dx;
             const ny = wy + dy;
             if (nx < 0 || nx >= CONFIG.MAP_WIDTH || ny < 0 || ny >= CONFIG.MAP_HEIGHT) continue;
@@ -974,28 +977,4 @@ export class Renderer {
 
         return sources;
     }
-}
-
-// Bresenham's line algorithm — returns the tile coordinates between two points
-// (exclusive of start, exclusive of end). Used for turret beam rendering to
-// determine which tiles a shot passes through.
-function getLinePoints(x0, y0, x1, y1) {
-    const points = [];
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1;
-    const sy = y0 < y1 ? 1 : -1;
-    // Error term: accumulates the deviation from the ideal line. When it
-    // exceeds the threshold in a dimension, we step in that direction.
-    let err = dx - dy;
-    let cx = x0, cy = y0;
-    while (cx !== x1 || cy !== y1) {
-        if (cx !== x0 || cy !== y0) {
-            points.push({ x: cx, y: cy });
-        }
-        const e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; cx += sx; }
-        if (e2 < dx) { err += dx; cy += sy; }
-    }
-    return points;
 }

@@ -4,6 +4,8 @@ import { getTradeRates, computeTradeValues } from '../systems/events.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
+import { getMaxCountBonus } from '../systems/building.js';
+import { getTargetPriority, getThreatDisplayHtml, countByKey } from './ui-utils.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
@@ -12,6 +14,25 @@ import { installArcanePanel } from './ui-arcane.js';
 import { installResearchPanel } from './ui-research.js';
 
 const WEATHER_ICONS = { clear: '☀', rain: '☔', thunderstorm: '⛈', snow: '❄', blizzard: '❅', heatwave: '♨' };
+
+// Skill/magic XP tooltip text, shared by the colonist tooltip refresh and the
+// colonist info panel so both show identical "— XP: x/y (z%)" (or "(MAX)") text.
+function skillXpTip(def, level, xp) {
+    const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
+    const pct = Math.floor((xp / maxXp) * 100);
+    return level >= COLONIST_CONFIG.skillMaxLevel
+        ? `${def.description} (MAX)`
+        : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+}
+
+// Magic XP is stored as an accumulator scaled to /100 (max level hardcoded at 10).
+function magicXpTip(def, level, acc) {
+    const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
+    const pct = Math.floor((acc / maxXp) * 100);
+    return level >= 10
+        ? `${def.description} (MAX)`
+        : `${def.description} — XP: ${pct}/100 (${pct}%)`;
+}
 
 export class UI {
     constructor(game) {
@@ -689,25 +710,13 @@ export class UI {
             const skillEntry = Object.entries(SKILLS).find(([, def]) => def.name === name);
             if (skillEntry) {
                 const [k, def] = skillEntry;
-                const level = colonist.skills[k] || 1;
-                const xp = colonist.skillXp?.[k] || 0;
-                const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
-                const pct = Math.floor((xp / maxXp) * 100);
-                tip.dataset.tip = level >= COLONIST_CONFIG.skillMaxLevel
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+                tip.dataset.tip = skillXpTip(def, colonist.skills[k] || 1, colonist.skillXp?.[k] || 0);
                 continue;
             }
             const magicEntry = Object.entries(MAGIC_SKILLS).find(([, def]) => def.name === name);
             if (magicEntry) {
                 const [k, def] = magicEntry;
-                const level = colonist.magicSkills[k];
-                const acc = colonist._magicXpAccumulator?.[k] || 0;
-                const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
-                const currentScaled = Math.floor((acc / maxXp) * 100);
-                tip.dataset.tip = level >= 10
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${currentScaled}/100 (${currentScaled}%)`;
+                tip.dataset.tip = magicXpTip(def, colonist.magicSkills[k], colonist._magicXpAccumulator?.[k] || 0);
             }
         }
     }
@@ -758,8 +767,7 @@ export class UI {
                         const status = p.hp <= 0 ? ' [DOWN]' : '';
                         const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
                         const shieldStr = p.shieldActive ? ' 🛡' : '';
-                        const priority = p.artifact?.expedition?.targetPriority || 0;
-                        const threatStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'};font-size:0.85em;">[${priority > 0 ? '▲' : '▼'}Threat]</span>` : '';
+                        const threatStr = getThreatDisplayHtml(getTargetPriority(p));
                         html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${shieldStr}${status}${threatStr}</div>`;
                     }
 
@@ -838,8 +846,7 @@ export class UI {
             html += `<div class="info-row" style="color:#999;font-size:11px;">${def.description}</div>`;
         }
         if (def.maxCount) {
-            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-            const limit = def.maxCount + bonus;
+            const limit = def.maxCount + getMaxCountBonus(def, structure, this.game);
             let placed = 0;
             for (const row of this.game.map) for (const t of row) if (t.structure === structure) placed++;
             html += `<div class="info-row" style="color:#aa88ff;font-size:11px;">Placed: ${placed} / ${limit}</div>`;
@@ -994,12 +1001,7 @@ export class UI {
         html += `<div style="${sectionHdr}">Skills</div>`;
         html += `<div class="info-row">${Object.entries(SKILLS).map(([k, def]) => {
             const level = colonist.skills[k] || 1;
-            const xp = colonist.skillXp?.[k] || 0;
-            const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
-            const pct = Math.floor((xp / maxXp) * 100);
-            const xpTip = level >= COLONIST_CONFIG.skillMaxLevel
-                ? `${def.description} (MAX)`
-                : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+            const xpTip = skillXpTip(def, level, colonist.skillXp?.[k] || 0);
             return `<span class="skill-tip" data-tip="${xpTip}">${def.name}:${level}</span>`;
         }).join(' ')}</div>`;
         const hasMagic = colonist.magicSkills && Object.values(colonist.magicSkills).some(v => v > 0);
@@ -1007,12 +1009,7 @@ export class UI {
             html += `<div class="info-row"><span style="color:#aa88ff">Mana: ${bar(colonist.mana / colonist.maxMana * 100)} ${Math.floor(colonist.mana)}/${colonist.maxMana}</span></div>`;
             html += `<div class="info-row">Magic: ${Object.entries(MAGIC_SKILLS).filter(([k]) => colonist.magicSkills[k] > 0).map(([k, def]) => {
                 const level = colonist.magicSkills[k];
-                const acc = colonist._magicXpAccumulator?.[k] || 0;
-                const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
-                const currentScaled = Math.floor((acc / maxXp) * 100);
-                const tip = level >= 10
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${currentScaled}/100 (${currentScaled}%)`;
+                const tip = magicXpTip(def, level, colonist._magicXpAccumulator?.[k] || 0);
                 return `<span class="skill-tip" data-tip="${tip}" style="color:#bb88ff">${def.name}:${level}</span>`;
             }).join(' ')}</div>`;
         }
@@ -2147,8 +2144,7 @@ export class UI {
             if (def.power.damage) html += `<div class="build-tip-meta" style="color:#ff4444">Damage: ${def.power.damage} (range ${def.power.range || '?'})</div>`;
         }
         if (def.maxCount) {
-            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-            html += `<div class="build-tip-meta" style="color:#aaa">Max: ${def.maxCount + bonus}</div>`;
+            html += `<div class="build-tip-meta" style="color:#aaa">Max: ${def.maxCount + getMaxCountBonus(def, buildType, this.game)}</div>`;
         }
         this._buildTooltip.innerHTML = html;
         this._buildTooltip.style.display = 'block';
@@ -2230,11 +2226,7 @@ export class UI {
         }
         if (potions.length > 0) {
             html += '<div class="info-row" style="color:#cc88aa;margin-top:8px;margin-bottom:4px;"><b>Potions:</b></div>';
-            const potionCounts = {};
-            for (const p of potions) {
-                const k = p.key ?? p.type;
-                potionCounts[k] = (potionCounts[k] || 0) + 1;
-            }
+            const potionCounts = countByKey(potions, p => p.key ?? p.type);
             for (const [type, count] of Object.entries(potionCounts)) {
                 const def = POTIONS[type];
                 const potionTip = this.getCraftOutputTip(type) || '';
@@ -2243,10 +2235,7 @@ export class UI {
         }
         if (tomes.length > 0) {
             html += '<div class="info-row" style="color:#bb88ff;margin-top:8px;margin-bottom:4px;"><b>Spell Tomes:</b></div>';
-            const tomeCounts = {};
-            for (const t of tomes) {
-                tomeCounts[t.key] = (tomeCounts[t.key] || 0) + 1;
-            }
+            const tomeCounts = countByKey(tomes, t => t.key);
             for (const [key, count] of Object.entries(tomeCounts)) {
                 const def = SPELL_TOMES[key];
                 const spell = def ? SPELLS[def.spell] : null;
@@ -2262,10 +2251,7 @@ export class UI {
     _buildInvAnimals(tamed) {
         let html = '';
         if (tamed.length > 0) {
-            const counts = {};
-            for (const a of tamed) {
-                counts[a.type] = (counts[a.type] || 0) + 1;
-            }
+            const counts = countByKey(tamed, a => a.type);
             for (const [type, count] of Object.entries(counts)) {
                 const def = TAMED_ANIMALS[type];
                 let role = def.produces ? `produces: ${def.produces}` : def.packAnimal ? 'pack animal' : def.happinessAura ? 'happiness aura' : def.guardAnimal ? 'guard' : '';
@@ -2563,8 +2549,7 @@ export class UI {
                 if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
             }
         }
-        const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-        return count >= def.maxCount + bonus;
+        return count >= def.maxCount + getMaxCountBonus(def, buildType, this.game);
     }
 
     updateNotifications() {

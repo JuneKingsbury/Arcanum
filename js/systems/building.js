@@ -1,4 +1,20 @@
+/**
+ * Placement and gathering designations: validates where a structure/floor can
+ * be built (terrain, collision, research, per-type maxCount, resource cost) and
+ * queues the resulting build/gather tasks. Driven by player input, not the tick
+ * loop — colonists later execute the queued tasks.
+ */
 import { BUILDINGS, RESOURCES, WORK_CONFIG } from '../core/config.js';
+
+// Extra maxCount slots a building gets beyond its base def.maxCount: a
+// research-driven bonus stored on game[maxCountBonusKey], plus a special-case
+// +3 for mana crystals once mana_reservoir is researched. Kept in one place so
+// the placement gate and every UI limit/at-max display agree.
+export function getMaxCountBonus(def, buildType, game) {
+    let bonus = def.maxCountBonusKey ? (game[def.maxCountBonusKey] || 0) : 0;
+    if (buildType === 'mana_crystal' && game.research.isResearched('mana_reservoir')) bonus += 3;
+    return bonus;
+}
 
 export function designateBuild(game, x, y, buildType) {
     const tile = game.map[y][x];
@@ -25,8 +41,7 @@ export function designateBuild(game, x, y, buildType) {
                 if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
             }
         }
-        let bonus = def.maxCountBonusKey ? (game[def.maxCountBonusKey] || 0) : 0;
-        if (buildType === 'mana_crystal' && game.research.isResearched('mana_reservoir')) bonus += 3;
+        const bonus = getMaxCountBonus(def, buildType, game);
         if (count >= def.maxCount + bonus) return false;
     }
 

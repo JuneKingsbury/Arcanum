@@ -389,6 +389,28 @@ export function initEntityRoles(entity) {
     }
 }
 
+/**
+ * Ensure a deserialized entity has its roles + roleState populated, then init.
+ *
+ * Older/partial saves may omit `roles` (or store an empty array), so we
+ * backfill from the entity definition. Tamed animals draw their roles from
+ * `def.tamed.roles` rather than `def.roles` (a wild wolf fights; a tamed one
+ * hauls/produces) — that branch only fires when both the entity is tamed and
+ * the def declares a tamed variant. Role objects are shallow-cloned so per-
+ * entity role tweaks never mutate the shared config.
+ *
+ * @param entity  The deserialized entity to normalize (mutated in place).
+ * @param def     Its definition from ENTITIES[type], or undefined if unknown.
+ */
+export function ensureEntityRoles(entity, def) {
+    if (!entity.roles || entity.roles.length === 0) {
+        const roles = entity.tamed && def && def.tamed ? def.tamed.roles : def && def.roles;
+        entity.roles = (roles || []).map(r => ({ ...r }));
+    }
+    if (!entity.roleState) entity.roleState = {};
+    initEntityRoles(entity);
+}
+
 export function getRoleInfoHtml(entity) {
     if (!entity.roles || entity.roles.length === 0) return '';
     let html = '';

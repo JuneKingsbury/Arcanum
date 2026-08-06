@@ -86,18 +86,7 @@ export const FIRE_CONFIG = {
     spreadTimerMax: 25,
 };
 
-export const CARAVAN_TRADES = [
-    { give: { wood: 5 }, receive: { food: 4 } },
-    { give: { stone: 3 }, receive: { wood: 4 } },
-    { give: { food: 4 }, receive: { planks: 3 } },
-    { give: { food: 6 }, receive: { stone: 5 } },
-    { give: { stone: 8 }, receive: { runite: 2 } },
-    { give: { runite: 3, food: 5 }, receive: { tome_of_magic_missile: 1 } },
-    { give: { runite: 3, food: 6 }, receive: { tome_of_heal: 1 } },
-    { give: { runite: 4, food: 8 }, receive: { tome_of_haste: 1 } },
-    { give: { void_essence: 2, runite: 3 }, receive: { tome_of_shield: 1 } },
-    { give: { void_essence: 3, runite: 4 }, receive: { tome_of_warp: 1 } },
-];
+// CARAVAN_TRADES moved to ./trade.js (still re-exported via index.js).
 
 export const PATHFINDING_CONFIG = {
     maxNodes: 20000,

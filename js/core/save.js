@@ -1,55 +1,9 @@
 import { CONFIG, ENTITIES } from './config.js';
 import { syncEntityIdCounter } from '../entities/entity-factory.js';
-import { initEntityRoles } from '../entities/roles.js';
+import { ensureEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
 const SAVE_VERSION = 6;
-
-function migrateTomeKey(key) {
-    if (!key || key.startsWith('tome_of_')) return key;
-    if (key.startsWith('tome_')) return 'tome_of_' + key.slice(5);
-    return key;
-}
-
-function migrateTomeKeys(data) {
-    if (data.colonists) {
-        for (const c of data.colonists) {
-            if (c.equippedTome) c.equippedTome = migrateTomeKey(c.equippedTome);
-            if (c.tomeProgress) {
-                const newProgress = {};
-                for (const [k, v] of Object.entries(c.tomeProgress)) {
-                    newProgress[migrateTomeKey(k)] = v;
-                }
-                c.tomeProgress = newProgress;
-            }
-        }
-    }
-    if (data.resources?.tomes) {
-        for (const t of data.resources.tomes) {
-            if (t.key) t.key = migrateTomeKey(t.key);
-        }
-    }
-    if (data.settings?.craftTargets) {
-        const newTargets = {};
-        for (const [k, v] of Object.entries(data.settings.craftTargets)) {
-            const newKey = k.startsWith('craft_tome_') && !k.startsWith('craft_tome_of_')
-                ? 'craft_tome_of_' + k.slice(11)
-                : k;
-            newTargets[newKey] = v;
-        }
-        data.settings.craftTargets = newTargets;
-    }
-}
-
-function migrateGolemTypes(data) {
-    if (data.colonists) {
-        for (const c of data.colonists) {
-            if (c.golemType === 'miner_golem') {
-                c.golemType = 'builder_golem';
-            }
-        }
-    }
-}
 
 export function saveGame(game) {
     const layout = captureLayout();
@@ -153,30 +107,12 @@ export function loadGame(game) {
 
         const data = JSON.parse(json);
 
-        if (!data.version || data.version < 3) {
+        // Saves are not migrated across versions; a mismatch is discarded and the
+        // caller falls back to starting a fresh game.
+        if (data.version !== SAVE_VERSION) {
             console.warn(`Incompatible save version ${data.version}, expected ${SAVE_VERSION}. Starting fresh.`);
             localStorage.removeItem(SAVE_KEY);
             return false;
-        }
-
-        if (data.version < 4) {
-            migrateTomeKeys(data);
-            data.version = 4;
-        }
-
-        if (data.version < 5) {
-            migrateGolemTypes(data);
-            data.version = 5;
-        }
-
-        if (data.version < 6) {
-            // Potions used to store type=potionKey; normalize to type='potion', key=potionKey.
-            if (data.resources?.potions) {
-                data.resources.potions = data.resources.potions.map(p =>
-                    (p.type && p.type !== 'potion' && !p.key) ? { ...p, key: p.type, type: 'potion' } : p
-                );
-            }
-            data.version = 6;
         }
 
         CONFIG.PEACEFUL_MODE = data.peaceful;
@@ -257,33 +193,17 @@ export function loadGame(game) {
 
         syncEntityIdCounter([...game.colonists, ...game.entities, ...game.raiders]);
 
+        // Backfill roles/roleState for every deserialized entity (tamed animals,
+        // raiders, and wave enemies share the same normalization).
         for (const entity of game.entities) {
-            if (!entity.roles || entity.roles.length === 0) {
-                const def = ENTITIES[entity.type];
-                if (def) {
-                    const roles = entity.tamed && def.tamed ? def.tamed.roles : def.roles;
-                    entity.roles = (roles || []).map(r => ({ ...r }));
-                }
-            }
-            if (!entity.roleState) entity.roleState = {};
-            initEntityRoles(entity);
+            ensureEntityRoles(entity, ENTITIES[entity.type]);
         }
         for (const raider of game.raiders) {
-            if (!raider.roleState) raider.roleState = {};
-            if (!raider.roles) {
-                const def = ENTITIES[raider.type];
-                raider.roles = def ? (def.roles || []).map(r => ({ ...r })) : [];
-            }
-            initEntityRoles(raider);
+            ensureEntityRoles(raider, ENTITIES[raider.type]);
         }
         if (game.waves && game.waves.enemies) {
             for (const enemy of game.waves.enemies) {
-                if (!enemy.roleState) enemy.roleState = {};
-                if (!enemy.roles) {
-                    const def = ENTITIES[enemy.type];
-                    enemy.roles = def ? (def.roles || []).map(r => ({ ...r })) : [];
-                }
-                initEntityRoles(enemy);
+                ensureEntityRoles(enemy, ENTITIES[enemy.type]);
             }
         }
 
@@ -323,7 +243,7 @@ export function importSave(file) {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!data.version || data.version < SAVE_VERSION || !data.map || !data.colonists) {
+                if (data.version !== SAVE_VERSION || !data.map || !data.colonists) {
                     resolve(false);
                     return;
                 }

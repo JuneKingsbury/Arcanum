@@ -1,3 +1,9 @@
+/**
+ * Crafting orders and auto-production: computes which recipes are currently
+ * available (cached, see below), queues craft tasks, and runs the auto-cook /
+ * auto-craft passes. updateAutoCook and updateAutoCraft are called from
+ * simulationTick every 10th tick; queueCraftingOrder is player-driven.
+ */
 import { RECIPES, WORK_CONFIG } from '../core/config.js';
 
 // Cached recipe availability — invalidated when resources, research, structures,

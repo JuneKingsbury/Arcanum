@@ -33,20 +33,24 @@ export const ANIMALS = Object.fromEntries(
     Object.entries(ENTITIES).filter(([, e]) => e.category === 'animal')
 );
 
+// Live derived view: flattens each tameable animal's structured `tamed`
+// roles/effects into the flat property shape (guardAnimal, produces, packAnimal,
+// happinessAura, …) that the taming and animal-handling code reads. Regenerated
+// from ENTITIES on load; edit ENTITIES, not this.
 export const TAMED_ANIMALS = Object.fromEntries(
     Object.entries(ANIMALS).filter(([, a]) => a.tameable).map(([k, a]) => {
         const t = a.tamed;
-        const legacy = { char: a.char, color: a.color, hp: a.hp, foodToTame: t.foodToTame };
-        if (t.dangerousTame) { legacy.dangerousTame = true; legacy.baseTameChance = t.baseTameChance; legacy.retaliationDamage = t.retaliationDamage; }
+        const flat = { char: a.char, color: a.color, hp: a.hp, foodToTame: t.foodToTame };
+        if (t.dangerousTame) { flat.dangerousTame = true; flat.baseTameChance = t.baseTameChance; flat.retaliationDamage = t.retaliationDamage; }
         for (const role of (t.roles || [])) {
-            if (role.type === 'guard') { legacy.guardAnimal = true; legacy.guardRadius = role.guardRadius; legacy.guardDamage = role.guardDamage; }
-            if (role.type === 'production') { legacy.produces = role.produces; legacy.produceRate = role.produceRate; legacy.produceAmount = role.produceAmount; }
-            if (role.type === 'pack') { legacy.packAnimal = true; legacy.expeditionSpeedBonus = role.expeditionSpeedBonus; }
+            if (role.type === 'guard') { flat.guardAnimal = true; flat.guardRadius = role.guardRadius; flat.guardDamage = role.guardDamage; }
+            if (role.type === 'production') { flat.produces = role.produces; flat.produceRate = role.produceRate; flat.produceAmount = role.produceAmount; }
+            if (role.type === 'pack') { flat.packAnimal = true; flat.expeditionSpeedBonus = role.expeditionSpeedBonus; }
         }
         for (const effect of (t.effects || [])) {
-            if (effect.type === 'mood_aura') { legacy.happinessAura = true; legacy.auraRadius = effect.radius; legacy.auraMoodBonus = effect.moodBonus; }
+            if (effect.type === 'mood_aura') { flat.happinessAura = true; flat.auraRadius = effect.radius; flat.auraMoodBonus = effect.moodBonus; }
         }
-        return [k, legacy];
+        return [k, flat];
     })
 );
 
@@ -108,19 +112,5 @@ export const RAID_CONFIG = {
     timeout: 900,
 };
 
-// Base gold value per unit. Used by both buy and sell calculations.
-// Effective buy price = value × TRADER_MARKUP, effective sell price = value × TRADER_DISCOUNT.
-// Gold itself is always 1:1 (not subject to markup/discount).
-export const TRADE_VALUES = {
-    wood: 1, stone: 1.5, planks: 2, food: 1.5, bricks: 3,
-    hides: 1.5, leather: 3, iron_ore: 2, iron: 4,
-    runite: 6, void_essence: 10, meat: 1, wheat: 0.7, berries: 0.6,
-    corn: 0.8, potatoes: 0.7, moonbloom: 3, eggs: 1.5, milk: 2, wool: 2.5,
-};
-
-// TRADER_MARKUP: multiplier on base value when buying FROM the trader (higher = more expensive).
-// TRADER_DISCOUNT: multiplier on base value when selling TO the trader (lower = less value).
-// Effective ratio = MARKUP / DISCOUNT (currently 1.5:1). Must always be > 1 to prevent arbitrage.
-// Modified at runtime by: Trade Routes research (see getTradeRates), pedestal artifacts (tradeMarkupMult).
-export const TRADER_MARKUP = 1.2;
-export const TRADER_DISCOUNT = 0.8;
+// TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT moved to ./trade.js
+// (still re-exported via index.js).

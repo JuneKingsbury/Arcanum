@@ -7,40 +7,7 @@ export const SKILLS = {
     research: { name: 'Research', baseLevel: [1, 3], biasBonus: 3, description: 'Studying and discovering new knowledge' },
 };
 
-export const THOUGHTS = {
-    built_something:   { text: 'Built something', moodEffect: 3, duration: 100 },
-    good_work:         { text: 'Good honest work', moodEffect: 2, duration: 80 },
-    harvested:         { text: 'Harvested crops', moodEffect: 3, duration: 100 },
-    crafted:           { text: 'Crafted something', moodEffect: 4, duration: 120 },
-    cooked:            { text: 'Cooked a meal', moodEffect: 3, duration: 100 },
-    tamed_animal:      { text: 'Tamed an animal', moodEffect: 6, duration: 150 },
-    put_out_fire:      { text: 'Put out a fire', moodEffect: 5, duration: 150 },
-    repaired:          { text: 'Repaired a structure', moodEffect: 3, duration: 100 },
-    deconstructed:     { text: 'Tore something down', moodEffect: 2, duration: 80 },
-    new_colonist:      { text: 'New colonist arrived', moodEffect: 5, duration: 200 },
-    freezing:          { text: 'Freezing outside', moodEffect: -8, duration: 50 },
-    fire_panic:        { text: 'Colony on fire!', moodEffect: -20, duration: 200 },
-    crops_died:        { text: 'Crops died', moodEffect: -15, duration: 300 },
-    cold_snap:         { text: 'Freezing cold snap', moodEffect: -12, duration: 300 },
-    inspired:          { text: 'Feeling inspired!', moodEffect: 25, duration: 300 },
-    food_spoiled:      { text: 'Food is rotting', moodEffect: -5, duration: 150 },
-    learned_spell:     { text: 'Learned a new spell!', moodEffect: 8, duration: 200 },
-    cast_spell:        { text: 'Cast a spell', moodEffect: 3, duration: 80 },
-    tame_failed:       { text: 'Failed taming attempt!', moodEffect: -8, duration: 150 },
-    wolf_retaliated:   { text: 'Wolf attacked during taming!', moodEffect: -12, duration: 200 },
-    // Social thoughts
-    made_friend:       { text: 'Made a new friend!', moodEffect: 12, duration: 300 },
-    became_rivals:     { text: 'Made an enemy', moodEffect: -10, duration: 250 },
-    good_conversation: { text: 'Had a nice chat', moodEffect: 4, duration: 80 },
-    had_argument:      { text: 'Had an argument', moodEffect: -6, duration: 120 },
-    fell_in_love:      { text: 'Found love!', moodEffect: 20, duration: 500 },
-    friendship_ended:  { text: 'Lost a friend', moodEffect: -8, duration: 200 },
-    acquaintance_died: { text: 'Someone I knew has died', moodEffect: -20, duration: 1500 },
-    friend_died:       { text: 'A friend has died', moodEffect: -60, duration: 3000 },
-    close_friend_died: { text: 'A close friend has died', moodEffect: -80, duration: 4000 },
-    rival_died:        { text: 'A rival has died', moodEffect: 5, duration: 500 },
-    lover_died:        { text: 'My love has died', moodEffect: -100, duration: 5000 },
-};
+// THOUGHTS moved to ./social.js (still re-exported via index.js).
 
 // Mutually exclusive trait pairs — colonists cannot spawn with both.
 export const TRAIT_EXCLUSIONS = [
@@ -207,78 +174,10 @@ export const TASK_CONFIG = {
     unreachableCheckInterval: 60,
 };
 
-export const QUALITY_TIERS = [
-    { key: 'poor', prefix: 'Crude', multiplier: 0.85, color: '#888888', baseChance: 0.20, perSkill: -0.03 },
-    { key: 'normal', prefix: '', multiplier: 1.00, color: '#cccccc', baseChance: 0.60, perSkill: 0 },
-    { key: 'fine', prefix: 'Fine', multiplier: 1.10, color: '#44cc44', baseChance: 0.15, perSkill: 0.02 },
-    { key: 'superior', prefix: 'Superior', multiplier: 1.20, color: '#4488ff', baseChance: 0.05, perSkill: 0.01 },
-];
-
-export const ROOM_QUALITY_TIERS = [
-    { key: 'bare', name: 'Bare room', minScore: 0, moodEffect: 10, duration: 300 },
-    { key: 'cozy', name: 'Cozy bedroom', minScore: 20, moodEffect: 14, duration: 350 },
-    { key: 'comfortable', name: 'Comfortable bedroom', minScore: 40, moodEffect: 18, duration: 400 },
-    { key: 'luxurious', name: 'Luxurious bedroom', minScore: 60, moodEffect: 22, duration: 450 },
-    { key: 'opulent', name: 'Opulent quarters', minScore: 80, moodEffect: 26, duration: 500 },
-];
-
-export const WORKSHOP_QUALITY_TIERS = [
-    { key: 'makeshift', name: 'Makeshift', minScore: 0, speedMult: 1.0, qualityBonus: 0 },
-    { key: 'functional', name: 'Functional', minScore: 25, speedMult: 1.1, qualityBonus: 0 },
-    { key: 'professional', name: 'Professional', minScore: 50, speedMult: 1.15, qualityBonus: 1 },
-    { key: 'master', name: 'Master', minScore: 70, speedMult: 1.2, qualityBonus: 2 },
-    { key: 'legendary', name: 'Legendary', minScore: 90, speedMult: 1.25, qualityBonus: 3 },
-];
-
-export const STATION_GROUPS = {
-    anvil: 'Smithy',
-    cauldron: 'Kitchen',
-    alchemy_table: 'Kitchen',
-    workbench: 'Workshop',
-    enchanting_table: 'Workshop',
-    scriptorium: 'Scriptorium',
-    research_desk: 'Laboratory',
-};
-
-export const FLOOR_QUALITY_VALUES = {
-    wood_floor: 15,
-    stone_floor: 20,
-    brick_floor: 25,
-};
-
-export const SALVAGE_RATE = 0.5;
-
-export const RELATIONSHIP_TIERS = [
-    { key: 'rival',        minOpinion: -100, name: 'Rival',        color: '#ff4444' },
-    { key: 'stranger',     minOpinion: -25,  name: 'Stranger',     color: '#888888' },
-    { key: 'acquaintance', minOpinion: 15,   name: 'Acquaintance', color: '#aaaaaa' },
-    { key: 'friend',       minOpinion: 40,   name: 'Friend',       color: '#44cc44' },
-    { key: 'close_friend', minOpinion: 65,   name: 'Close Friend', color: '#44aaff' },
-    { key: 'lovers',       minOpinion: 85,   name: 'Lovers',       color: '#ff88cc' },
-];
-
-export const SOCIAL_INTERACTIONS = [
-    { key: 'pleasant_chat',   text: '{a} and {b} had a pleasant chat.',       weight: 40, opinionDelta: 5,  thoughtKey: 'good_conversation', type: 'info',    valence: 1 },
-    { key: 'shared_meal',     text: '{a} and {b} shared a meal together.',    weight: 30, opinionDelta: 8,  thoughtKey: 'good_conversation', type: 'info',    valence: 1 },
-    { key: 'helped_work',     text: '{a} helped {b} with their work.',        weight: 25, opinionDelta: 10, thoughtKey: 'good_conversation', type: 'success', valence: 1 },
-    { key: 'funny_story',     text: '{a} told {b} a funny story.',            weight: 25, opinionDelta: 4,  thoughtKey: 'good_conversation', type: 'info',    valence: 1 },
-    { key: 'encouraged',      text: '{a} and {b} encouraged each other.',     weight: 20, opinionDelta: 7,  thoughtKey: 'good_conversation', type: 'success', valence: 1 },
-    { key: 'nodded',          text: '{a} and {b} exchanged a nod.',           weight: 15, opinionDelta: 1,  thoughtKey: null,                type: 'info',    valence: 0 },
-    { key: 'disagreement',    text: '{a} and {b} had a disagreement.',        weight: 10, opinionDelta: -8, thoughtKey: 'had_argument',      type: 'warning', valence: -1 },
-    { key: 'argument',        text: '{a} and {b} argued loudly.',             weight: 6,  opinionDelta: -15,thoughtKey: 'had_argument',      type: 'warning', valence: -1 },
-    { key: 'annoyed',         text: '{a} got on {b}\'s nerves.',              weight: 8,  opinionDelta: -5, thoughtKey: null,                type: 'warning', valence: -1 },
-];
-
-export const SOCIAL_CONFIG = {
-    checkInterval: 15,
-    interactionRange: 6,
-    baseInteractionChance: 0.12,
-    socialiteChanceMult: 1.8,
-    lonerChanceMult: 0.3,
-    interactionCooldown: 200,
-    opinionDecayInterval: 500,
-    opinionDecayAmount: 1,
-};
+// QUALITY_TIERS, ROOM_QUALITY_TIERS, WORKSHOP_QUALITY_TIERS, STATION_GROUPS,
+// FLOOR_QUALITY_VALUES, SALVAGE_RATE moved to ./quality.js.
+// RELATIONSHIP_TIERS, SOCIAL_INTERACTIONS, SOCIAL_CONFIG moved to ./social.js.
+// (All still re-exported via index.js.)
 
 export const TASK_SPEED_STATS = {
     mine: 'miningSpeed',

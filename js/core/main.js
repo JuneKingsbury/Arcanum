@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
 import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
@@ -35,8 +35,10 @@ import { manhattanDist } from '../world/pathfinding.js';
 import { renderGlossaryHTML, initGlossaryInteraction } from '../ui/glossary.js';
 import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from '../ui/changelog.js';
 import { checkComplexStructures } from '../systems/complexBuildings.js';
+import { updateAutoRepair } from '../systems/auto-repair.js';
 import { StorySystem } from '../systems/story.js';
 import { SoundManager } from './sound.js';
+import { TickProfiler } from './perf-probe.js';
 
 class Game {
     constructor() {
@@ -313,7 +315,11 @@ class Game {
             }
         }
 
+        const prof = this._profiler;
+        if (prof) { prof.countFrame(); prof.begin(); }
+
         this.renderer.render(this);
+        if (prof) prof.mark('frame:renderer');
         if (this.settings.showFps) {
             this._fpsFrames++;
             if (timestamp - this._fpsLastTime >= 1000) {
@@ -324,13 +330,37 @@ class Game {
             this.renderer.renderFps(this._fpsDisplay);
         }
         if (this.settings.showMinimap) this.minimap.render();
+        if (prof) prof.mark('frame:minimap');
         this.ui.update();
+        if (prof) prof.mark('frame:ui.update');
         requestAnimationFrame(this.gameLoop);
     }
 
+    // The heartbeat of the simulation, driven by gameLoop at a fixed cadence.
+    // Work is spread across ticks to bound per-tick cost:
+    //
+    //   Every tick:  rebuild hostile + colonist spatial hashes; weather update;
+    //                room/quality recompute WHEN roomsDirty; turrets (if powered);
+    //                per-colonist update; summons; wildlife; combat; waves;
+    //                exploration; events; social; fires; effect/projectile expiry.
+    //   Every 5:     farming, research.
+    //   Every 10:    power, tamed animals, auto-cook, auto-craft, auto-repair,
+    //                pedestal auras (aura fields are cleared then reapplied here).
+    //   Periodic:    music state (%30), snow (%50), food decay (FOOD_DECAY_CONFIG
+    //                .decayInterval).
+    //
+    // Deliberately NOT optimized (see Phase 3 notes): the spatial hashes are
+    // rebuilt from scratch every tick (entities move most ticks; n is small and
+    // an incremental path risks desync); findBestTask stays a linear scan (a task
+    // spatial index is a correctness risk that needs measurement first). Both are
+    // revisited under Phase 6 only if a timing probe shows they matter.
     simulationTick() {
         this.tick++;
         this.timeOfDay = this.tick % CONFIG.TICKS_PER_DAY;
+
+        // Phase 6 profiler hook — zero cost unless startPerfProbe() was called.
+        const prof = this._profiler;
+        if (prof) { prof.countTick(); prof.begin(); }
 
         if (this.tick % 30 === 0 && window.soundManager) {
             window.soundManager.updateMusicState(this);
@@ -342,6 +372,7 @@ class Game {
         if (this.waves) { for (const e of this.waves.enemies) { if (e.hp > 0) hostileEntities.push(e); } }
         this.spatial.hostiles.rebuild(hostileEntities);
         this.spatial.colonists.rebuild(this.colonists);
+        if (prof) prof.mark('spatial.rebuild');
 
         const prevSeason = this.weather.season;
         this.weather.update(this.tick, this.divinationModifiers);
@@ -368,40 +399,49 @@ class Game {
             this.workshopQualities = qualities.workshopQualities;
             this.roomsDirty = false;
         }
+        if (prof) prof.mark('weather+decay+rooms');
 
         if (this.tick % 5 === 0) {
             updateFarming(this);
             updateResearch(this);
         }
+        if (prof) prof.mark('farming+research(%5)');
 
         if (this.tick % 10 === 0) {
             this.power.update(this);
             updateTamedAnimals(this);
             updateAutoCook(this);
             updateAutoCraft(this);
-            updateAutoRepair(this);
+            // Structure positions are stable within a tick; compute once and
+            // share between auto-repair and pedestal scanning.
+            const structurePositions = this.mapIndex.getAllStructurePositions();
+            updateAutoRepair(this, structurePositions);
             for (const c of this.colonists) {
                 c.pedestalWorkBonus = 0;
                 c.pedestalDamageBonus = 1;
                 c.pedestalSkillBonus = 0;
                 c.activeAuras = [];
             }
-            updatePedestals(this);
+            updatePedestals(this, structurePositions);
         }
+        if (prof) prof.mark('power+tamed+auto+pedestals(%10)');
 
         if (this.power.hasPower()) {
             this.power.updateTurrets(this);
         }
 
         this._buildOccupancySet();
+        if (prof) prof.mark('turrets+occupancy');
 
         for (const colonist of this.colonists) {
             if (colonist.hp > 0) {
                 updateColonist(colonist, this);
             }
         }
+        if (prof) prof.mark('colonists');
 
         updateSummons(this);
+        if (prof) prof.mark('summons');
 
         this.combatEffects = this.combatEffects.filter(e => e.ttl-- > 0);
         const now = performance.now();
@@ -419,14 +459,22 @@ class Game {
                 });
             }
         }
+        if (prof) prof.mark('effect-expiry+progressbars');
 
         updateWildlife(this);
+        if (prof) prof.mark('wildlife');
         this.combat.update(this);
+        if (prof) prof.mark('combat');
         this.waves.update(this);
+        if (prof) prof.mark('waves');
         this.exploration.update(this);
+        if (prof) prof.mark('exploration');
         this.events.update(this);
+        if (prof) prof.mark('events');
         this.social.update(this);
+        if (prof) prof.mark('social');
         updateFires(this);
+        if (prof) prof.mark('fires');
 
         this._recipeCacheVersion++;
 
@@ -436,6 +484,8 @@ class Game {
             this.notifications.push({ text: 'All colonists have died. Game Over.', tick: this.tick, type: 'danger' });
             this.eventLog.add(this, 'All colonists have died. Game Over.', 'danger', null);
         }
+
+        if (prof && this.tick % this._profilerReportEvery === 0) prof.report();
     }
 
     _buildOccupancySet() {
@@ -1405,10 +1455,31 @@ class Game {
         this.tick += ticks;
         this.notifications.push({ text: `[DEBUG] Advanced ${ticks} ticks`, tick: this.tick, type: 'success' });
     }
+
+    // Phase 6 perf investigation: attach an opt-in profiler and auto-report every
+    // `reportEvery` ticks. Zero cost until this is called (hot paths guard on
+    // this._profiler). See js/core/perf-probe.js for the console usage.
+    startPerfProbe(reportEvery = 200) {
+        this._profiler = new TickProfiler();
+        this._profilerReportEvery = Math.max(1, reportEvery | 0);
+        this.notifications.push({ text: `[PERF] Probe started (report every ${this._profilerReportEvery} ticks)`, tick: this.tick, type: 'info' });
+        return this._profiler;
+    }
+
+    stopPerfProbe() {
+        if (!this._profiler) return null;
+        const snap = this._profiler.report();
+        this._profiler = null;
+        this.notifications.push({ text: '[PERF] Probe stopped', tick: this.tick, type: 'info' });
+        return snap;
+    }
 }
 
 function applyAuraToColonists(game, pedestal, radius, centerX, centerY, auraLabel) {
-    for (const c of game.colonists) {
+    // Query the colonist spatial hash (rebuilt every tick) for a cell-granular
+    // superset, then keep the exact manhattan-radius filter. The 'global' radius
+    // case is handled by the caller with a full colonist loop.
+    for (const c of game.spatial.colonists.query(centerX, centerY, radius)) {
         if (c.hp <= 0) continue;
         if (manhattanDist(c.x, c.y, centerX, centerY) > radius) continue;
         if (pedestal.workSpeedBonus) c.pedestalWorkBonus += pedestal.workSpeedBonus;
@@ -1432,8 +1503,8 @@ function applyBlightImmunity(game, radius, centerX, centerY) {
     }
 }
 
-function updatePedestals(game) {
-    const pedestals = game.mapIndex.getAllStructurePositions().filter(({ x, y }) => {
+function updatePedestals(game, structurePositions = game.mapIndex.getAllStructurePositions()) {
+    const pedestals = structurePositions.filter(({ x, y }) => {
         const tile = game.map[y][x];
         return tile.structure === 'artifact_pedestal' && tile.pedestalArtifact;
     });
@@ -1468,42 +1539,6 @@ function updatePedestals(game) {
         const auraLabel = { name: art.name, key: art.key, sourceType: 'colonist', colonistId: carrier.id };
         applyAuraToColonists(game, art.pedestal, radius, carrier.x, carrier.y, auraLabel);
         if (art.pedestal.blightImmunity) applyBlightImmunity(game, radius, carrier.x, carrier.y);
-    }
-}
-
-function updateAutoRepair(game) {
-    const allStructures = game.mapIndex.getAllStructurePositions();
-    for (const { x, y } of allStructures) {
-        const tile = game.map[y][x];
-        if (tile.structureHp === undefined) continue;
-        const maxHp = BUILDINGS[tile.structure]?.hp;
-        if (!maxHp || tile.structureHp >= maxHp) continue;
-        const existing = game.taskQueue.getByPosition(x, y);
-        if (existing) continue;
-        game.taskQueue.add({
-            type: 'repair',
-            skillRequired: 'building',
-            x, y,
-            workAmount: 15,
-        });
-    }
-    const anvils = allStructures.filter(s => s.type === 'anvil');
-    if (anvils.length === 0) return;
-    for (const c of game.colonists) {
-        if (c.hp <= 0 || !c.artifactBroken || !c.artifact) continue;
-        if (c._repairQueued) continue;
-        const anvil = anvils[0];
-        const existing = game.taskQueue.getAll().find(t => t.type === 'repair_artifact' && t.colonistId === c.id);
-        if (existing) continue;
-        game.taskQueue.add({
-            type: 'repair_artifact',
-            skillRequired: 'crafting',
-            x: anvil.x, y: anvil.y,
-            workAmount: 40,
-            colonistId: c.id,
-            artifactKey: c.artifact,
-        });
-        c._repairQueued = true;
     }
 }
 
