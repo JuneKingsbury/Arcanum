@@ -566,7 +566,8 @@ const arcaneMethods = {
                 if (p.golem && p.golemType) {
                     sprite = skinMgr.getSprite('entities', p.golemType);
                 } else {
-                    sprite = skinMgr.getColonistSprite(p.id, false, p.gender);
+                    const variant = skinMgr.resolveColonistVariant(p.id, p.skinSeed, p.skinVariants);
+                    sprite = skinMgr.getColonistSprite(p.id, false, p.gender, variant);
                 }
                 if (sprite) {
                     ctx.drawImage(sprite, px - 7, py - 7, 14, 14);

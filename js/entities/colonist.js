@@ -84,7 +84,16 @@ export function createColonist(x, y, skillBias, existingNames = []) {
 
     return {
         id, name, gender, x, y, skills, skillXp: {}, magicSkills, magicBias, traits,
-        nameColor: COLONIST_CONFIG.nameColors[(id - 1) % COLONIST_CONFIG.nameColors.length],
+        // Visual identity, decoupled from entity-spawn order (see skin-manager):
+        //  - nameColor: the ASCII '@' colour, a random palette pick (editable in-game).
+        //  - skinSeed: a stable random int; sprite packs with no explicit choice map
+        //    this into their variant range, so the "random" look doesn't depend on how
+        //    many wild animals happened to spawn before this colonist.
+        //  - skinVariants: { [skinPackName]: variantIndex } — an explicit per-pack choice
+        //    (set in the Custom Colonist menu) that overrides the seed for that pack only.
+        nameColor: COLONIST_CONFIG.nameColors[Math.floor(Math.random() * COLONIST_CONFIG.nameColors.length)],
+        skinSeed: Math.floor(Math.random() * 1000000),
+        skinVariants: {},
         priorities: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 3])),
         needs: { hunger: COLONIST_CONFIG.initialHunger[0] + Math.random() * (COLONIST_CONFIG.initialHunger[1] - COLONIST_CONFIG.initialHunger[0]), rest: COLONIST_CONFIG.initialRest[0] + Math.random() * (COLONIST_CONFIG.initialRest[1] - COLONIST_CONFIG.initialRest[0]) },
         mood: COLONIST_CONFIG.initialMood,

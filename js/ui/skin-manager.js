@@ -102,7 +102,27 @@ export class SkinManager {
         return url;
     }
 
-    getColonistSprite(colonistId, drafted, gender) {
+    // Resolve which sprite variant a colonist uses for the CURRENTLY active pack.
+    // Precedence (all pack-count-agnostic so swapping packs never corrupts a choice):
+    //   1. an explicit per-pack choice from the Custom Colonist menu (skinVariants),
+    //   2. else the colonist's stable random seed mapped into the pack's range,
+    //   3. else the legacy id-ordering (old saves predate skinSeed).
+    // Returns a 1-based variant index, or 0 when the pack has no variants.
+    resolveColonistVariant(colonistId, skinSeed, skinVariants) {
+        const count = this._colonistVariantCount;
+        if (count <= 0) return 0;
+        const explicit = skinVariants && this._activeSkin ? skinVariants[this._activeSkin] : undefined;
+        if (explicit != null) {
+            // Clamp: the chosen index may exceed a pack that now has fewer variants.
+            return (((explicit - 1) % count) + count) % count + 1;
+        }
+        if (skinSeed != null) return (skinSeed % count) + 1;
+        return ((colonistId - 1) % count) + 1;
+    }
+
+    // `variant`, when provided, is a resolved 1-based index (see resolveColonistVariant);
+    // otherwise the legacy id-ordering is used so old call sites keep working.
+    getColonistSprite(colonistId, drafted, gender, variant) {
         if (drafted) {
             if (gender) {
                 const s = this._sprites.get('entities:colonist_' + gender + '_drafted');
@@ -112,12 +132,12 @@ export class SkinManager {
             if (s) return s;
         }
         if (this._colonistVariantCount > 0) {
-            const variant = ((colonistId - 1) % this._colonistVariantCount) + 1;
+            const variantIdx = variant != null ? variant : ((colonistId - 1) % this._colonistVariantCount) + 1;
             if (gender) {
-                const s = this._sprites.get('entities:colonist_' + gender + '_' + variant);
+                const s = this._sprites.get('entities:colonist_' + gender + '_' + variantIdx);
                 if (s) return s;
             }
-            const s = this._sprites.get('entities:colonist_' + variant);
+            const s = this._sprites.get('entities:colonist_' + variantIdx);
             if (s) return s;
         }
         if (gender) {
@@ -131,13 +151,16 @@ export class SkinManager {
         return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
-    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender, weaponKey, toolKey) {
-        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, gender);
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender, weaponKey, toolKey, variant) {
+        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, gender, variant);
 
-        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}:${weaponKey || ''}:${toolKey || ''}`;
+        // The variant is part of the base sprite, so it must key the composite cache
+        // too — otherwise two colonists with the same gear but different variants
+        // would collide on one cached image.
+        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}:${weaponKey || ''}:${toolKey || ''}:${variant != null ? variant : ''}`;
         if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
 
-        const base = this.getColonistSprite(colonistId, drafted, gender);
+        const base = this.getColonistSprite(colonistId, drafted, gender, variant);
         if (!base) return null;
 
         const armorSprite = armorKey ? this._sprites.get('equipment_worn:' + armorKey) : null;
