@@ -1867,6 +1867,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const opening = settingsPanel.style.display === 'none';
         closeModals();
         if (opening) {
+            loadStartSettings();
             settingsPanel.style.display = 'block';
             modalBackdrop.style.display = 'block';
         }
@@ -2382,6 +2383,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalBackdrop.addEventListener('click', closeModals);
 
+    function saveStartSettings() {
+        try {
+            const s = JSON.parse(localStorage.getItem('colony_settings') || '{}');
+            s.autoPauseHostile = document.getElementById('start-autopause-hostile').checked;
+            s.autoPauseEvent = document.getElementById('start-autopause-event').checked;
+            s.pauseOnDeath = document.getElementById('start-pause-death').checked;
+            s.pauseOnResearch = document.getElementById('start-pause-research').checked;
+            s.demoMode = document.getElementById('start-demo-mode').checked;
+            s.autoCookTarget = parseInt(document.getElementById('start-autocook').value) || 0;
+            s.autoSaveInterval = parseInt(document.getElementById('start-autosave').value) || 0;
+            s.showOverlays = document.getElementById('start-overlays').checked;
+            s.showDamageFlash = document.getElementById('start-damage-flash').checked;
+            s.enableScreenShake = document.getElementById('start-screen-shake').checked;
+            s.showCombatParticles = document.getElementById('start-combat-particles').checked;
+            s.showProjectiles = document.getElementById('start-projectiles').checked;
+            s.showEquipmentOverlays = document.getElementById('start-equip-overlays').checked;
+            s.showProgressBars = document.getElementById('start-progress-bars').checked;
+            s.showPortalPath = document.getElementById('start-portal-path').checked;
+            s.showNightLighting = document.getElementById('start-night').checked;
+            s.showWeatherParticles = document.getElementById('start-weather').checked;
+            s.showMinimap = document.getElementById('start-minimap').checked;
+            s.showFps = document.getElementById('start-fps').checked;
+            s.ditherDistance = document.getElementById('start-dither-dist').value;
+            s.ditherQuality = document.getElementById('start-dither-qual').value;
+            s.darkenOnPause = document.getElementById('start-darken-pause').checked;
+            s.toolbarMode = document.getElementById('start-toolbar-mode').value;
+            s.largeClickTargets = document.getElementById('start-large-clicks').checked;
+            s.pauseOnFocusLoss = document.getElementById('start-pause-focus').checked;
+            s.colorblindMode = document.getElementById('start-colorblind').value;
+            s.notificationDuration = parseInt(document.getElementById('start-notif-dur').value) || 100;
+            s.layoutMode = document.getElementById('start-layout-mode').value;
+            s.temperatureUnit = document.getElementById('start-temp-unit').value;
+            s.musicVolume = parseInt(document.getElementById('start-music-vol').value) || 70;
+            s.sfxVolume = parseInt(document.getElementById('start-sfx-vol').value) || 80;
+            s.showColonistNames = document.getElementById('start-names').value;
+            s.uiFontSize = parseInt(document.getElementById('start-ui-font-size').value) || 12;
+            localStorage.setItem('colony_settings', JSON.stringify(s));
+        } catch (e) {}
+    }
+
+    function loadStartSettings() {
+        try {
+            const s = JSON.parse(localStorage.getItem('colony_settings'));
+            if (!s) return;
+            if (s.autoPauseHostile != null) document.getElementById('start-autopause-hostile').checked = s.autoPauseHostile;
+            if (s.autoPauseEvent != null) document.getElementById('start-autopause-event').checked = s.autoPauseEvent;
+            if (s.pauseOnDeath != null) document.getElementById('start-pause-death').checked = s.pauseOnDeath;
+            if (s.pauseOnResearch != null) document.getElementById('start-pause-research').checked = s.pauseOnResearch;
+            if (s.demoMode != null) document.getElementById('start-demo-mode').checked = s.demoMode;
+            if (s.autoCookTarget != null) document.getElementById('start-autocook').value = s.autoCookTarget;
+            if (s.autoSaveInterval != null) document.getElementById('start-autosave').value = s.autoSaveInterval;
+            if (s.showOverlays != null) document.getElementById('start-overlays').checked = s.showOverlays;
+            if (s.showDamageFlash != null) document.getElementById('start-damage-flash').checked = s.showDamageFlash;
+            if (s.enableScreenShake != null) document.getElementById('start-screen-shake').checked = s.enableScreenShake;
+            if (s.showCombatParticles != null) document.getElementById('start-combat-particles').checked = s.showCombatParticles;
+            if (s.showProjectiles != null) document.getElementById('start-projectiles').checked = s.showProjectiles;
+            if (s.showEquipmentOverlays != null) document.getElementById('start-equip-overlays').checked = s.showEquipmentOverlays;
+            if (s.showProgressBars != null) document.getElementById('start-progress-bars').checked = s.showProgressBars;
+            if (s.showPortalPath != null) document.getElementById('start-portal-path').checked = s.showPortalPath;
+            if (s.showNightLighting != null) document.getElementById('start-night').checked = s.showNightLighting;
+            if (s.showWeatherParticles != null) document.getElementById('start-weather').checked = s.showWeatherParticles;
+            if (s.showMinimap != null) document.getElementById('start-minimap').checked = s.showMinimap;
+            if (s.showFps != null) document.getElementById('start-fps').checked = s.showFps;
+            if (s.ditherDistance) document.getElementById('start-dither-dist').value = s.ditherDistance;
+            if (s.ditherQuality) document.getElementById('start-dither-qual').value = s.ditherQuality;
+            if (s.darkenOnPause != null) document.getElementById('start-darken-pause').checked = s.darkenOnPause;
+            if (s.toolbarMode) document.getElementById('start-toolbar-mode').value = s.toolbarMode;
+            if (s.largeClickTargets != null) document.getElementById('start-large-clicks').checked = s.largeClickTargets;
+            if (s.pauseOnFocusLoss != null) document.getElementById('start-pause-focus').checked = s.pauseOnFocusLoss;
+            if (s.colorblindMode) document.getElementById('start-colorblind').value = s.colorblindMode;
+            if (s.notificationDuration != null) document.getElementById('start-notif-dur').value = s.notificationDuration;
+            if (s.layoutMode) document.getElementById('start-layout-mode').value = s.layoutMode;
+            if (s.temperatureUnit) document.getElementById('start-temp-unit').value = s.temperatureUnit;
+            if (s.musicVolume != null) { document.getElementById('start-music-vol').value = s.musicVolume; document.getElementById('start-music-vol-val').textContent = s.musicVolume; }
+            if (s.sfxVolume != null) { document.getElementById('start-sfx-vol').value = s.sfxVolume; document.getElementById('start-sfx-vol-val').textContent = s.sfxVolume; }
+            if (s.showColonistNames) document.getElementById('start-names').value = s.showColonistNames;
+            if (s.uiFontSize) { document.getElementById('start-ui-font-size').value = s.uiFontSize; document.getElementById('start-ui-font-val').textContent = s.uiFontSize + 'px'; }
+        } catch (e) {}
+    }
+
+    document.getElementById('start-settings-panel').addEventListener('change', saveStartSettings);
+    document.getElementById('start-settings-panel').addEventListener('input', saveStartSettings);
+
     document.getElementById('start-reset-defaults').addEventListener('click', () => {
         document.getElementById('start-skin').value = 'ascii';
         document.getElementById('start-names').value = 'selected';
@@ -2390,6 +2474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-autopause-hostile').checked = true;
         document.getElementById('start-autopause-event').checked = true;
         document.getElementById('start-pause-death').checked = false;
+        document.getElementById('start-pause-research').checked = true;
         document.getElementById('start-peaceful-check').checked = false;
         document.getElementById('start-demo-mode').checked = false;
         document.getElementById('start-autocook').value = '0';
@@ -2404,8 +2489,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-night').checked = true;
         document.getElementById('start-weather').checked = true;
         document.getElementById('start-minimap').checked = true;
+        document.getElementById('start-equip-overlays').checked = true;
         document.getElementById('start-fps').checked = false;
-        document.getElementById('start-dither').checked = true;
+        document.getElementById('start-dither-dist').value = 'light';
+        document.getElementById('start-dither-qual').value = 'medium';
         document.getElementById('start-darken-pause').checked = true;
         document.getElementById('start-toolbar-mode').value = 'auto';
         document.getElementById('start-large-clicks').checked = false;
@@ -2418,6 +2505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-music-vol-val').textContent = '70';
         document.getElementById('start-sfx-vol').value = 80;
         document.getElementById('start-sfx-vol-val').textContent = '80';
+        saveStartSettings();
     });
 
     // Shared transition from start screen into active game
@@ -2458,6 +2546,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoPauseHostile: document.getElementById('start-autopause-hostile').checked,
             autoPauseEvent: document.getElementById('start-autopause-event').checked,
             pauseOnDeath: document.getElementById('start-pause-death').checked,
+            pauseOnResearch: document.getElementById('start-pause-research').checked,
             autoCookTarget: parseInt(document.getElementById('start-autocook').value) || 0,
             autoSaveInterval: parseInt(document.getElementById('start-autosave').value) || 0,
             showOverlays: document.getElementById('start-overlays').checked,
@@ -2465,12 +2554,15 @@ document.addEventListener('DOMContentLoaded', () => {
             enableScreenShake: document.getElementById('start-screen-shake').checked,
             showCombatParticles: document.getElementById('start-combat-particles').checked,
             showProjectiles: document.getElementById('start-projectiles').checked,
+            showEquipmentOverlays: document.getElementById('start-equip-overlays').checked,
             showProgressBars: document.getElementById('start-progress-bars').checked,
             showPortalPath: document.getElementById('start-portal-path').checked,
             showNightLighting: document.getElementById('start-night').checked,
             showWeatherParticles: document.getElementById('start-weather').checked,
             showMinimap: document.getElementById('start-minimap').checked,
             showFps: document.getElementById('start-fps').checked,
+            ditherDistance: document.getElementById('start-dither-dist').value,
+            ditherQuality: document.getElementById('start-dither-qual').value,
             showColonistNames: document.getElementById('start-names').value,
             uiFontSize: parseInt(document.getElementById('start-ui-font-size').value) || 12,
             activeSkin: document.getElementById('start-skin').value || '16x16_tiny_world',
@@ -2488,7 +2580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setUIFontSize(startSettings.uiFontSize);
         localStorage.setItem('convocation_skin', startSettings.activeSkin);
-        RENDER_CONFIG.terrainDithering = document.getElementById('start-dither').checked;
+        RENDER_CONFIG.terrainDithering = document.getElementById('start-dither-dist').value !== 'none';
         const customDefs = readCustomColonistDefs();
         launchGame(game => {
             Object.assign(game.settings, startSettings);
