@@ -37,6 +37,7 @@ import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from
 import { checkComplexStructures } from '../systems/complexBuildings.js';
 import { StorySystem } from '../systems/story.js';
 import { SoundManager } from './sound.js';
+import { TickProfiler } from './perf-probe.js';
 
 class Game {
     constructor() {
@@ -313,7 +314,11 @@ class Game {
             }
         }
 
+        const prof = this._profiler;
+        if (prof) { prof.countFrame(); prof.begin(); }
+
         this.renderer.render(this);
+        if (prof) prof.mark('frame:renderer');
         if (this.settings.showFps) {
             this._fpsFrames++;
             if (timestamp - this._fpsLastTime >= 1000) {
@@ -324,7 +329,9 @@ class Game {
             this.renderer.renderFps(this._fpsDisplay);
         }
         if (this.settings.showMinimap) this.minimap.render();
+        if (prof) prof.mark('frame:minimap');
         this.ui.update();
+        if (prof) prof.mark('frame:ui.update');
         requestAnimationFrame(this.gameLoop);
     }
 
@@ -350,6 +357,10 @@ class Game {
         this.tick++;
         this.timeOfDay = this.tick % CONFIG.TICKS_PER_DAY;
 
+        // Phase 6 profiler hook — zero cost unless startPerfProbe() was called.
+        const prof = this._profiler;
+        if (prof) { prof.countTick(); prof.begin(); }
+
         if (this.tick % 30 === 0 && window.soundManager) {
             window.soundManager.updateMusicState(this);
         }
@@ -360,6 +371,7 @@ class Game {
         if (this.waves) { for (const e of this.waves.enemies) { if (e.hp > 0) hostileEntities.push(e); } }
         this.spatial.hostiles.rebuild(hostileEntities);
         this.spatial.colonists.rebuild(this.colonists);
+        if (prof) prof.mark('spatial.rebuild');
 
         const prevSeason = this.weather.season;
         this.weather.update(this.tick, this.divinationModifiers);
@@ -386,11 +398,13 @@ class Game {
             this.workshopQualities = qualities.workshopQualities;
             this.roomsDirty = false;
         }
+        if (prof) prof.mark('weather+decay+rooms');
 
         if (this.tick % 5 === 0) {
             updateFarming(this);
             updateResearch(this);
         }
+        if (prof) prof.mark('farming+research(%5)');
 
         if (this.tick % 10 === 0) {
             this.power.update(this);
@@ -409,20 +423,24 @@ class Game {
             }
             updatePedestals(this, structurePositions);
         }
+        if (prof) prof.mark('power+tamed+auto+pedestals(%10)');
 
         if (this.power.hasPower()) {
             this.power.updateTurrets(this);
         }
 
         this._buildOccupancySet();
+        if (prof) prof.mark('turrets+occupancy');
 
         for (const colonist of this.colonists) {
             if (colonist.hp > 0) {
                 updateColonist(colonist, this);
             }
         }
+        if (prof) prof.mark('colonists');
 
         updateSummons(this);
+        if (prof) prof.mark('summons');
 
         this.combatEffects = this.combatEffects.filter(e => e.ttl-- > 0);
         const now = performance.now();
@@ -440,14 +458,22 @@ class Game {
                 });
             }
         }
+        if (prof) prof.mark('effect-expiry+progressbars');
 
         updateWildlife(this);
+        if (prof) prof.mark('wildlife');
         this.combat.update(this);
+        if (prof) prof.mark('combat');
         this.waves.update(this);
+        if (prof) prof.mark('waves');
         this.exploration.update(this);
+        if (prof) prof.mark('exploration');
         this.events.update(this);
+        if (prof) prof.mark('events');
         this.social.update(this);
+        if (prof) prof.mark('social');
         updateFires(this);
+        if (prof) prof.mark('fires');
 
         this._recipeCacheVersion++;
 
@@ -457,6 +483,8 @@ class Game {
             this.notifications.push({ text: 'All colonists have died. Game Over.', tick: this.tick, type: 'danger' });
             this.eventLog.add(this, 'All colonists have died. Game Over.', 'danger', null);
         }
+
+        if (prof && this.tick % this._profilerReportEvery === 0) prof.report();
     }
 
     _buildOccupancySet() {
@@ -1425,6 +1453,24 @@ class Game {
     cheatAdvanceTime(ticks) {
         this.tick += ticks;
         this.notifications.push({ text: `[DEBUG] Advanced ${ticks} ticks`, tick: this.tick, type: 'success' });
+    }
+
+    // Phase 6 perf investigation: attach an opt-in profiler and auto-report every
+    // `reportEvery` ticks. Zero cost until this is called (hot paths guard on
+    // this._profiler). See js/core/perf-probe.js for the console usage.
+    startPerfProbe(reportEvery = 200) {
+        this._profiler = new TickProfiler();
+        this._profilerReportEvery = Math.max(1, reportEvery | 0);
+        this.notifications.push({ text: `[PERF] Probe started (report every ${this._profilerReportEvery} ticks)`, tick: this.tick, type: 'info' });
+        return this._profiler;
+    }
+
+    stopPerfProbe() {
+        if (!this._profiler) return null;
+        const snap = this._profiler.report();
+        this._profiler = null;
+        this.notifications.push({ text: '[PERF] Probe stopped', tick: this.tick, type: 'info' });
+        return snap;
     }
 }
 
