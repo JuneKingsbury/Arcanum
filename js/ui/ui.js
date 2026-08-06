@@ -14,6 +14,25 @@ import { installResearchPanel } from './ui-research.js';
 
 const WEATHER_ICONS = { clear: '☀', rain: '☔', thunderstorm: '⛈', snow: '❄', blizzard: '❅', heatwave: '♨' };
 
+// Skill/magic XP tooltip text, shared by the colonist tooltip refresh and the
+// colonist info panel so both show identical "— XP: x/y (z%)" (or "(MAX)") text.
+function skillXpTip(def, level, xp) {
+    const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
+    const pct = Math.floor((xp / maxXp) * 100);
+    return level >= COLONIST_CONFIG.skillMaxLevel
+        ? `${def.description} (MAX)`
+        : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+}
+
+// Magic XP is stored as an accumulator scaled to /100 (max level hardcoded at 10).
+function magicXpTip(def, level, acc) {
+    const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
+    const pct = Math.floor((acc / maxXp) * 100);
+    return level >= 10
+        ? `${def.description} (MAX)`
+        : `${def.description} — XP: ${pct}/100 (${pct}%)`;
+}
+
 export class UI {
     constructor(game) {
         this.game = game;
@@ -690,25 +709,13 @@ export class UI {
             const skillEntry = Object.entries(SKILLS).find(([, def]) => def.name === name);
             if (skillEntry) {
                 const [k, def] = skillEntry;
-                const level = colonist.skills[k] || 1;
-                const xp = colonist.skillXp?.[k] || 0;
-                const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
-                const pct = Math.floor((xp / maxXp) * 100);
-                tip.dataset.tip = level >= COLONIST_CONFIG.skillMaxLevel
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+                tip.dataset.tip = skillXpTip(def, colonist.skills[k] || 1, colonist.skillXp?.[k] || 0);
                 continue;
             }
             const magicEntry = Object.entries(MAGIC_SKILLS).find(([, def]) => def.name === name);
             if (magicEntry) {
                 const [k, def] = magicEntry;
-                const level = colonist.magicSkills[k];
-                const acc = colonist._magicXpAccumulator?.[k] || 0;
-                const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
-                const currentScaled = Math.floor((acc / maxXp) * 100);
-                tip.dataset.tip = level >= 10
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${currentScaled}/100 (${currentScaled}%)`;
+                tip.dataset.tip = magicXpTip(def, colonist.magicSkills[k], colonist._magicXpAccumulator?.[k] || 0);
             }
         }
     }
@@ -994,12 +1001,7 @@ export class UI {
         html += `<div style="${sectionHdr}">Skills</div>`;
         html += `<div class="info-row">${Object.entries(SKILLS).map(([k, def]) => {
             const level = colonist.skills[k] || 1;
-            const xp = colonist.skillXp?.[k] || 0;
-            const maxXp = COLONIST_CONFIG.skillXpToLevel + level * COLONIST_CONFIG.skillXpScalePerLevel;
-            const pct = Math.floor((xp / maxXp) * 100);
-            const xpTip = level >= COLONIST_CONFIG.skillMaxLevel
-                ? `${def.description} (MAX)`
-                : `${def.description} — XP: ${xp}/${maxXp} (${pct}%)`;
+            const xpTip = skillXpTip(def, level, colonist.skillXp?.[k] || 0);
             return `<span class="skill-tip" data-tip="${xpTip}">${def.name}:${level}</span>`;
         }).join(' ')}</div>`;
         const hasMagic = colonist.magicSkills && Object.values(colonist.magicSkills).some(v => v > 0);
@@ -1007,12 +1009,7 @@ export class UI {
             html += `<div class="info-row"><span style="color:#aa88ff">Mana: ${bar(colonist.mana / colonist.maxMana * 100)} ${Math.floor(colonist.mana)}/${colonist.maxMana}</span></div>`;
             html += `<div class="info-row">Magic: ${Object.entries(MAGIC_SKILLS).filter(([k]) => colonist.magicSkills[k] > 0).map(([k, def]) => {
                 const level = colonist.magicSkills[k];
-                const acc = colonist._magicXpAccumulator?.[k] || 0;
-                const maxXp = MAGIC_STUDY_CONFIG.magicXpToLevel + level * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
-                const currentScaled = Math.floor((acc / maxXp) * 100);
-                const tip = level >= 10
-                    ? `${def.description} (MAX)`
-                    : `${def.description} — XP: ${currentScaled}/100 (${currentScaled}%)`;
+                const tip = magicXpTip(def, level, colonist._magicXpAccumulator?.[k] || 0);
                 return `<span class="skill-tip" data-tip="${tip}" style="color:#bb88ff">${def.name}:${level}</span>`;
             }).join(' ')}</div>`;
         }
