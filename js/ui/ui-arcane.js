@@ -1,5 +1,6 @@
 import { BUILDINGS, REALMS, ANIMALS, TAMED_ANIMALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, EXPEDITION_DIFFICULTY, ALL_ITEMS } from '../core/config.js';
 import { estimatePartyStrength } from '../systems/exploration.js';
+import { getTargetPriority, getThreatDisplayHtml } from './ui-utils.js';
 
 export function installArcanePanel(UI) {
     Object.assign(UI.prototype, arcaneMethods);
@@ -150,8 +151,7 @@ const arcaneMethods = {
                         const color = p.hp <= 0 ? '#664444' : hpPct < 30 ? '#ff4444' : hpPct < 60 ? '#ffaa44' : '#88cc88';
                         const status = p.hp <= 0 ? ' [DOWN]' : '';
                         const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
-                        const priority = p.artifact?.expedition?.targetPriority || 0;
-                        const threatStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'};font-size:0.85em;">[${priority > 0 ? '▲' : '▼'}Threat]</span>` : '';
+                        const threatStr = getThreatDisplayHtml(getTargetPriority(p));
                         html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${status}${threatStr}</div>`;
                     }
 
@@ -228,7 +228,7 @@ const arcaneMethods = {
         for (const c of available) {
             const dmg = c.weapon ? c.weapon.damage : 5;
             const def = c.armor ? Math.round(c.armor.damageReduction * 100) : 0;
-            const priority = c.artifact?.expedition?.targetPriority || c.artifact?.combat?.targetPriority || 0;
+            const priority = getTargetPriority(c);
             const priorityStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'}">${priority > 0 ? '▲' : '▼'}Thr</span>` : '';
             const defStr = def > 0 ? ` Def:${def}%` : '';
             html += `<div class="info-row"><label><input type="checkbox" class="exp-check" value="${c.id}" data-max="5"> ${c.name} <span style="color:#888;font-size:0.85em;">Dmg:${dmg}${defStr}${priorityStr}</span></label></div>`;

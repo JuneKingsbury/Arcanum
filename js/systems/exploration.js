@@ -1,6 +1,7 @@
 import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, ALL_ITEMS, COLONIST_CONFIG } from '../core/config.js';
 import { getEquipmentStat } from '../entities/colonist.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
+import { getTargetPriority } from '../ui/ui-utils.js';
 
 let nextExpeditionId = 1;
 
@@ -490,7 +491,7 @@ export class ExplorationSystem {
                 let bestScore = Infinity;
                 for (const p of alive) {
                     if (p.hp <= 0) continue;
-                    const priority = p.artifact?.expedition?.targetPriority || 0;
+                    const priority = getTargetPriority(p);
                     const score = -priority;
                     if (score < bestScore) { bestScore = score; target = p; }
                 }

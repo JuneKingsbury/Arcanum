@@ -5,6 +5,7 @@ import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
 import { getMaxCountBonus } from '../systems/building.js';
+import { getTargetPriority, getThreatDisplayHtml } from './ui-utils.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
@@ -766,8 +767,7 @@ export class UI {
                         const status = p.hp <= 0 ? ' [DOWN]' : '';
                         const manaStr = p.maxMana > 0 ? ` | ${Math.round(p.mana)}/${p.maxMana} MP` : '';
                         const shieldStr = p.shieldActive ? ' 🛡' : '';
-                        const priority = p.artifact?.expedition?.targetPriority || 0;
-                        const threatStr = priority !== 0 ? ` <span style="color:${priority > 0 ? '#ff6644' : '#66aaff'};font-size:0.85em;">[${priority > 0 ? '▲' : '▼'}Threat]</span>` : '';
+                        const threatStr = getThreatDisplayHtml(getTargetPriority(p));
                         html += `<div class="info-row" style="color:${color}; padding-left:8px;">${p.name} — ${Math.max(0, Math.round(p.hp))}/${p.maxHp} HP${manaStr}${shieldStr}${status}${threatStr}</div>`;
                     }
 
