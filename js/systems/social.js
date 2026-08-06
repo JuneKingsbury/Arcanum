@@ -1,3 +1,10 @@
+/**
+ * Colonist relationships: nearby colonists periodically interact, shifting
+ * pairwise opinions that roll up into named relationship tiers and mood thoughts
+ * (see THOUGHTS / SOCIAL_CONFIG). SocialSystem.update is called every simulation
+ * tick but self-throttles: opinion decay and the interaction scan are gated on
+ * SOCIAL_CONFIG intervals, and each colonist pair has an interaction cooldown.
+ */
 import { SOCIAL_INTERACTIONS, SOCIAL_CONFIG, THOUGHTS } from '../core/config.js';
 import { getRelationshipTier } from './social-utils.js';
 import { addThought } from '../entities/colonist.js';

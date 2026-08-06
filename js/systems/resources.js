@@ -1,3 +1,10 @@
+/**
+ * The colony's central store: the resource stockpile plus item inventories
+ * (weapons, armor, tomes, artifacts, consumables). Owns add/deduct/has resource
+ * math and food spoilage. decayFood is called from simulationTick on the
+ * FOOD_DECAY_CONFIG.decayInterval cadence; the rest is invoked on demand by
+ * building, crafting, trading, and equipment code.
+ */
 import { CONFIG, FOODSTUFFS, FOOD_DECAY_CONFIG, WORK_CONFIG, ALL_ITEMS } from '../core/config.js';
 
 export { FOODSTUFFS };
@@ -191,6 +198,11 @@ export class ResourceManager {
         return wealth;
     }
 
+    // Spoil stored food. Rate scales with season and per-item multipliers, and
+    // is reduced by food chests (always) and ice boxes (only when powered), each
+    // capped independently and then jointly. Fractional decay is carried in
+    // _decayAccumulators so slow-spoiling items still lose whole units over time
+    // rather than rounding to zero every call. Returns units lost this call.
     decayFood(game) {
         const season = game.weather.season;
         const seasonMult = FOOD_DECAY_CONFIG.seasonDecayMult[season] || 1.0;

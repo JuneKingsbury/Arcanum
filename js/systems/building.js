@@ -1,3 +1,9 @@
+/**
+ * Placement and gathering designations: validates where a structure/floor can
+ * be built (terrain, collision, research, per-type maxCount, resource cost) and
+ * queues the resulting build/gather tasks. Driven by player input, not the tick
+ * loop — colonists later execute the queued tasks.
+ */
 import { BUILDINGS, RESOURCES, WORK_CONFIG } from '../core/config.js';
 
 // Extra maxCount slots a building gets beyond its base def.maxCount: a

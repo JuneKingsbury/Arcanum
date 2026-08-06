@@ -1,3 +1,8 @@
+/**
+ * Crop farming: designating farm zones (research-gated per crop) and advancing
+ * crop growth/blight. updateFarming is called from simulationTick every 5th
+ * tick; ready crops become harvest tasks for colonists.
+ */
 import { CROPS, TERRAIN, WORK_CONFIG } from '../core/config.js';
 
 // Derived from the 'research' field on each crop entry

@@ -328,6 +328,24 @@ class Game {
         requestAnimationFrame(this.gameLoop);
     }
 
+    // The heartbeat of the simulation, driven by gameLoop at a fixed cadence.
+    // Work is spread across ticks to bound per-tick cost:
+    //
+    //   Every tick:  rebuild hostile + colonist spatial hashes; weather update;
+    //                room/quality recompute WHEN roomsDirty; turrets (if powered);
+    //                per-colonist update; summons; wildlife; combat; waves;
+    //                exploration; events; social; fires; effect/projectile expiry.
+    //   Every 5:     farming, research.
+    //   Every 10:    power, tamed animals, auto-cook, auto-craft, auto-repair,
+    //                pedestal auras (aura fields are cleared then reapplied here).
+    //   Periodic:    music state (%30), snow (%50), food decay (FOOD_DECAY_CONFIG
+    //                .decayInterval).
+    //
+    // Deliberately NOT optimized (see Phase 3 notes): the spatial hashes are
+    // rebuilt from scratch every tick (entities move most ticks; n is small and
+    // an incremental path risks desync); findBestTask stays a linear scan (a task
+    // spatial index is a correctness risk that needs measurement first). Both are
+    // revisited under Phase 6 only if a timing probe shows they matter.
     simulationTick() {
         this.tick++;
         this.timeOfDay = this.tick % CONFIG.TICKS_PER_DAY;

@@ -1,3 +1,9 @@
+/**
+ * Mana "power" grid: tallies generation vs consumption from placed buildings
+ * and gates powered devices (heaters, lamps, turrets) on a net-positive supply.
+ * PowerSystem.update runs every 10th simulation tick; updateTurrets runs every
+ * tick while powered so defenses react quickly.
+ */
 import { BUILDINGS, COMBAT_VISUALS, ARTIFACTS } from '../core/config.js';
 import { manhattanDist } from '../world/pathfinding.js';
 

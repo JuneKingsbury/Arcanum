@@ -1,3 +1,9 @@
+/**
+ * Artifact pedestal effect queries. getPedestalEffect sums a given global-radius
+ * pedestal effect (additive, or multiplicative for *Mult keys) across all active
+ * pedestals, for systems that need the colony-wide modifier on demand. The
+ * radius-based aura application to colonists lives in main.js (updatePedestals).
+ */
 import { ARTIFACTS } from '../core/config.js';
 
 export function getPedestalEffect(game, effectKey) {

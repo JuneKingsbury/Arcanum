@@ -59,7 +59,12 @@ export class TaskQueue {
         this._pendingDirty = true;
     }
 
-    // Called per colonist per tick — scoring favors higher priority then shorter distance
+    // Called per colonist per tick. Linear scan over pending tasks; the winner
+    // minimizes score = prio*10000 + dist, so colonist priority (lower number =
+    // preferred) strictly dominates distance and distance only breaks ties within
+    // a priority band. Any future spatial-index rewrite (Phase 6a) MUST reproduce
+    // this exact ordering. _pending is a dirty-flagged snapshot, so status and
+    // assignment are re-checked here in case they changed since it was built.
     findBestTask(colonist, tick) {
         const failedTasks = colonist._failedTasks;
         if (this._pendingDirty) {

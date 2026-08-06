@@ -1,3 +1,8 @@
+/**
+ * Tech tree: tracks completed research and advances the active project's
+ * progress. updateResearch is called from simulationTick every 5th tick;
+ * completing a project unlocks buildings, crops, and recipes gated on it.
+ */
 import { RESEARCH, WORK_CONFIG, DEMO_LOCKED_RESEARCH } from '../core/config.js';
 
 export class ResearchSystem {
