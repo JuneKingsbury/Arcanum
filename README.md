@@ -1,9 +1,9 @@
-# Convocation
-A Rimworld-like Arcane Colony Management Sim
+# Arcanum: Rifts & Ruins
+A Browser-Based Arcane Colony Management Sim
 
 ## About
 
-Convocation is a browser-based colony management game inspired by Rimworld and Dwarf Fortress. Manage colonists, build defenses, research arcane technologies, and defend your settlement against waves of void creatures. The game ships with a classic ASCII renderer and supports custom pixel-art skins that can be created in the built-in Skin Editor.
+Arcanum is a colony management game inspired by Rimworld and Dwarf Fortress. Manage colonists, build defenses, research arcane technologies, and defend your settlement against waves of void creatures. The game comes with a classic ASCII renderer and supports custom pixel-art skins that can be created in the built-in Skin Editor.
 
 ---
 
@@ -212,7 +212,7 @@ Use "Auto-equip Best" to quickly gear up a colonist with the best available item
 Magic is at the heart of Convocation. Colonists learn spells, channel mana, and reshape the world.
 
 ### Learning Spells
-Colonists learn spells by studying Spell Tomes at the Arcanum. Equip a tome, assign the colonist to research, and they'll make progress on it alongside generating study points. Progress persists if you unequip and re-equip the tome. Completing a tome consumes it and permanently grants that spell.
+Colonists learn spells by studying Spell Tomes at the research desk. Equip a tome, assign the colonist to research, and they'll make progress on it alongside generating study points. Progress persists if you unequip and re-equip the tome. Completing a tome consumes it and permanently grants that spell.
 
 ### Mana & Casting
 Each colonist has a personal mana pool (base 20 + bonuses from magic skill levels across all schools). Spells consume mana and go on cooldown. Mana regenerates over time. You can disable auto-casting for specific spells to conserve mana.
@@ -292,7 +292,7 @@ Press B to enter Build mode. Buildings are organized into 5 tabs (cycle with Tab
 - **Void Turret** (Y) - 20 damage, range 5. Consumes 5 mana. Requires Void Forging.
 
 ### Arcane
-- **Arcanum** (R) - Research station. Colonists study here to unlock the tech tree and progress spell tomes.
+- **Research Desk** (R) - Research station. Colonists study here to unlock the tech tree and progress spell tomes.
 - **Beast Circle** (A) - Required for taming creatures.
 - **Mana Crystal** (W) - Generates 10 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
 - **Glowstone** (L) - Mana-powered light, radius 5. Consumes 2 mana.
@@ -513,7 +513,7 @@ Some items can only be obtained through trade:
 
 ## Research Tree
 
-Build an Arcanum and assign colonists to study. Select one research topic at a time from the Research panel - all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
+Build a Research Desk and assign colonists to study. Select one research topic at a time from the Research panel - all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
 
 | Research | Requires | Unlocks |
 |---|---|---|
