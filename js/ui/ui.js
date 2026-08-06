@@ -4,6 +4,7 @@ import { getTradeRates, computeTradeValues } from '../systems/events.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
 import { getAvailableRecipes } from '../systems/crafting.js';
+import { getMaxCountBonus } from '../systems/building.js';
 import { CROP_RESEARCH_REQS } from '../systems/farming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
@@ -838,8 +839,7 @@ export class UI {
             html += `<div class="info-row" style="color:#999;font-size:11px;">${def.description}</div>`;
         }
         if (def.maxCount) {
-            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-            const limit = def.maxCount + bonus;
+            const limit = def.maxCount + getMaxCountBonus(def, structure, this.game);
             let placed = 0;
             for (const row of this.game.map) for (const t of row) if (t.structure === structure) placed++;
             html += `<div class="info-row" style="color:#aa88ff;font-size:11px;">Placed: ${placed} / ${limit}</div>`;
@@ -2147,8 +2147,7 @@ export class UI {
             if (def.power.damage) html += `<div class="build-tip-meta" style="color:#ff4444">Damage: ${def.power.damage} (range ${def.power.range || '?'})</div>`;
         }
         if (def.maxCount) {
-            const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-            html += `<div class="build-tip-meta" style="color:#aaa">Max: ${def.maxCount + bonus}</div>`;
+            html += `<div class="build-tip-meta" style="color:#aaa">Max: ${def.maxCount + getMaxCountBonus(def, buildType, this.game)}</div>`;
         }
         this._buildTooltip.innerHTML = html;
         this._buildTooltip.style.display = 'block';
@@ -2563,8 +2562,7 @@ export class UI {
                 if (t.designation && t.designation.type === 'build' && t.designation.buildType === buildType) count++;
             }
         }
-        const bonus = def.maxCountBonusKey ? (this.game[def.maxCountBonusKey] || 0) : 0;
-        return count >= def.maxCount + bonus;
+        return count >= def.maxCount + getMaxCountBonus(def, buildType, this.game);
     }
 
     updateNotifications() {
