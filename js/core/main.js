@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, BUILDINGS, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS } from './config.js';
 import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
@@ -762,7 +762,7 @@ class Game {
     // ─── Trade Panel State & Actions ───────────────────────────────────────
     // UI state lives on this.ui._trade*:
     //   _tradeOffer: { resource: amount } - what player is giving
-    //   _tradeRequest: { resource: amount, __exclusive?: 1, __gold?: amount } - what player wants
+    //   _tradeRequest: { resource: amount, __exclusive_N?: 1, __gold?: amount } - what player wants
     //   _tradeGoldOffer: number - gold the player is spending
     //   _tradeStep: 1|10|100 - increment for +/- buttons
     //   _tradeDirty: bool - triggers UI re-render
@@ -778,27 +778,36 @@ class Game {
 
     tradeOffer(resource, amount) {
         if (!this.ui._tradeOffer) this.ui._tradeOffer = {};
-        const max = this.resources.stockpile[resource] || 0;
-        this.ui._tradeOffer[resource] = Math.min((this.ui._tradeOffer[resource] || 0) + amount, max);
+        if (resource.startsWith('__equip_')) {
+            // Equipment items are single-unit — toggle on
+            this.ui._tradeOffer[resource] = 1;
+        } else {
+            const max = this.resources.stockpile[resource] || 0;
+            this.ui._tradeOffer[resource] = Math.min((this.ui._tradeOffer[resource] || 0) + amount, max);
+        }
         this.ui._tradeDirty = true;
     }
 
     tradeRemoveOffer(resource, amount) {
         if (!this.ui._tradeOffer) return;
-        const cur = this.ui._tradeOffer[resource] || 0;
-        const next = Math.max(0, cur - amount);
-        if (next <= 0) {
+        if (resource.startsWith('__equip_')) {
             delete this.ui._tradeOffer[resource];
         } else {
-            this.ui._tradeOffer[resource] = next;
+            const cur = this.ui._tradeOffer[resource] || 0;
+            const next = Math.max(0, cur - amount);
+            if (next <= 0) {
+                delete this.ui._tradeOffer[resource];
+            } else {
+                this.ui._tradeOffer[resource] = next;
+            }
         }
         this.ui._tradeDirty = true;
     }
 
     tradeRequest(resource, amount) {
         if (!this.ui._tradeRequest) this.ui._tradeRequest = {};
-        if (resource === '__exclusive') {
-            this.ui._tradeRequest.__exclusive = 1;
+        if (resource.startsWith('__exclusive_')) {
+            this.ui._tradeRequest[resource] = 1;
         } else {
             const evt = this.events.pendingEvent;
             const max = evt?.data?.traderResources?.[resource] || 0;
@@ -809,8 +818,8 @@ class Game {
 
     tradeRemoveRequest(resource, amount) {
         if (!this.ui._tradeRequest) return;
-        if (resource === '__exclusive') {
-            delete this.ui._tradeRequest.__exclusive;
+        if (resource.startsWith('__exclusive_')) {
+            delete this.ui._tradeRequest[resource];
         } else {
             const cur = this.ui._tradeRequest[resource] || 0;
             const next = Math.max(0, cur - amount);
@@ -879,7 +888,7 @@ class Game {
         const currentGoldRequest = request.__gold || 0;
 
         const rates = getTradeRates(this);
-        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, currentGoldOffer, rates, data);
+        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, currentGoldOffer, rates, data, this);
 
         const diff = offerVal - reqVal;
         if (diff < 0) {
@@ -1354,18 +1363,9 @@ class Game {
     }
 
     cheatSpawnItem(category, key) {
-        const SPAWN_MAP = {
-            weapon: { config: WEAPONS, add: 'addWeapon' },
-            armor: { config: ARMORS, add: 'addArmor' },
-            helmet: { config: HELMETS, add: 'addHelmet' },
-            tool: { config: TOOLS, add: 'addTool' },
-            artifact: { config: ARTIFACTS, add: 'addArtifact' },
-        };
-        const entry = SPAWN_MAP[category];
-        if (!entry) return;
-        const def = entry.config[key];
-        if (!def) return;
-        this.resources[entry.add]({ ...def, key });
+        const def = ALL_ITEMS[key];
+        if (!def || def.type !== category) return;
+        this.resources.addItem({ ...def, key });
         this.notifications.push({ text: `[DEBUG] Granted ${category}: ${def.name}`, tick: this.tick, type: 'success' });
     }
 

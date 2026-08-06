@@ -1,4 +1,4 @@
-import { BUILDINGS, REALMS, ANIMALS, TAMED_ANIMALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, EXPEDITION_DIFFICULTY, TRADER_EXCLUSIVE_ITEMS } from '../core/config.js';
+import { BUILDINGS, REALMS, ANIMALS, TAMED_ANIMALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, EXPEDITION_DIFFICULTY, ALL_ITEMS } from '../core/config.js';
 import { estimatePartyStrength } from '../systems/exploration.js';
 
 export function installArcanePanel(UI) {
@@ -293,7 +293,7 @@ const arcaneMethods = {
                 } else if (rare.loot.item) {
                     key = rare.loot.item;
                     isFound = discovered.has(`${realmKey}:${key}`);
-                    name = isFound ? (TRADER_EXCLUSIVE_ITEMS[key]?.name || key) : '??????';
+                    name = isFound ? (ALL_ITEMS[key]?.name || key) : '??????';
                 } else {
                     key = rare.loot.resource;
                     isFound = discovered.has(`${realmKey}:${key}`);
@@ -754,7 +754,7 @@ const arcaneMethods = {
         }
         const cat = categoryHint || this._getItemCategory(itemKey);
         if (!cat) return '';
-        const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || HELMETS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey]);
+        const itemDef = (WEAPONS[itemKey] || ARMORS[itemKey] || HELMETS[itemKey] || TOOLS[itemKey] || ARTIFACTS[itemKey] || POTIONS[itemKey] || SPELL_TOMES[itemKey] || ALL_ITEMS[itemKey]);
         const ch = itemDef?.char || ITEM_CHARS[cat]?.char;
         if (!ch) return '';
         const color = itemDef?.charColor || ITEM_CHARS[cat]?.color || '#aaa';
@@ -769,7 +769,7 @@ const arcaneMethods = {
         if (ARTIFACTS[itemKey]) return 'artifact';
         if (POTIONS[itemKey]) return 'potion';
         if (SPELL_TOMES[itemKey]) return 'tome';
-        return null;
+        return ALL_ITEMS[itemKey]?.type || null;
     },
 
     getColonistTaskDescription(colonist) {

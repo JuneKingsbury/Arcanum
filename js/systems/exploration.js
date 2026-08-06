@@ -1,4 +1,4 @@
-import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, TRADER_EXCLUSIVE_ITEMS, COLONIST_CONFIG } from '../core/config.js';
+import { REALMS, EXPLORATION_CONFIG, EXPEDITION_DIFFICULTY, EXPLORATION_EVENTS, SPELLS, ARTIFACTS, ALL_ITEMS, COLONIST_CONFIG } from '../core/config.js';
 import { getEquipmentStat } from '../entities/colonist.js';
 import { findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 
@@ -346,7 +346,7 @@ export class ExplorationSystem {
                     } else if (rare.loot.item) {
                         if (!exp.loot._items) exp.loot._items = [];
                         exp.loot._items.push(rare.loot.item);
-                        const itemName = TRADER_EXCLUSIVE_ITEMS[rare.loot.item]?.name || rare.loot.item;
+                        const itemName = ALL_ITEMS[rare.loot.item]?.name || rare.loot.item;
                         this._addLog(exp, game, `${msg} (found ${itemName}!)`, 'loot');
                     } else {
                         const amount = Math.round(randInt(rare.loot.amount[0], rare.loot.amount[1]) * ds.lootAmountMult);
@@ -701,8 +701,12 @@ export class ExplorationSystem {
             game.resources.addArtifact({ ...ARTIFACTS[artKey], key: artKey });
         }
         for (const itemKey of items) {
-            const itemDef = TRADER_EXCLUSIVE_ITEMS[itemKey];
-            game.resources.addConsumable({ key: itemKey, name: itemDef?.name || itemKey });
+            const def = ALL_ITEMS[itemKey];
+            if (def) {
+                game.resources.addItem({ ...def, key: itemKey });
+            } else {
+                game.resources.addConsumable({ key: itemKey, name: itemKey });
+            }
         }
         if (game.discoveredLoot) {
             for (const res of Object.keys(exp.loot)) {
@@ -720,7 +724,7 @@ export class ExplorationSystem {
             parts.push(ARTIFACTS[artKey]?.name || artKey);
         }
         for (const itemKey of items) {
-            parts.push(TRADER_EXCLUSIVE_ITEMS[itemKey]?.name || itemKey);
+            parts.push(ALL_ITEMS[itemKey]?.name || itemKey);
         }
         const lootSummary = parts.join(', ');
         if (!allDefeated) {

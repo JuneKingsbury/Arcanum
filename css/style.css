@@ -1624,7 +1624,7 @@ body {
 /* === TRADE PANEL === */
 
 #event-panel.trade-panel-active {
-    width: 520px;
+    width: 680px;
     max-width: 95vw;
     top: 50%;
     max-height: 85vh;
@@ -1691,7 +1691,7 @@ body {
 
 .trade-column {
     flex: 1;
-    min-width: 200px;
+    min-width: 260px;
 }
 
 .trade-column-header {

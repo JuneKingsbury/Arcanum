@@ -1,4 +1,4 @@
-import { CONFIG, COLONIST_CONFIG, MAGIC_STUDY_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, TRADER_EXCLUSIVE_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
+import { CONFIG, COLONIST_CONFIG, MAGIC_STUDY_CONFIG, TRAITS, BUILDINGS, BUILD_CATEGORIES, TILE_CHARS, TILE_COLORS, ANIMALS, TAMED_ANIMALS, WAVE_CONFIG, RECIPE_CATEGORIES, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SKILLS, MAGIC_SKILLS, SPELL_TOMES, SPELLS, FOODSTUFFS, WORK_CONFIG, GOLEM_TYPES, TRADE_VALUES, ALL_ITEMS, COMPLEX_STRUCTURES, EVENTS, STORY_MILESTONES, RENDER_CONFIG, LOG_COLORS, CROPS, ENTITIES, STAT_META, formatStatValue, getItemStatLines, getNestedEffectLines } from '../core/config.js';
 import { getTradeRates, computeTradeValues } from '../systems/events.js';
 import { getComplexStructureAt } from '../systems/complexBuildings.js';
 import { getTameChance } from '../entities/taming.js';
@@ -2201,7 +2201,7 @@ export class UI {
             html += '<div class="info-row" style="color:#aa44ff;margin-bottom:4px;"><b>Usable Items:</b></div>';
             for (let i = 0; i < consumables.length; i++) {
                 const c = consumables[i];
-                const def = TRADER_EXCLUSIVE_ITEMS[c.key];
+                const def = ALL_ITEMS[c.key];
                 const desc = def?.description || '';
                 const icon = this._itemIcon(c.key);
                 html += `<div class="inv-row"><span class="inv-name skill-tip" data-tip="${desc}">${icon}${c.name}</span><button class="inv-use" onclick="window.game.useConsumable(${i})">Use</button></div>`;
@@ -2211,7 +2211,8 @@ export class UI {
             html += '<div class="info-row" style="color:#cc88aa;margin-top:8px;margin-bottom:4px;"><b>Potions:</b></div>';
             const potionCounts = {};
             for (const p of potions) {
-                potionCounts[p.type] = (potionCounts[p.type] || 0) + 1;
+                const k = p.key ?? p.type;
+                potionCounts[k] = (potionCounts[k] || 0) + 1;
             }
             for (const [type, count] of Object.entries(potionCounts)) {
                 const def = POTIONS[type];
@@ -2617,36 +2618,14 @@ export class UI {
     }
 
     _getExclusiveItemTooltip(key) {
-        const item = TRADER_EXCLUSIVE_ITEMS[key];
+        const item = ALL_ITEMS[key];
         if (!item) return '';
-        if (item.type === 'artifact' && ARTIFACTS[item.name]) {
-            return this._getArtifactTooltip(ARTIFACTS[item.name]);
-        }
-        if (item.type === 'consumable' && POTIONS[item.name]) {
-            return item.description || '';
-        }
+        if (item.type === 'artifact') return this._getArtifactTooltip(item);
         const lines = [];
         if (item.description) lines.push(item.description);
         const stats = getItemStatLines(item);
         if (stats.length) lines.push(stats.join(', '));
-        if (item.type == 'artifact' && ARTIFACTS[item.name]) {
-            return lines.join(' | ') || ARTIFACTS[item.name].name;
-        }
-        else if (item.type == 'weapon' && WEAPONS[item.name]) {
-            return lines.join(' | ') || WEAPONS[item.name].name;
-        }
-        else if (item.type == 'armor' && ARMORS[item.name]) {
-            return lines.join(' | ') || ARMORS[item.name].name;
-        }
-        else if (item.type == 'helmet' && HELMETS[item.name]) {
-            return lines.join(' | ') || HELMETS[item.name].name;
-        }
-        else if (item.type == 'consumable' && POTIONS[item.name]) {
-            return lines.join(' | ') || POTIONS[item.name].name;
-        }
-        else {
-            return lines.join(' | ') || item.name;
-        }
+        return lines.join(' | ') || item.name;
     }
 
     _updateTradePanel(evt) {
@@ -2665,11 +2644,11 @@ export class UI {
         const rates = getTradeRates(this.game);
         const effectiveMarkup = rates.markup;
         const effectiveDiscount = rates.discount;
-        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, goldOffer, rates, data);
+        const { offerVal, resourceOfferVal, reqVal } = computeTradeValues(offer, request, goldOffer, rates, data, this.game);
 
         const ratio = (effectiveMarkup / effectiveDiscount).toFixed(2);
         let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">`;
-        html += `<div class="event-text" style="font-size:0.95em;margin:0;">Trade Caravan</div>`;
+        html += `<div class="event-text" style="font-size:0.95em;margin:0;">${data.merchantName || 'Trade Caravan'}</div>`;
         html += `<div class="trade-step-selector">`;
         for (const s of [1, 10, 100]) {
             html += `<button class="trade-step-btn${step === s ? ' active' : ''}" onclick="window.game.ui._tradeStep=${s};window.game.ui._tradeDirty=true;">±${s}</button>`;
@@ -2715,39 +2694,43 @@ export class UI {
             html += `<button class="trade-btn" onclick="window.game.tradeRequest('${res}',${step})">+</button>`;
             html += `</div></div>`;
         }
-        if (data.exclusiveItem) {
-            const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
-            const isSelected = request.__exclusive ? ' active' : '';
-            const tip = this._getExclusiveItemTooltip(data.exclusiveItem);
-            const exIcon = this._itemIcon(data.exclusiveItem, item.type === 'consumable' ? 'artifact' : item.type);
-            html += `<div class="trade-exclusive-row skill-tip" data-tip="${tip.replace(/"/g, '&quot;')}">`;
-            if (item.type === 'artifact' && ARTIFACTS[item.name]) {
-                html += `<div class="trade-item-name">${exIcon}${ARTIFACTS[item.name].name}</div>`;
+        if (data.exclusiveItems?.length > 0) {
+            for (let si = 0; si < data.exclusiveItems.length; si++) {
+                const itemKey = data.exclusiveItems[si];
+                if (!itemKey) continue;  // already purchased this slot
+                const item = ALL_ITEMS[itemKey];
+                const slotKey = `__exclusive_${si}`;
+                const isSelected = request[slotKey] ? ' active' : '';
+                const tip = this._getExclusiveItemTooltip(itemKey);
+                const exIcon = this._itemIcon(itemKey, item?.type);
+                html += `<div class="trade-exclusive-row skill-tip" data-tip="${tip.replace(/"/g, '&quot;')}">`;
+                html += `<div class="trade-item-name">${exIcon}${item?.name || itemKey}</div>`;
+                html += `<div class="trade-item-value">${item?.tradeValue ?? '?'}g</div>`;
+                html += `<button class="trade-exclusive-toggle${isSelected}" onclick="window.game.${request[slotKey] ? 'tradeRemoveRequest' : 'tradeRequest'}('${slotKey}',1)">${request[slotKey] ? 'Remove' : 'Buy'}</button>`;
+                html += `</div>`;
             }
-            else if (item.type === 'weapon' && WEAPONS[item.name]) {
-                html += `<div class="trade-item-name">${exIcon}${WEAPONS[item.name].name}</div>`;
-            }
-            else if (item.type === 'armor' && ARMOR[item.name]) {
-                html += `<div class="trade-item-name">${exIcon}${ARMOR[item.name].name}</div>`;
-            }
-            else if (item.type === 'helmet' && HELMETS[item.name]) {
-                html += `<div class="trade-item-name">${exIcon}${HELMETS[item.name].name}</div>`;
-            }
-            else if (item.type === 'consumable' && POTIONS[item.name]) {
-                html += `<div class="trade-item-name">${exIcon}${POTIONS[item.name].name}</div>`;
-            } else {
-                html += `<div class="trade-item-name">${exIcon}${item.name}</div>`;
-            }
-            html += `<div class="trade-item-value">${item.tradeValue}g</div>`;
-            html += `<button class="trade-exclusive-toggle${isSelected}" onclick="window.game.${request.__exclusive ? 'tradeRemoveRequest' : 'tradeRequest'}('__exclusive',1)">${request.__exclusive ? 'Remove' : 'Buy'}</button>`;
-            html += `</div>`;
         }
         html += `<div style="height:12px;"></div></div>`;
 
         // You offer column - sorted by value descending
+        // Exclude resources in the merchant's pool (they don't buy what they sell)
+        const merchantResourcePool = data.merchantResourcePool ? new Set(data.merchantResourcePool) : null;
         const tradableStock = Object.entries(stock)
-            .filter(([res, amt]) => typeof amt === 'number' && amt > 0 && !res.startsWith('_') && TRADE_VALUES[res])
+            .filter(([res, amt]) => typeof amt === 'number' && amt > 0 && !res.startsWith('_') && TRADE_VALUES[res] && (!merchantResourcePool || !merchantResourcePool.has(res)))
             .sort((a, b) => (TRADE_VALUES[b[0]] || 0) - (TRADE_VALUES[a[0]] || 0));
+
+        // Equipment items the merchant will buy, filtered by buyCategories
+        const buyCategories = data.buyCategories ? new Set(data.buyCategories) : null;
+        const EQUIP_ARRAYS = ['weapon', 'armor', 'helmet', 'tool', 'artifact', 'tome', 'consumable'];
+        const offerableEquip = [];
+        for (const type of EQUIP_ARRAYS) {
+            if (buyCategories && !buyCategories.has(type)) continue;
+            const arr = this.game.resources[`${type}s`] || [];
+            for (let i = 0; i < arr.length; i++) {
+                const item = arr[i];
+                if (item?.tradeValue) offerableEquip.push({ key: `__equip_${type}_${i}`, item, type });
+            }
+        }
 
         html += `<div class="trade-column">`;
         html += `<div class="trade-column-header offer">You Offer</div>`;
@@ -2780,6 +2763,30 @@ export class UI {
             html += `<button class="trade-btn" onclick="window.game.tradeOffer('${res}',${step})">+</button>`;
             html += `</div></div>`;
         }
+
+        // Equipment items player can sell
+        if (offerableEquip.length > 0) {
+            html += `<div class="trade-section-label" style="color:#aaa;font-size:0.8em;padding:4px 0 2px;border-top:1px solid #333;margin-top:4px;">Equipment</div>`;
+            for (const { key, item, type } of offerableEquip) {
+                const val = (item.tradeValue * effectiveDiscount).toFixed(1);
+                const isOffered = !!offer[key];
+                const selected = isOffered ? ' selected' : '';
+                const icon = this._itemIcon(item.key || key, type);
+                html += `<div class="trade-item-row${selected}">`;
+                html += `<div class="trade-item-name">${icon}${item.name}`;
+                if (isOffered) html += `<span class="trade-item-badge">1</span>`;
+                html += `</div>`;
+                html += `<div class="trade-item-value">${val}g</div>`;
+                html += `<div class="trade-item-buttons">`;
+                if (isOffered) {
+                    html += `<button class="trade-btn" onclick="window.game.tradeRemoveOffer('${key}',1)">−</button>`;
+                } else {
+                    html += `<button class="trade-btn" onclick="window.game.tradeOffer('${key}',1)">+</button>`;
+                }
+                html += `</div></div>`;
+            }
+        }
+
         html += `<div style="height:12px;"></div></div></div>`;
 
         // Deal meter — trade is valid when player is offering something and offer value covers request

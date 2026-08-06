@@ -37,12 +37,12 @@ export const WEAPONS = {
     fists: { name: 'Fists', damage: 5, tier: 0, description: 'Bare fists.' },
     stone_spear: { name: 'Stone Spear', damage: 8, tier: 1, description: 'A sharpened stone lashed to a stick.', recipe: { input: { stone: 2, wood: 1 }, ticks: 12 } },
     wooden_club: { name: 'Wooden Club', damage: 10, tier: 1, description: 'A heavy wooden bludgeon.', recipe: { input: { wood: 2, planks: 1 }, ticks: 15 } },
-    iron_sword: { name: 'Iron Sword', damage: 14, tier: 2, description: 'A reliable iron blade.', recipe: { input: { iron: 2, planks: 1 }, ticks: 20, station: 'anvil' } },
+    iron_sword: { name: 'Iron Sword', tradeValue: 28, damage: 14, tier: 2, description: 'A reliable iron blade.', recipe: { input: { iron: 2, planks: 1 }, ticks: 20, station: 'anvil' } },
     etched_axe: { name: 'Etched Axe', damage: 15, tier: 2, description: 'An axe inscribed with runes of sharpness.', recipe: { input: { iron: 2, planks: 1, stone: 1 }, ticks: 22, research: 'runecraft', station: 'anvil' } },
     etched_mace: { name: 'Etched Mace', damage: 17, tier: 2, description: 'A heavy mace with runes that make it heavier.', recipe: { input: { iron: 3, planks: 1 }, ticks: 24, research: 'runecraft', station: 'anvil' } },
     enchanted_glaive: { name: 'Enchanted Glaive', damage: 18, tier: 3, spellDamageBonus: 0.25, description: 'A long blade humming with arcane energy.', recipe: { input: { iron: 2, runite: 1, planks: 2 }, ticks: 38, research: 'mana_weaving', station: 'anvil' } },
     void_dagger: { name: 'Void Dagger', damage: 16, tier: 4, attackCooldown: 2, spellDamageBonus: 0.40, description: 'A dagger forged from void essence. Strikes fast and amplifies spells.', recipe: { input: { void_essence: 2, runite: 2, planks: 1 }, ticks: 45, research: 'void_forging', station: 'anvil' } },
-    runic_blade: { name: 'Runic Blade', damage: 22, tier: 3, description: 'A blade etched with powerful runes.', recipe: { input: { runite: 2, planks: 1 }, ticks: 40, research: 'runeforging', station: 'anvil' } },
+    runic_blade: { name: 'Runic Blade', tradeValue: 45, damage: 22, tier: 3, description: 'A blade etched with powerful runes.', recipe: { input: { runite: 2, planks: 1 }, ticks: 40, research: 'runeforging', station: 'anvil' } },
     runic_greatsword: { name: 'Runic Greatsword', damage: 45, tier: 4, attackCooldown: 5, description: 'A massive two-handed runic sword. Slow but devastating.', recipe: { input: { runite: 4, iron: 2, planks: 2 }, ticks: 50, research: 'masterwork', station: 'anvil' } },
     wooden_wand: { name: 'Wooden Wand', damage: 3, tier: 1, attackCooldown: 2, spellDamageBonus: 0.2, ranged: true, range: 5, projectileChar: '·', projectileColor: '#aaccff', skinKey: 'projectile_spell', description: 'A basic wand for aspiring mages. Attacks quickly.', recipe: { input: { wood: 3, planks: 1 }, ticks: 12, research: 'arcane_implements' } },
     crystal_staff: { name: 'Crystal Staff', damage: 8, tier: 2, spellDamageBonus: 0.35, ranged: true, range: 6, projectileChar: '✦', projectileColor: '#88ddff', skinKey: 'projectile_spell', description: 'A staff topped with a focusing crystal.', recipe: { input: { iron: 2, planks: 2, runite: 1 }, ticks: 28, research: 'arcane_implements', station: 'anvil' } },
@@ -50,7 +50,7 @@ export const WEAPONS = {
     void_staff: { name: 'Void Staff', damage: 12, tier: 4, spellDamageBonus: 0.65, ranged: true, range: 8, projectileChar: '✦', projectileColor: '#cc00ff', skinKey: 'projectile_spell', description: 'A staff channeling raw void energy.', recipe: { input: { void_essence: 5, runite: 2, planks: 2 }, ticks: 55, research: 'void_sorcery', station: 'anvil' } },
     short_bow: { name: 'Short Bow', damage: 7, tier: 1, ranged: true, range: 5, projectileChar: '-', projectileColor: '#ffaa33', skinKey: 'projectile_arrow', description: 'A simple short-range bow.', recipe: { input: { wood: 3, leather: 1 }, ticks: 14 } },
     hunting_bow: { name: 'Hunting Bow', damage: 10, tier: 2, ranged: true, range: 6, projectileChar: '-', projectileColor: '#ffaa33', skinKey: 'projectile_arrow', description: 'A sturdy bow made for hunting.', recipe: { input: { planks: 2, leather: 2, iron: 1 }, ticks: 22, station: 'anvil' } },
-    iron_crossbow: { name: 'Iron Crossbow', damage: 22, tier: 2, attackCooldown: 5, ranged: true, range: 7, projectileChar: '→', projectileColor: '#aaddff', skinKey: 'projectile_bolt', description: 'A mechanical crossbow with iron bolts. Slow but powerful.', recipe: { input: { iron: 3, planks: 2, leather: 1 }, ticks: 30, research: 'marksmanship', station: 'anvil' } },
+    iron_crossbow: { name: 'Iron Crossbow', tradeValue: 38, damage: 22, tier: 2, attackCooldown: 5, ranged: true, range: 7, projectileChar: '→', projectileColor: '#aaddff', skinKey: 'projectile_bolt', description: 'A mechanical crossbow with iron bolts. Slow but powerful.', recipe: { input: { iron: 3, planks: 2, leather: 1 }, ticks: 30, research: 'marksmanship', station: 'anvil' } },
     runic_crossbow: { name: 'Runic Crossbow', damage: 30, tier: 3, attackCooldown: 5, ranged: true, range: 8, projectileChar: '→', projectileColor: '#bb99ff', skinKey: 'projectile_bolt', description: 'A crossbow enhanced with runic power. Slow but devastating.', recipe: { input: { runite: 3, iron: 2, planks: 2 }, ticks: 42, research: 'runeforging', station: 'anvil' } },
     void_longbow: { name: 'Void Longbow', damage: 24, tier: 4, ranged: true, range: 10, projectileChar: '⟶', projectileColor: '#cc00ff', skinKey: 'projectile_void', description: 'A longbow that fires arrows of pure void.', recipe: { input: { void_essence: 4, runite: 2, planks: 3 }, ticks: 55, research: 'void_forging', station: 'anvil' } },
     void_blade: { name: 'Void Blade', damage: 52, tier: 4, attackCooldown: 5, description: 'The ultimate melee weapon, forged in the void. Slow but devastating.', recipe: { input: { void_essence: 6, runite: 2, planks: 1 }, ticks: 60, research: 'void_forging', station: 'anvil' } },
@@ -63,7 +63,7 @@ export const ARMORS = {
     enchanted_tunic: { name: 'Enchanted Tunic', damageReduction: 0.12, tier: 2, spellDamageBonus: 0.10, description: 'A leather tunic woven with mana threads. Light protection with arcane attunement.', recipe: { input: { leather: 2, planks: 2, iron: 1 }, ticks: 24, research: 'mana_weaving', station: 'anvil' } },
     mana_weave_robe: { name: 'Mana-Weave Robe', damageReduction: 0.18, tier: 3, spellDamageBonus: 0.20, description: 'A robe woven with mana threads. Boosts spell damage.', recipe: { input: { runite: 2, leather: 2, iron: 1 }, ticks: 40, research: 'mana_weaving', station: 'anvil' } },
     iron_chainmail: { name: 'Iron Chainmail', damageReduction: 0.16, tier: 2, description: 'Interlocking iron rings for solid protection.', recipe: { input: { iron: 4, leather: 2 }, ticks: 30, station: 'anvil' } },
-    runic_plate: { name: 'Runic Plate', damageReduction: 0.24, tier: 3, description: 'Heavy plate armor inscribed with protective runes.', recipe: { input: { runite: 3, iron: 2, leather: 1 }, ticks: 45, research: 'runeforging', station: 'anvil' } },
+    runic_plate: { name: 'Runic Plate', tradeValue: 48, damageReduction: 0.24, tier: 3, description: 'Heavy plate armor inscribed with protective runes.', recipe: { input: { runite: 3, iron: 2, leather: 1 }, ticks: 45, research: 'runeforging', station: 'anvil' } },
     void_armor: { name: 'Void Armor', damageReduction: 0.3, tier: 4, description: 'Armor forged from void essence. Maximum protection.', recipe: { input: { void_essence: 5, runite: 2, iron: 1 }, ticks: 55, research: 'void_forging', station: 'anvil' } },
 };
 
@@ -72,7 +72,7 @@ export const HELMETS = {
     leather_cap: { name: 'Leather Cap', damageReduction: 0.05, tier: 1, description: 'A simple leather skullcap.', recipe: { input: { leather: 2 }, ticks: 12 } },
     iron_helmet: { name: 'Iron Helmet', damageReduction: 0.08, tier: 2, description: 'A solid iron helmet.', recipe: { input: { iron: 3 }, ticks: 18, station: 'anvil' } },
     mages_circlet: { name: "Mage's Circlet", damageReduction: 0.06, tier: 2, spellDamageBonus: 0.08, description: 'A circlet of woven iron and crystal. Focuses magical energy.', recipe: { input: { iron: 2, planks: 1 }, ticks: 20, research: 'arcane_implements', station: 'anvil' } },
-    runic_helm: { name: 'Runic Helm', damageReduction: 0.14, tier: 3, description: 'A helm etched with protective runes.', recipe: { input: { runite: 2, iron: 1 }, ticks: 35, research: 'runeforging', station: 'anvil' } },
+    runic_helm: { name: 'Runic Helm', tradeValue: 38, damageReduction: 0.14, tier: 3, description: 'A helm etched with protective runes.', recipe: { input: { runite: 2, iron: 1 }, ticks: 35, research: 'runeforging', station: 'anvil' } },
     runic_hood: { name: 'Runic Hood', damageReduction: 0.10, tier: 3, spellDamageBonus: 0.12, description: 'A hood inscribed with runes of clarity. Amplifies spellcraft.', recipe: { input: { runite: 2, leather: 1 }, ticks: 32, research: 'mana_weaving', station: 'anvil' } },
     void_crown: { name: 'Void Crown', damageReduction: 0.18, tier: 4, spellDamageBonus: 0.15, description: 'A crown of void energy. Boosts spells and protection.', recipe: { input: { void_essence: 4, runite: 1 }, ticks: 50, research: 'void_forging', station: 'anvil' } },
 };
@@ -104,36 +104,36 @@ export const TOOLS = {
 };
 
 export const ARTIFACTS = {
-    boots_of_haste: { name: 'Boots of Haste', moveSpeedBonus: 0.5, description: 'Enchanted boots that quicken the wearer.', expedition: { durationMult: 0.85 }, recipe: { input: { void_essence: 3, planks: 2, runite: 1 }, ticks: 55, research: 'void_forging', station: 'anvil' } },
-    seedkeepers_locket: { name: "Seedkeeper's Locket", description: 'A locket blessed by druids. Protects crops from blight.', pedestal: { radius: 8, manaCost: 1, blightImmunity: true }, expedition: { trapDamageMult: 0.7 } },
-    hourglass_of_diligence: { name: 'Hourglass of Diligence', description: 'Time bends around this hourglass, hastening all labor.', workSpeedBonus: 0.25, pedestal: { radius: 5, manaCost: 2, workSpeedBonus: 0.15 } },
-    lodestone_of_prosperity: { name: 'Lodestone of Prosperity', description: 'A magnetic stone that draws wanderers and traders to your colony.', pedestal: { radius: 'global', manaCost: 2, wandererChanceMult: 1.25, traderChanceMult: 1.25 } },
-    cornucopia_charm: { name: 'Cornucopia Charm', description: 'A charm of abundance. Cooking yields extra food.', pedestal: { radius: 'global', manaCost: 1, cookingBonusFood: 1 } },
-    compass_of_greed: { name: 'Compass of Greed', description: 'Points toward treasure, but attracts danger.', expedition: { lootMult: 1.5, trapDamageMult: 1.2 } },
-    voidwalkers_lantern: { name: "Voidwalker's Lantern", description: 'A lantern fueled by void energy. Reveals hidden paths.', expedition: { rareEncounterMult: 2.0 }, pedestal: { radius: 6, manaCost: 2, lightRadius: 4 } },
-    map_fragment: { name: 'Map Fragment', description: 'A torn piece of an ancient map. Shortens expeditions.', consumable: true, expedition: { durationMult: 0.7 } },
-    ward_of_the_sentinel: { name: 'Ward of the Sentinel', description: 'A one-use ward that revives the bearer from death.', combat: { autoReviveHp: 0.5 }, expedition: { autoReviveHp: 0.5 }, durability: { max: 1, breakOnUse: true }, recipe: { input: { void_essence: 4, runite: 3, stone: 2 }, ticks: 65, research: 'void_forging', station: 'anvil' } },
-    drum_of_rallying: { name: 'Drum of Rallying', description: 'War drums that inspire nearby fighters.', attackSpeed: 0.15, pedestal: { radius: 8, manaCost: 3, damageBonusMult: 1.15 }, expedition: { partyDamageMult: 1.15 }, recipe: { input: { wood: 6, runite: 2, planks: 3 }, ticks: 45, research: 'runeforging', station: 'anvil' } },
-    cloak_of_shadows: { name: 'Cloak of Shadows', description: 'A cloak that makes the wearer harder to target.', combat: { targetPriority: -10 }, expedition: { targetPriority: -10 } },
-    aegis_of_the_vanguard: { name: 'Aegis of the Vanguard', description: 'A heavy shield that draws attacks and absorbs blows.', combat: { targetPriority: 10, damageReduction: 0.3 }, expedition: { targetPriority: 10, damageReduction: 0.3 } },
-    hagglers_coin: { name: "Haggler's Coin", description: 'A lucky coin that improves trade deals.', pedestal: { radius: 'global', manaCost: 1, tradeMarkupMult: 0.85 } },
-    tome_of_shared_wisdom: { name: 'Tome of Shared Wisdom', description: 'A tome that accelerates skill growth for those nearby.', pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.1 } },
-    crystal_aegis: { name: 'Crystal Aegis', description: 'A crystalline shield that absorbs damage.', damageReduction: 0.2, combat: { damageReduction: 0.15 }, expedition: { damageReduction: 0.2 } },
-    runite_hammer: { name: 'Runite Hammer', description: 'A hammer pulsing with runic energy. Greatly speeds work.', workSpeedBonus: 0.35, pedestal: { radius: 5, manaCost: 2, workSpeedBonus: 0.2 } },
-    staff_of_regrowth: { name: 'Staff of Regrowth', description: 'A living staff that protects crops and amplifies spells.', spellDamageBonus: 0.2, pedestal: { radius: 6, manaCost: 2, blightImmunity: true } },
-    mycelium_crown: { name: 'Mycelium Crown', description: 'A crown woven from fungal threads. Enhances growth.', workSpeedBonus: 0.15, pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.15 }, expedition: { trapDamageMult: 0.6 } },
-    living_bark_armor: { name: 'Living Bark Armor', description: 'Armor grown from a living tree. Regenerates the wearer.', damageReduction: 0.25, healthRegen: 0.07, combat: { damageReduction: 0.2, healthRegen: 0.05 }, expedition: { damageReduction: 0.25, healthRegen: 0.07 } },
-    heartwood_staff: { name: 'Heartwood Staff', description: 'A staff carved from ancient heartwood. Strong magic focus.', spellDamageBonus: 0.3, pedestal: { radius: 7, manaCost: 3, skillGrowthBonus: 0.1 } },
-    scholars_spectacles: { name: "Scholar's Spectacles", description: 'Enchanted lenses that sharpen the mind.', workSpeedBonus: 0.2, pedestal: { radius: 'global', manaCost: 2, skillGrowthBonus: 0.1 } },
-    arcane_amplifier: { name: 'Arcane Amplifier', description: 'A crystal that amplifies all magical output.', spellDamageBonus: 0.35, expedition: { partyDamageMult: 1.1 } },
-    staff_of_distortion: { name: 'Staff of Distortion', description: 'A staff that warps space, confusing enemies.', spellDamageBonus: 0.4, combat: { targetPriority: -5 }, expedition: { partyDamageMult: 1.2, trapDamageMult: 1.3 } },
-    void_blade: { name: 'Void Blade', description: 'A blade that cuts through dimensions.', combat: { targetPriority: 5, damageReduction: 0.1 }, expedition: { partyDamageMult: 1.25 } },
-    dimensional_orb: { name: 'Dimensional Orb', description: 'An orb that bends space. Shortens journeys dramatically.', expedition: { durationMult: 0.6, rareEncounterMult: 2.5 }, pedestal: { radius: 'global', manaCost: 3, wandererChanceMult: 1.3 } },
-    shard_of_oblivion: { name: 'Shard of Oblivion', description: 'A shard of pure destruction. Devastating but dangerous.', expedition: { partyDamageMult: 1.4, trapDamageMult: 1.5 }, combat: { targetPriority: 5 } },
-    voidheart: { name: 'Voidheart', description: 'The heart of the void itself. Ultimate arcane power.', spellDamageBonus: 0.5, moveSpeedBonus: 0.2, pedestal: { radius: 'global', manaCost: 4, damageBonusMult: 1.2 } },
-    armor_of_the_abyss: { name: 'Armor of the Abyss', description: 'Abyssal armor that draws fire and shrugs off blows.', damageReduction: 0.35, combat: { damageReduction: 0.3, targetPriority: 10 }, expedition: { damageReduction: 0.35 } },
-    amulet_of_fortune: { name: 'Amulet of Fortune', description: 'A lucky amulet that accelerates learning.', pedestal: { radius: 'global', manaCost: 1, skillGrowthBonus: 0.2 } },
-    merchants_ring: { name: "Merchant's Ring", description: 'A ring favored by traders. Slightly improves deals.', pedestal: { radius: 'global', manaCost: 1, tradeMarkupMult: 0.9 } },
+    boots_of_haste: { name: 'Boots of Haste', tradeValue: 55, moveSpeedBonus: 0.5, description: 'Enchanted boots that quicken the wearer.', expedition: { durationMult: 0.85 }, recipe: { input: { void_essence: 3, planks: 2, runite: 1 }, ticks: 55, research: 'void_forging', station: 'anvil' } },
+    seedkeepers_locket: { name: "Seedkeeper's Locket", tradeValue: 55, description: 'A locket blessed by druids. Protects crops from blight.', pedestal: { radius: 8, manaCost: 1, blightImmunity: true }, expedition: { trapDamageMult: 0.7 } },
+    hourglass_of_diligence: { name: 'Hourglass of Diligence', tradeValue: 50, description: 'Time bends around this hourglass, hastening all labor.', workSpeedBonus: 0.25, pedestal: { radius: 5, manaCost: 2, workSpeedBonus: 0.15 } },
+    lodestone_of_prosperity: { name: 'Lodestone of Prosperity', tradeValue: 45, description: 'A magnetic stone that draws wanderers and traders to your colony.', pedestal: { radius: 'global', manaCost: 2, wandererChanceMult: 1.25, traderChanceMult: 1.25 } },
+    cornucopia_charm: { name: 'Cornucopia Charm', tradeValue: 40, description: 'A charm of abundance. Cooking yields extra food.', pedestal: { radius: 'global', manaCost: 1, cookingBonusFood: 1 } },
+    compass_of_greed: { name: 'Compass of Greed', tradeValue: 35, description: 'Points toward treasure, but attracts danger.', expedition: { lootMult: 1.5, trapDamageMult: 1.2 } },
+    voidwalkers_lantern: { name: "Voidwalker's Lantern", tradeValue: 45, description: 'A lantern fueled by void energy. Reveals hidden paths.', expedition: { rareEncounterMult: 2.0 }, pedestal: { radius: 6, manaCost: 2, lightRadius: 4 } },
+    map_fragment: { name: 'Map Fragment', tradeValue: 25, description: 'A torn piece of an ancient map. Shortens expeditions.', consumable: true, expedition: { durationMult: 0.7 } },
+    ward_of_the_sentinel: { name: 'Ward of the Sentinel', tradeValue: 60, description: 'A one-use ward that revives the bearer from death.', combat: { autoReviveHp: 0.5 }, expedition: { autoReviveHp: 0.5 }, durability: { max: 1, breakOnUse: true }, recipe: { input: { void_essence: 4, runite: 3, stone: 2 }, ticks: 65, research: 'void_forging', station: 'anvil' } },
+    drum_of_rallying: { name: 'Drum of Rallying', tradeValue: 50, description: 'War drums that inspire nearby fighters.', attackSpeed: 0.15, pedestal: { radius: 8, manaCost: 3, damageBonusMult: 1.15 }, expedition: { partyDamageMult: 1.15 }, recipe: { input: { wood: 6, runite: 2, planks: 3 }, ticks: 45, research: 'runeforging', station: 'anvil' } },
+    cloak_of_shadows: { name: 'Cloak of Shadows', tradeValue: 40, description: 'A cloak that makes the wearer harder to target.', combat: { targetPriority: -10 }, expedition: { targetPriority: -10 } },
+    aegis_of_the_vanguard: { name: 'Aegis of the Vanguard', tradeValue: 60, description: 'A heavy shield that draws attacks and absorbs blows.', combat: { targetPriority: 10, damageReduction: 0.3 }, expedition: { targetPriority: 10, damageReduction: 0.3 } },
+    hagglers_coin: { name: "Haggler's Coin", tradeValue: 40, description: 'A lucky coin that improves trade deals.', pedestal: { radius: 'global', manaCost: 1, tradeMarkupMult: 0.85 } },
+    tome_of_shared_wisdom: { name: 'Tome of Shared Wisdom', tradeValue: 50, description: 'A tome that accelerates skill growth for those nearby.', pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.1 } },
+    crystal_aegis: { name: 'Crystal Aegis', tradeValue: 45, description: 'A crystalline shield that absorbs damage.', damageReduction: 0.2, combat: { damageReduction: 0.15 }, expedition: { damageReduction: 0.2 } },
+    runite_hammer: { name: 'Runite Hammer', tradeValue: 50, description: 'A hammer pulsing with runic energy. Greatly speeds work.', workSpeedBonus: 0.35, pedestal: { radius: 5, manaCost: 2, workSpeedBonus: 0.2 } },
+    staff_of_regrowth: { name: 'Staff of Regrowth', tradeValue: 45, description: 'A living staff that protects crops and amplifies spells.', spellDamageBonus: 0.2, pedestal: { radius: 6, manaCost: 2, blightImmunity: true } },
+    mycelium_crown: { name: 'Mycelium Crown', tradeValue: 40, description: 'A crown woven from fungal threads. Enhances growth.', workSpeedBonus: 0.15, pedestal: { radius: 5, manaCost: 2, skillGrowthBonus: 0.15 }, expedition: { trapDamageMult: 0.6 } },
+    living_bark_armor: { name: 'Living Bark Armor', tradeValue: 55, description: 'Armor grown from a living tree. Regenerates the wearer.', damageReduction: 0.25, healthRegen: 0.07, combat: { damageReduction: 0.2, healthRegen: 0.05 }, expedition: { damageReduction: 0.25, healthRegen: 0.07 } },
+    heartwood_staff: { name: 'Heartwood Staff', tradeValue: 55, description: 'A staff carved from ancient heartwood. Strong magic focus.', spellDamageBonus: 0.3, pedestal: { radius: 7, manaCost: 3, skillGrowthBonus: 0.1 } },
+    scholars_spectacles: { name: "Scholar's Spectacles", tradeValue: 45, description: 'Enchanted lenses that sharpen the mind.', workSpeedBonus: 0.2, pedestal: { radius: 'global', manaCost: 2, skillGrowthBonus: 0.1 } },
+    arcane_amplifier: { name: 'Arcane Amplifier', tradeValue: 55, description: 'A crystal that amplifies all magical output.', spellDamageBonus: 0.35, expedition: { partyDamageMult: 1.1 } },
+    staff_of_distortion: { name: 'Staff of Distortion', tradeValue: 60, description: 'A staff that warps space, confusing enemies.', spellDamageBonus: 0.4, combat: { targetPriority: -5 }, expedition: { partyDamageMult: 1.2, trapDamageMult: 1.3 } },
+    void_blade: { name: 'Void Blade', tradeValue: 65, description: 'A blade that cuts through dimensions.', combat: { targetPriority: 5, damageReduction: 0.1 }, expedition: { partyDamageMult: 1.25 } },
+    dimensional_orb: { name: 'Dimensional Orb', tradeValue: 70, description: 'An orb that bends space. Shortens journeys dramatically.', expedition: { durationMult: 0.6, rareEncounterMult: 2.5 }, pedestal: { radius: 'global', manaCost: 3, wandererChanceMult: 1.3 } },
+    shard_of_oblivion: { name: 'Shard of Oblivion', tradeValue: 65, description: 'A shard of pure destruction. Devastating but dangerous.', expedition: { partyDamageMult: 1.4, trapDamageMult: 1.5 }, combat: { targetPriority: 5 } },
+    voidheart: { name: 'Voidheart', tradeValue: 80, description: 'The heart of the void itself. Ultimate arcane power.', spellDamageBonus: 0.5, moveSpeedBonus: 0.2, pedestal: { radius: 'global', manaCost: 4, damageBonusMult: 1.2 } },
+    armor_of_the_abyss: { name: 'Armor of the Abyss', tradeValue: 70, description: 'Abyssal armor that draws fire and shrugs off blows.', damageReduction: 0.35, combat: { damageReduction: 0.3, targetPriority: 10 }, expedition: { damageReduction: 0.35 } },
+    amulet_of_fortune: { name: 'Amulet of Fortune', tradeValue: 40, description: 'A lucky amulet that accelerates learning.', pedestal: { radius: 'global', manaCost: 1, skillGrowthBonus: 0.2 } },
+    merchants_ring: { name: "Merchant's Ring", tradeValue: 35, description: 'A ring favored by traders. Slightly improves deals.', pedestal: { radius: 'global', manaCost: 1, tradeMarkupMult: 0.9 } },
 };
 
 export const POTIONS = {
@@ -141,6 +141,10 @@ export const POTIONS = {
     speed_potion: { name: 'Speed Potion', trigger: 'hasTask', effect: 'speed', moveSpeedBonus: 0.5, workSpeedBonus: 1.3, duration: 100, cooldown: 400, description: 'An invigorating tonic that quickens body and mind.', recipe: { input: { corn: 2, potatoes: 2, berries: 1 }, skill: 'cooking', ticks: 20, station: 'alchemy_table', research: 'alchemy' } },
     mana_potion: { name: 'Mana Potion', trigger: 'lowMana', manaThreshold: 0.3, effect: 'restoreMana', manaAmount: 30, cooldown: 300, description: 'A shimmering elixir that restores magical energy.', recipe: { input: { moonbloom: 3, runite: 1 }, skill: 'cooking', ticks: 22, station: 'alchemy_table', research: 'herbalism' } },
     resistance_potion: { name: 'Resistance Potion', trigger: 'inCombat', effect: 'resistance', damageReduction: 0.25, duration: 80, cooldown: 500, description: 'A thick draught that hardens the body against blows.', recipe: { input: { moonbloom: 2, stone: 2, iron: 1 }, skill: 'cooking', ticks: 25, station: 'alchemy_table', research: 'herbalism' } },
+};
+
+export const CONSUMABLES = {
+    crystal_capacitor: { name: 'Crystal Capacitor', char: '◆', charColor: '#aa44ff', description: 'Use to permanently increase your mana crystal limit by 1.', tradeValue: 65 },
 };
 
 export const ITEM_CHARS = {
@@ -151,6 +155,7 @@ export const ITEM_CHARS = {
     artifact: { char: '*', color: '#cc44ff' },
     potion: { char: '!', color: '#44cc44' },
     tome: { char: '~', color: '#4488ff' },
+    consumable: { char: '◆', color: '#aa44ff' },
 };
 
 const ARMOR_PAIRS = [
@@ -163,19 +168,65 @@ const ARMOR_PAIRS = [
     ['void_crown', HELMETS], ['void_armor', ARMORS],
 ];
 
-// Exclusive items the trader may carry (30% chance per caravan, see eventCaravan).
-// tradeValue is flat gold cost (not affected by markup/discount).
-// Effects defined here are for the trade panel tooltip.
-export const TRADER_EXCLUSIVE_ITEMS = {
-    amulet_of_fortune: { type: 'artifact', name: 'amulet_of_fortune', tradeValue: 40 },
-    merchants_ring: { type: 'artifact', name: "merchants_ring", tradeValue: 35 },
-    seedkeepers_locket: { type: 'artifact', name: "seedkeepers_locket", tradeValue: 55 },
-    hourglass_of_diligence: { type: 'artifact', name: 'hourglass_of_diligence', tradeValue: 50 },
-    lodestone_of_prosperity: { type: 'artifact', name: 'lodestone_of_prosperity', tradeValue: 45 },
-    hagglers_coin: { type: 'artifact', name: "hagglers_coin", tradeValue: 40 },
-    aegis_of_the_vanguard: { type: 'artifact', name: 'aegis_of_the_vanguard', tradeValue: 60 },
-    crystal_capacitor: { type: 'consumable', name: 'crystal_capacitor', tradeValue: 65, char: '◆', charColor: '#aa44ff', description: 'Use to permanently increase your mana crystal limit by 1.' },
-};
+// Unified item registry — every non-stackable item with its type and optional tradeValue.
+// Built by merging all item dicts; SPELL_TOMES are merged in config/index.js after import.
+export const ALL_ITEMS = {};
+
+const _ITEM_SOURCES = [
+    ['weapon',     WEAPONS],
+    ['armor',      ARMORS],
+    ['helmet',     HELMETS],
+    ['tool',       TOOLS],
+    ['artifact',   ARTIFACTS],
+    ['potion',     POTIONS],
+    ['material',   MATERIALS],
+    ['consumable', CONSUMABLES],
+];
+for (const [type, dict] of _ITEM_SOURCES) {
+    for (const [key, def] of Object.entries(dict)) {
+        ALL_ITEMS[key] = { ...def, type };
+    }
+}
+
+// Named merchants for the caravan event. Each has its own resource pool and exclusive item list.
+// exclusiveItems: pool to draw from. First item is always guaranteed; extraItemChances lists the
+// probability of each additional slot (drawn without replacement from remaining pool items).
+// buyCategories: item types this merchant will purchase from the player (null = anything).
+// The merchant will NOT buy items of the same category they sell as exclusives.
+export const MERCHANTS = [
+    {
+        name: 'Traveling Merchant',
+        resourcePool: null,
+        exclusiveItems: ['amulet_of_fortune', 'merchants_ring', 'hagglers_coin', 'seedkeepers_locket'],
+        extraItemChances: [0.3],        // 1 guaranteed + up to 1 extra (30%)
+        goldRange: [20, 49],
+        buyCategories: ['weapon', 'armor', 'helmet', 'tool', 'tome', 'consumable'],
+    },
+    {
+        name: 'Arms Dealer',
+        resourcePool: ['iron', 'planks', 'leather', 'iron_ore', 'runite'],
+        exclusiveItems: ['aegis_of_the_vanguard', 'iron_sword', 'runic_blade', 'iron_crossbow', 'runic_plate', 'runic_helm'],
+        extraItemChances: [0.6, 0.3],   // 1 guaranteed + up to 2 extras (60%, then 30%)
+        goldRange: [30, 60],
+        buyCategories: ['artifact', 'tome', 'consumable'],
+    },
+    {
+        name: 'Tome Peddler',
+        resourcePool: ['planks', 'runite', 'wood'],
+        exclusiveItems: ['tome_of_spark', 'tome_of_mend', 'tome_of_smite', 'tome_of_magic_missile', 'tome_of_heal'],
+        extraItemChances: [0.6, 0.3],   // 1 guaranteed + up to 2 extras (60%, then 30%)
+        goldRange: [15, 35],
+        buyCategories: ['weapon', 'armor', 'helmet', 'artifact', 'consumable'],
+    },
+    {
+        name: 'Wandering Alchemist',
+        resourcePool: ['berries', 'wheat', 'moonbloom', 'corn', 'potatoes', 'food'],
+        exclusiveItems: ['hourglass_of_diligence', 'lodestone_of_prosperity', 'crystal_capacitor'],
+        extraItemChances: [0.3],        // 1 guaranteed + up to 1 extra (30%)
+        goldRange: [20, 45],
+        buyCategories: ['weapon', 'armor', 'helmet', 'tool', 'tome'],
+    },
+];
 
 const EQUIPMENT_RECIPE_SOURCES = [
     { items: WEAPONS, category: 'Weapons', prefix: 'craft_', defaults: { skill: 'crafting', station: 'workbench' } },

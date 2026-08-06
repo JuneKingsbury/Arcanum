@@ -1,4 +1,4 @@
-import { CONFIG, FOODSTUFFS, FOOD_DECAY_CONFIG, WORK_CONFIG, SPELL_TOMES } from '../core/config.js';
+import { CONFIG, FOODSTUFFS, FOOD_DECAY_CONFIG, WORK_CONFIG, ALL_ITEMS } from '../core/config.js';
 
 export { FOODSTUFFS };
 
@@ -73,13 +73,27 @@ export class ResourceManager {
 
     add(resources) {
         for (const [resource, amount] of Object.entries(resources)) {
-            if (SPELL_TOMES[resource]) {
+            if (ALL_ITEMS[resource]?.type === 'tome') {
                 for (let i = 0; i < amount; i++) {
-                    this.addTome({ ...SPELL_TOMES[resource], key: resource });
+                    this.addTome({ ...ALL_ITEMS[resource], key: resource });
                 }
             } else {
                 this.stockpile[resource] = (this.stockpile[resource] || 0) + amount;
             }
+        }
+    }
+
+    addItem(item) {
+        switch (item.type) {
+            case 'weapon':     return this.addWeapon(item);
+            case 'armor':      return this.addArmor(item);
+            case 'helmet':     return this.addHelmet(item);
+            case 'tool':       return this.addTool(item);
+            case 'artifact':   return this.addArtifact(item);
+            case 'potion':     return this.addPotion(item);
+            case 'tome':       return this.addTome(item);
+            case 'consumable': return this.addConsumable(item);
+            default:           return this.addConsumable(item);
         }
     }
 
@@ -150,13 +164,13 @@ export class ResourceManager {
     }
 
     takePotion(type) {
-        const idx = this.potions.findIndex(p => p.type === type);
+        const idx = this.potions.findIndex(p => (p.key ?? p.type) === type);
         if (idx < 0) return null;
         return this.potions.splice(idx, 1)[0];
     }
 
     getPotionCount(type) {
-        return this.potions.filter(p => p.type === type).length;
+        return this.potions.filter(p => (p.key ?? p.type) === type).length;
     }
 
     addConsumable(item) {

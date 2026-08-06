@@ -1,4 +1,4 @@
-import { COLONIST_CONFIG, THOUGHTS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH } from '../core/config.js';
+import { COLONIST_CONFIG, THOUGHTS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH, ALL_ITEMS } from '../core/config.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
@@ -163,34 +163,13 @@ export function completeTask(colonist, task, game) {
                 const output = task.recipe.output;
                 let handled = false;
                 for (const key of Object.keys(output)) {
-                    if (WEAPONS[key]) {
-                        const item = { ...WEAPONS[key], key };
-                        applyQuality(item, colonist, game, 'damage');
-                        game.resources.addWeapon(item);
-                        handled = true;
-                    } else if (ARMORS[key]) {
-                        const item = { ...ARMORS[key], key };
-                        applyQuality(item, colonist, game, 'damageReduction');
-                        game.resources.addArmor(item);
-                        handled = true;
-                    } else if (HELMETS[key]) {
-                        const item = { ...HELMETS[key], key };
-                        applyQuality(item, colonist, game, 'damageReduction');
-                        game.resources.addHelmet(item);
-                        handled = true;
-                    } else if (TOOLS[key]) {
-                        const item = { ...TOOLS[key], key };
-                        applyQuality(item, colonist, game, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
-                        game.resources.addTool(item);
-                        handled = true;
-                    } else if (ARTIFACTS[key]) {
-                        game.resources.addArtifact({ ...ARTIFACTS[key], key });
-                        handled = true;
-                    } else if (POTIONS[key]) {
-                        game.resources.addPotion({ ...POTIONS[key], type: key });
-                        handled = true;
-                    } else if (SPELL_TOMES[key]) {
-                        game.resources.addTome({ ...SPELL_TOMES[key], key });
+                    const def = ALL_ITEMS[key];
+                    if (def) {
+                        const item = { ...def, key };
+                        if (def.type === 'weapon') applyQuality(item, colonist, game, 'damage');
+                        else if (def.type === 'armor' || def.type === 'helmet') applyQuality(item, colonist, game, 'damageReduction');
+                        else if (def.type === 'tool') applyQuality(item, colonist, game, 'miningSpeed', 'choppingSpeed', 'farmingSpeed', 'craftingSpeed');
+                        game.resources.addItem(item);
                         handled = true;
                     }
                 }

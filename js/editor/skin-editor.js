@@ -1,4 +1,4 @@
-import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES, EQUIPMENT_OVERLAY_OFFSETS } from '../core/config.js';
+import { BUILDINGS, TERRAIN, RESOURCES, ANIMALS, GOLEM_TYPES, CROPS, COMBAT_VISUALS, WEAPONS, ARMORS, HELMETS, TOOLS, ARTIFACTS, POTIONS, CONSUMABLES, SPELL_TOMES, ITEM_CHARS, WEATHER_TYPES, EQUIPMENT_OVERLAY_OFFSETS } from '../core/config.js';
 
 const MATERIAL_ITEMS = [
     { key: 'wood', char: '≡', color: '#8b6b3a', desc: 'Wood resource' },
@@ -500,6 +500,9 @@ class SkinEditor {
                 }
                 for (const [key, def] of Object.entries(SPELL_TOMES)) {
                     items.push({ key, char: def.char || ITEM_CHARS.tome.char, color: def.charColor || ITEM_CHARS.tome.color, desc: `Tome: ${def.name}`, category: 'items' });
+                }
+                for (const [key, def] of Object.entries(CONSUMABLES)) {
+                    items.push({ key, char: def.char || ITEM_CHARS.consumable.char, color: def.charColor || ITEM_CHARS.consumable.color, desc: `Consumable: ${def.name}`, category: 'items' });
                 }
                 break;
             case 'Materials':

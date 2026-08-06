@@ -3,7 +3,7 @@ import { syncEntityIdCounter } from '../entities/entity-factory.js';
 import { initEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 
 function migrateTomeKey(key) {
     if (!key || key.startsWith('tome_of_')) return key;
@@ -167,6 +167,16 @@ export function loadGame(game) {
         if (data.version < 5) {
             migrateGolemTypes(data);
             data.version = 5;
+        }
+
+        if (data.version < 6) {
+            // Potions used to store type=potionKey; normalize to type='potion', key=potionKey.
+            if (data.resources?.potions) {
+                data.resources.potions = data.resources.potions.map(p =>
+                    (p.type && p.type !== 'potion' && !p.key) ? { ...p, key: p.type, type: 'potion' } : p
+                );
+            }
+            data.version = 6;
         }
 
         CONFIG.PEACEFUL_MODE = data.peaceful;

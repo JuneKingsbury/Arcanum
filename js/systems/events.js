@@ -1,4 +1,4 @@
-import { CONFIG, EVENTS, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, TRADER_EXCLUSIVE_ITEMS, FIRE_CONFIG, COMBAT_VISUALS, ARMORS, HELMETS, WEAPONS, ARTIFACTS, POTIONS } from '../core/config.js';
+import { CONFIG, EVENTS, WEATHER_TYPES, THOUGHTS, SKILLS, TRADE_VALUES, TRADER_MARKUP, TRADER_DISCOUNT, ALL_ITEMS, MERCHANTS, FIRE_CONFIG, COMBAT_VISUALS } from '../core/config.js';
 import { createColonist, addThought } from '../entities/colonist.js';
 import { createWildAnimal } from '../entities/entity-factory.js';
 import { getPedestalEffect } from './artifacts.js';
@@ -24,27 +24,39 @@ export function getTradeRates(game) {
 /**
  * Calculates gold values for a trade offer and request.
  * Gold is always valued 1:1. Resources use base value × rate.
- * Special keys: '__exclusive' (trader's unique item), '__gold' (direct gold request).
+ * Special keys: '__exclusive_N' (trader's Nth unique item), '__gold' (direct gold request).
  *
  * @param {object} offer - { resource: amount } the player is giving
- * @param {object} request - { resource: amount } the player wants (may include __exclusive, __gold)
+ * @param {object} request - { resource: amount } the player wants (may include __exclusive_N, __gold)
  * @param {number} goldOffer - gold the player is spending
  * @param {{ markup: number, discount: number }} rates - from getTradeRates()
- * @param {object} tradeData - pendingEvent.data (traderResources, exclusiveItem, traderGold)
+ * @param {object} tradeData - pendingEvent.data (traderResources, exclusiveItems, traderGold)
  * @returns {{ offerVal: number, resourceOfferVal: number, reqVal: number }}
  */
-export function computeTradeValues(offer, request, goldOffer, rates, tradeData) {
+export function computeTradeValues(offer, request, goldOffer, rates, tradeData, game) {
     let resourceOfferVal = 0;
+    let equipOfferVal = 0;
     for (const [res, amt] of Object.entries(offer)) {
         if (amt <= 0) continue;
-        resourceOfferVal += (TRADE_VALUES[res] || 1) * amt * rates.discount;
+        if (res.startsWith('__equip_')) {
+            // __equip_<type>_<index> — look up item's tradeValue
+            const parts = res.split('_');
+            const type = parts[3];
+            const idx = parseInt(parts[4], 10);
+            const arr = game?.resources[`${type}s`] || [];
+            const item = arr[idx];
+            equipOfferVal += (item?.tradeValue || 0) * rates.discount;
+        } else {
+            resourceOfferVal += (TRADE_VALUES[res] || 1) * amt * rates.discount;
+        }
     }
 
     let reqVal = 0;
     for (const [res, amt] of Object.entries(request)) {
         if (amt <= 0) continue;
-        if (res === '__exclusive') {
-            reqVal += TRADER_EXCLUSIVE_ITEMS[tradeData.exclusiveItem]?.tradeValue || 0;
+        if (res.startsWith('__exclusive_')) {
+            const slotIdx = parseInt(res.split('_')[3], 10);
+            reqVal += ALL_ITEMS[tradeData.exclusiveItems?.[slotIdx]]?.tradeValue || 0;
         } else if (res === '__gold') {
             reqVal += amt;
         } else {
@@ -53,8 +65,8 @@ export function computeTradeValues(offer, request, goldOffer, rates, tradeData) 
     }
 
     return {
-        offerVal: resourceOfferVal + goldOffer,
-        resourceOfferVal,
+        offerVal: resourceOfferVal + equipOfferVal + goldOffer,
+        resourceOfferVal: resourceOfferVal + equipOfferVal,
         reqVal,
     };
 }
@@ -267,30 +279,42 @@ export class EventSystem {
      *   - traderGold: 20-49g (change range for economy pacing)
      */
     eventCaravan(game) {
+        const merchant = MERCHANTS[Math.floor(Math.random() * MERCHANTS.length)];
+        const available = merchant.resourcePool ?? Object.keys(TRADE_VALUES);
         const traderResources = {};
-        const available = Object.keys(TRADE_VALUES);
         const numItems = 3 + Math.floor(Math.random() * 4);
         for (let i = 0; i < numItems; i++) {
             const res = available[Math.floor(Math.random() * available.length)];
             traderResources[res] = (traderResources[res] || 0) + 3 + Math.floor(Math.random() * 8);
         }
 
-        let exclusiveItem = null;
-        if (Math.random() < 0.3) {
-            const keys = Object.keys(TRADER_EXCLUSIVE_ITEMS);
-            exclusiveItem = keys[Math.floor(Math.random() * keys.length)];
+        // Build exclusive item list: 1 guaranteed + extra slots per extraItemChances.
+        // Draw without replacement so the same item never appears twice.
+        const pool = [...merchant.exclusiveItems];
+        const exclusiveItems = [];
+        if (pool.length > 0) {
+            const firstIdx = Math.floor(Math.random() * pool.length);
+            exclusiveItems.push(pool.splice(firstIdx, 1)[0]);
+            for (const chance of (merchant.extraItemChances || [])) {
+                if (pool.length === 0) break;
+                if (Math.random() < chance) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    exclusiveItems.push(pool.splice(idx, 1)[0]);
+                }
+            }
         }
 
-        const traderGold = 20 + Math.floor(Math.random() * 30);
+        const [gMin, gMax] = merchant.goldRange;
+        const traderGold = gMin + Math.floor(Math.random() * (gMax - gMin + 1));
 
         this.pendingEvent = {
             type: 'trade',
-            text: 'A trade caravan arrives! Barter resources with the merchant.',
+            text: `A ${merchant.name} arrives! Barter resources with the merchant.`,
             choices: ['Open Trade', 'Dismiss'],
-            data: { traderResources, exclusiveItem, traderGold },
+            data: { traderResources, exclusiveItems, traderGold, merchantName: merchant.name, buyCategories: merchant.buyCategories || null, merchantResourcePool: merchant.resourcePool || null },
         };
-        game.notifications.push({ text: 'Trade caravan arrived!', tick: game.tick, type: 'event' });
-        game.eventLog.add(game, 'Trade caravan arrived', 'event', null);
+        game.notifications.push({ text: `${merchant.name} arrived!`, tick: game.tick, type: 'event' });
+        game.eventLog.add(game, `${merchant.name} arrived`, 'event', null);
         if (game.settings.autoPauseEvent && !game.paused) {
             game.togglePause();
             game._eventPaused = true;
@@ -327,39 +351,61 @@ export class EventSystem {
 
         for (const [res, amt] of Object.entries(offering)) {
             if (amt <= 0) continue;
-            if ((game.resources.stockpile[res] || 0) < amt) return false;
+            if (res.startsWith('__equip_')) {
+                const parts = res.split('_');
+                const type = parts[3];
+                const idx = parseInt(parts[4], 10);
+                const arr = game.resources[`${type}s`] || [];
+                if (!arr[idx]) return false;
+            } else {
+                if ((game.resources.stockpile[res] || 0) < amt) return false;
+            }
         }
 
         for (const [res, amt] of Object.entries(requesting)) {
             if (amt <= 0) continue;
-            if (res === '__exclusive' && !data.exclusiveItem) return false;
-            if (res === '__gold' && amt > data.traderGold) return false;
-            if (res !== '__exclusive' && res !== '__gold' && (data.traderResources[res] || 0) < amt) return false;
+            if (res.startsWith('__exclusive_')) {
+                const slotIdx = parseInt(res.split('_')[3], 10);
+                if (!data.exclusiveItems?.[slotIdx]) return false;
+            } else if (res === '__gold') {
+                if (amt > data.traderGold) return false;
+            } else {
+                if ((data.traderResources[res] || 0) < amt) return false;
+            }
         }
 
         // Value check: player's offer must cover the request cost
         const rates = getTradeRates(game);
-        const { offerVal, reqVal } = computeTradeValues(offering, requesting, goldOffer, rates, data);
+        const { offerVal, reqVal } = computeTradeValues(offering, requesting, goldOffer, rates, data, game);
         if (offerVal < reqVal) return false;
 
         // --- Execute: deduct from player ---
         if (goldOffer > 0) game.resources.deduct({ gold: goldOffer });
+        // Collect __equip keys first, sorted by index descending so splices don't shift indices
+        const equipOffers = Object.entries(offering)
+            .filter(([res]) => res.startsWith('__equip_'))
+            .sort((a, b) => parseInt(b[0].split('_')[4], 10) - parseInt(a[0].split('_')[4], 10));
+        for (const [res] of equipOffers) {
+            const parts = res.split('_');
+            const type = parts[3];
+            const idx = parseInt(parts[4], 10);
+            const arr = game.resources[`${type}s`];
+            if (arr) arr.splice(idx, 1);
+        }
         for (const [res, amt] of Object.entries(offering)) {
+            if (res.startsWith('__equip_')) continue;
             if (amt > 0) game.resources.deduct({ [res]: amt });
         }
 
         // --- Execute: give player what they requested ---
         const goldRequested = requesting.__gold || 0;
         for (const [res, amt] of Object.entries(requesting)) {
-            if (res === '__exclusive') {
-                const item = TRADER_EXCLUSIVE_ITEMS[data.exclusiveItem];
-                if (item.type === 'weapon') game.resources.addWeapon({ ...WEAPONS[item.name], key: item.name });
-                else if (item.type === 'armor') game.resources.addArmor({ ...ARMORS[item.name], key: item.name });
-                else if (item.type === 'helmet') game.resources.addHelmet({ ...HELMETS[item.name], key: item.name });
-                else if (item.type === 'artifact') game.resources.addArtifact({ ...ARTIFACTS[item.name], key: item.name });
-                else if (item.type === 'tome') game.resources.addTome({ ...TOMES[item.name], key: item.name });
-                else if (item.type === 'consumable') game.resources.addConsumable({ ...POTIONS[item.name], key: item.name });
-                data.exclusiveItem = null;
+            if (res.startsWith('__exclusive_')) {
+                const slotIdx = parseInt(res.split('_')[3], 10);
+                const itemKey = data.exclusiveItems?.[slotIdx];
+                const def = itemKey ? ALL_ITEMS[itemKey] : null;
+                if (def) game.resources.addItem({ ...def, key: itemKey });
+                if (data.exclusiveItems) data.exclusiveItems[slotIdx] = null;
             } else if (res === '__gold') {
                 const goldAmt = Math.min(amt, data.traderGold);
                 if (goldAmt > 0) {
