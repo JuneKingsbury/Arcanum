@@ -3,7 +3,7 @@ import { syncEntityIdCounter } from '../entities/entity-factory.js';
 import { ensureEntityRoles } from '../entities/roles.js';
 
 const SAVE_KEY = 'colony_save';
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 
 export function saveGame(game) {
     const layout = captureLayout();
@@ -83,6 +83,7 @@ export function saveGame(game) {
             progress: game.research.progress,
         },
 
+        stats: game.stats,
         manaCrystalBonus: game.manaCrystalBonus || 0,
         discoveredLoot: [...(game.discoveredLoot || [])],
 
@@ -179,6 +180,9 @@ export function loadGame(game) {
             game.exploration.completedRealms = new Set(data.exploration.completedRealms || []);
         }
 
+        if (data.stats) {
+            Object.assign(game.stats, data.stats);
+        }
         game.manaCrystalBonus = data.manaCrystalBonus || 0;
         game.discoveredLoot = new Set(data.discoveredLoot || []);
 

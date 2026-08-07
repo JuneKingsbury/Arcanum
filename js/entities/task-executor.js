@@ -29,6 +29,9 @@ function applyQuality(item, colonist, game, ...statKeys) {
     for (const stat of statKeys) {
         if (item[stat]) item[stat] = Math.round(item[stat] * tier.multiplier * 100) / 100;
     }
+    if (tier.key === 'superior' && window.game?.stats) {
+        window.game.stats.superiorItemsCrafted++;
+    }
 }
 
 function applyThought(colonist, thoughtKey, tick) {
@@ -181,6 +184,10 @@ export function completeTask(colonist, task, game) {
                 if (!handled) {
                     game.resources.add(output);
                 }
+                const tile = game.map[colonist.y]?.[colonist.x];
+                if (tile?.structure === 'enchanting_table' && game.stats) {
+                    game.stats.itemsEnchanted++;
+                }
                 applyThought(colonist, 'crafted', game.tick);
                 const craftedName = Object.keys(task.recipe.output)[0]?.replace(/_/g, ' ') || 'item';
                 game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `Crafted ${craftedName}`, color: '#ffcc00', fontSize: 10, ttl: 20, maxTtl: 20 });
@@ -233,9 +240,10 @@ export function completeTask(colonist, task, game) {
             break;
         }
         case 'research': {
-            let researchPts = colonist.skills.research + 2;
+            let researchPts = Math.ceil((colonist.skills.research + 2) * 0.6);
             const researchMult = getEquipmentStat(colonist, 'researchSpeed');
             if (researchMult > 0) researchPts = Math.floor(researchPts * researchMult);
+            if (task.diminished) researchPts = Math.max(1, Math.floor(researchPts * 0.5));
             const completedKey = game.research.addProgress(researchPts);
             if (completedKey) {
                 const tech = RESEARCH[completedKey];

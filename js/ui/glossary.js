@@ -8,7 +8,7 @@ export const GLOSSARY = [
             ['Thoughts', 'Temporary mood modifiers from events (good meals, nice rooms, deaths, etc.). Each has a duration before it fades.'],
             ['Traits', 'Permanent modifiers assigned at spawn: Hard Worker, Lazy, Night Owl, Early Bird, Green Thumb, Iron Stomach, Socialite, Loner, Optimist, Pessimist, Tough, Pyromaniac, Gourmand.'],
             ['Drafting', 'Manually control colonists. Drafted colonists ignore AI and move where you right-click. Select multiple with click-drag, then Draft All.'],
-            ['Skills', 'Building, Farming, Crafting, Cooking, Animals, Research, and six Magic schools (Evocation, Enchantment, Abjuration, Conjuration, Transmutation, Divination). Higher skill = faster work completion. Magic skills increase by studying tomes and casting spells.'],
+            ['Skills', 'Building, Farming, Crafting, Cooking, Animals, Research, and six Magic schools (Evocation, Enchantment, Abjuration, Conjuration, Transmutation, Divination). Higher skill = faster work completion (+12% per level). Skills level up by completing tasks (1 XP per task, scaling cost per level). Magic skills increase by studying tomes and casting spells.'],
             ['Equipment Slots', 'Weapon, Armor, Helmet, Tool, and Artifact. Displayed in a person-shaped grid. Use "Auto-equip Best" to quickly gear up a colonist with the best available items. Salvage unwanted equipment (♻) to recover 50% of crafting materials.'],
             ['Helmet Slot', 'Separate from body armor. Helmet DR stacks multiplicatively with armor DR.\n\n  Leather Cap     5% DR   (2 leather)\n  Iron Helmet     8% DR   (3 iron)\n  Runic Helm     14% DR   (2 runite, 1 iron, needs Runeforging)\n  Void Crown     18% DR + 15% spell dmg (4 void essence, 1 runite, needs Void Forging)'],
             ['Critical Alerts', 'Automatic warnings when colonists are near starvation (hunger < 30), mental break (mood 20-30), or freezing. Each alert fires once per episode — recovers at 40 before re-triggering.'],
@@ -89,7 +89,7 @@ export const GLOSSARY = [
                     ['Beast Circle', '(A) Required for binding creatures. Needs research: Beast Binding.'],
                     ['Mana Crystal', '(W) Generates 8 mana. Limit 4 (upgradeable with Crystal Capacitor). Needs research: Ley Channeling.'],
                     ['Glowstone', '(L) Mana-powered light, radius 5. Consumes 2 mana.'],
-                    ['Enchanting Table', '(P) 2x crafting speed. Consumes 4 mana.'],
+                    ['Enchanting Table', '(P) 1.5x crafting speed. Consumes 4 mana.'],
                     ['Ember Ward', '(H) Warms nearby tiles (radius 4) in winter. Consumes 3 mana.'],
                     ['Arcane Sentinel', '(X) Auto-attacks hostile enemies in range 4. Consumes 3 mana.'],
                     ['Ice Box', '(I) Magical preservation. Reduces food spoilage by 40%. Consumes 1 mana.'],
@@ -143,7 +143,8 @@ export const GLOSSARY = [
             {
                 subtitle: 'Research',
                 entries: [
-                    ['How Research Works', 'Select a research topic, then colonists study at the Arcanum to progress it. Only one research can be active at a time. If no research is selected, tome study speed is doubled.'],
+                    ['How Research Works', 'Select a research topic, then colonists study at the Arcanum to progress it. Only one research can be active at a time. If no research is selected, tome study speed is doubled. The first 2 research desks contribute full output; additional desks produce at 50% efficiency.'],
+                    ['Research Gates', 'Advanced technologies have additional requirements beyond prerequisites:\n\n  Building Prerequisites — Certain buildings must exist on the map\n  Milestone Gates — Achievements must be completed first\n  Tab Breadth — A minimum number of techs in the same tab must be done\n\nExamples: Ley Channeling requires an Anvil. Void tab techs require surviving a raid. Endgame techs require 3+ techs completed in their tab.'],
                     ['Research Tree', 'Research is organized into 4 tabs. Cross-tab prerequisites show as clickable badges.\n\n  Foundations & Nature    Arcane & Mana        Crafting & Lore      Void & Exploration\n  ──────────────────────  ───────────────────  ───────────────────  ──────────────────\n  Stonework              Ley Channeling       Marksmanship         Warding\n  Runecraft              Luminance            Arcane Studies       Fortification\n  Druidcraft             Brilliance           Arcane Implements    Void Summoning\n  Alchemy                Arcane Conduits      Artisan\'s Touch      Void Architecture\n  Irrigation             Ember Magic          Advanced Arcana      Void Forging\n  Beast Binding          Arcane Infusion      Void Sorcery         Planar Rift\n  Trade Routes           Mana Reservoir       Runeforging          Deep Delving\n  Husbandry              Mana Weaving         Masterwork\n  Wolf Mastery           Pyroclasm            Golem Craft\n  Herbalism\n  Verdant Growth'],
                 ]
             },

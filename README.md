@@ -296,7 +296,7 @@ Press B to enter Build mode. Buildings are organized into 5 tabs (cycle with Tab
 - **Beast Circle** (A) - Required for taming creatures.
 - **Mana Crystal** (W) - Generates 8 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
 - **Glowstone** (L) - Mana-powered light, radius 5. Consumes 2 mana.
-- **Enchanting Table** (P) - 2x crafting speed. Consumes 4 mana.
+- **Enchanting Table** (P) - 1.5x crafting speed. Consumes 4 mana.
 - **Ember Ward** (H) - Warms radius 4 in winter. Consumes 3 mana.
 - **Arcane Sentinel** (X) - Auto-attacks enemies in range 4. Consumes 3 mana.
 - **Ice Box** (I) - Reduces food spoilage by 40% (stacks with chests, max 90%). Consumes 1 mana.
@@ -519,31 +519,36 @@ Some items can only be obtained through trade:
 
 Build a Research Desk and assign colonists to study. Select one research topic at a time from the Research panel - all study points flow into it until complete, then you pick the next. You can deselect research to pause (progress is kept) and make tome study 2x faster. The Research button highlights gold when no topic is selected and techs remain available.
 
-| Research | Requires | Unlocks |
-|---|---|---|
-| Runecraft | - | Etched Axe. Unlocks Runeforging & Warding |
-| Druidcraft | - | Corn, Potatoes. Unlocks Beast Binding |
-| Ley Channeling | Runecraft | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
-| Alchemy | Stonework | +2 bonus food per cooked meal |
-| Mana Weaving | Ley Channeling | Mana-Weave Robe, Enchanted Glaive |
-| Masterwork | Runeforging | Runic Greatsword, Great Forge |
-| Runeforging | Runecraft | Runic Blade, Runic Pick, Runic Pickaxe, Runic Plate, Boots of Haste |
-| Warding | Runecraft | Arcane Sentinel |
-| Ember Magic | Ley Channeling | Ember Ward |
-| Luminance | Ley Channeling | Glowstone |
-| Arcane Infusion | Ley Channeling | Enchanting Table |
-| Void Summoning | Ley Channeling + Warding | Void Nexus |
-| Void Architecture | Void Summoning | Void Wall, Void Door |
-| Void Forging | Void Architecture + Runeforging | Void Blade, Void Armor, Void Turret, Void Crown |
-| Golem Craft | Arcane Infusion + Void Forging | Golem Forge, all golem types, Forge Core, Ritual Core |
-| Planar Rift | Void Summoning + Ley Channeling | Rift Gate |
-| Deep Delving | Planar Rift | Shadow Realm dimension |
+Research has diminishing returns from multiple desks: the first 2 desks contribute full research output, while additional desks produce at 50% efficiency.
+
+Some advanced technologies have additional requirements beyond prerequisites:
+- **Building prerequisites** - Certain buildings must exist (e.g., Ley Channeling requires an Anvil).
+- **Milestone gates** - Achievements must be completed (e.g., Void tab techs require surviving a raid).
+- **Tab breadth** - A minimum number of techs in the same tab must be completed before the deepest techs unlock.
+
+| Research | Requires | Additional Gates | Unlocks |
+|---|---|---|---|
+| Runecraft | - | - | Etched Axe. Unlocks Runeforging & Warding |
+| Stonework | - | - | Brick walls, floors |
+| Druidcraft | - | - | Corn, Potatoes. Unlocks Beast Binding |
+| Alchemy | Stonework | - | +2 bonus food per cooked meal |
+| Ley Channeling | Runecraft + Stonework | Anvil built | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
+| Arcane Infusion | Ley Channeling + Alchemy | 2 Mana Crystals built | Enchanting Table |
+| Runeforging | Runecraft | - | Runic Blade, Runic Pick, Runic Pickaxe, Runic Plate, Boots of Haste |
+| Masterwork | Runeforging + Arcane Infusion + Artisan's Touch | Enchanting Table built, Superior item crafted, 3 tab techs | Runic Greatsword, Great Forge |
+| Warding | Runecraft | - | Arcane Sentinel |
+| Fortification | Warding + Stonework | - | Reinforced doors, faster wall repair |
+| Void Summoning | Ley Channeling + Warding + Fortification | Arcane Sentinel built, raid survived | Void Nexus |
+| Void Forging | Void Architecture + Runeforging | 3 tab techs | Void Blade, Void Armor, Void Turret, Void Crown |
+| Golem Craft | Arcane Infusion + Void Forging + Mana Reservoir | Forge Core built, 3 items enchanted, 3 tab techs | Golem Forge, all golem types, Forge Core, Ritual Core |
+| Planar Rift | Void Summoning + Arcane Infusion | Wave completed | Rift Gate |
+| Deep Delving | Planar Rift | Rift Gate built, expedition completed, 3 tab techs | Shadow Realm dimension |
 
 ---
 
 ## Seasons & Weather
 
-The year cycles through 4 seasons (1500 ticks each, about 5 minutes real-time at 1x speed).
+The year cycles through 4 seasons (2400 ticks each, about 8 minutes real-time at 1x speed).
 
 | Season | Temperature | Crop Growth | Special |
 |---|---|---|---|

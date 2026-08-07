@@ -96,6 +96,7 @@ export class CombatSystem {
             game.notifications.push({ text: 'Raid defeated!', tick: game.tick, type: 'success' });
             game.eventLog.add(game, 'Raid defeated!', 'success', null);
             game.story.checkMilestone('first_raid_survived', game);
+            if (game.stats) game.stats.raidsDefeated++;
             return;
         }
 
@@ -151,6 +152,7 @@ export class CombatSystem {
             game.notifications.push({ text: 'Raiders fled!', tick: game.tick, type: 'success' });
             game.eventLog.add(game, 'Raiders fled!', 'success', null);
             game.story.checkMilestone('first_raid_survived', game);
+            if (game.stats) game.stats.raidsDefeated++;
         }
     }
 }

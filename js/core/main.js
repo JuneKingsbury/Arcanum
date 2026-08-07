@@ -110,6 +110,7 @@ class Game {
 
         this.manaCrystalBonus = 0;
         this.discoveredLoot = new Set();
+        this.stats = { raidsDefeated: 0, wavesCompleted: 0, expeditionsCompleted: 0, superiorItemsCrafted: 0, itemsEnchanted: 0 };
 
         this.colonists = [];
         this._colonistById = new Map();
@@ -439,9 +440,11 @@ class Game {
 
         if (this.tick % 5 === 0) {
             updateFarming(this);
+        }
+        if (this.tick % 8 === 0) {
             updateResearch(this);
         }
-        if (prof) prof.mark('farming+research(%5)');
+        if (prof) prof.mark('farming+research');
 
         if (this.tick % 10 === 0) {
             this.power.update(this);

@@ -1551,6 +1551,23 @@ body {
     background: #4a3a6a;
 }
 
+.research-gates {
+    margin-top: 4px;
+    text-align: left;
+    padding: 3px 4px;
+    background: #1a1a2a;
+    border-radius: 3px;
+    border: 1px solid #333;
+}
+
+.research-gate {
+    font-size: 0.68em;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .research-node.dimmed {
     opacity: 0.25;
     transition: opacity 0.2s;

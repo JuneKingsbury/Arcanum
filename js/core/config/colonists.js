@@ -1,10 +1,10 @@
 export const SKILLS = {
-    building: { name: 'Building', baseLevel: [2, 5], biasBonus: 3, description: 'Construction, mining, chopping, and repairs' },
-    farming:  { name: 'Farming', baseLevel: [2, 5], biasBonus: 3, description: 'Planting and harvesting crops' },
-    crafting: { name: 'Crafting', baseLevel: [2, 5], biasBonus: 3, description: 'Crafting items at workbenches' },
-    cooking:  { name: 'Cooking', baseLevel: [2, 5], biasBonus: 3, description: 'Cooking meals at cauldrons' },
-    animals:  { name: 'Animals', baseLevel: [1, 4], biasBonus: 3, description: 'Taming and handling animals' },
-    research: { name: 'Research', baseLevel: [1, 3], biasBonus: 3, description: 'Studying and discovering new knowledge' },
+    building: { name: 'Building', baseLevel: [2, 4], biasBonus: 3, description: 'Construction, mining, chopping, and repairs' },
+    farming:  { name: 'Farming', baseLevel: [2, 4], biasBonus: 3, description: 'Planting and harvesting crops' },
+    crafting: { name: 'Crafting', baseLevel: [2, 4], biasBonus: 3, description: 'Crafting items at workbenches' },
+    cooking:  { name: 'Cooking', baseLevel: [2, 4], biasBonus: 3, description: 'Cooking meals at cauldrons' },
+    animals:  { name: 'Animals', baseLevel: [1, 3], biasBonus: 3, description: 'Taming and handling animals' },
+    research: { name: 'Research', baseLevel: [1, 2], biasBonus: 3, description: 'Studying and discovering new knowledge' },
 };
 
 // THOUGHTS moved to ./social.js (still re-exported via index.js).
@@ -42,7 +42,7 @@ export const TRAITS = {
     light_sleeper: { name: 'Light Sleeper', weight: 7,  value:  0, restDecayMult: 1.4, sleepRestMult: 1.5, description: 'Gets tired faster, but recovers faster while sleeping' },
     deep_sleeper:  { name: 'Deep Sleeper',  weight: 7,  value:  0, restDecayMult: 0.7, sleepRestMult: 0.7, description: 'Gets tired slower, but recovers slower while sleeping' },
     creative:      { name: 'Creative',      weight: 6,  value:  3, craftingSpeedMult: 1.2, qualityBonus: 1, description: '+20% crafting speed, +1 quality tier chance' },
-    scholar:       { name: 'Scholar',       weight: 6,  value:  3, researchSpeedMult: 1.3, magicXpMult: 1.2, description: '+30% research speed, +20% magic XP gain' },
+    scholar:       { name: 'Scholar',       weight: 6,  value:  3, researchSpeedMult: 1.2, magicXpMult: 1.2, description: '+20% research speed, +20% magic XP gain' },
     gluttonous:    { name: 'Gluttonous',    weight: 6,  value: -2, hungerDecayMult: 1.6,  description: 'Gets hungry 60% faster' },
     // ── Rare ────────────────────────────────────────────────────────────────
     lucky:         { name: 'Lucky',         weight: 3,  value:  4, qualityBonus: 2, description: '+2 quality tier chance on all crafted items' },
@@ -75,7 +75,7 @@ export const COLONIST_CONFIG = {
     fleeDisengageDistance: 8,
     hostileSearchRadius: 30,
     socialRange: 3,
-    skillWorkBonus: 0.15,
+    skillWorkBonus: 0.12,
     deconstructRecovery: 0.5,
     baseAttackCooldown: 3,
     combatDamageVariance: 3,
@@ -104,8 +104,8 @@ export const COLONIST_CONFIG = {
     healthRegenWhileSleeping: 3.0,
     skillMaxLevel: 10,
     skillXpPerTask: 1,
-    skillXpToLevel: 4,
-    skillXpScalePerLevel: 2,
+    skillXpToLevel: 8,
+    skillXpScalePerLevel: 4,
 };
 
 export const GENDERS = ['man', 'woman', 'nonbinary'];
@@ -147,12 +147,12 @@ export const MOOD_SPEED_MULT = {
 export const WORK_CONFIG = {
     plantWork: 5,
     harvestWork: 8,
-    researchWork: 25,
+    researchWork: 60,
     deconstructWork: 10,
     tameWork: 20,
     dangerousTameWork: 30,
     tameSkillChanceBonus: 0.06,
-    poweredWorkbenchDivisor: 2,
+    poweredWorkbenchDivisor: 1.5,
     alchemyFoodBonus: 2,
     wealthPerWeapon: 10,
     guardPatrolRadius: 6,
@@ -163,10 +163,10 @@ export const WORK_CONFIG = {
 export const MAGIC_STUDY_CONFIG = {
     studyTicksPerProgress: 1,
     tomeStudyBonus: 2,
-    xpPerStudyTick: 0.05,
-    xpPerCast: 0.02,
-    magicXpToLevel: 0.5,
-    magicXpScalePerLevel: 0.15,
+    xpPerStudyTick: 0.025,
+    xpPerCast: 0.015,
+    magicXpToLevel: 0.8,
+    magicXpScalePerLevel: 0.25,
 };
 
 export const TASK_CONFIG = {

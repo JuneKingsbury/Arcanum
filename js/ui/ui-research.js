@@ -1,4 +1,4 @@
-import { RESEARCH, RESEARCH_TABS, DEMO_LOCKED_RESEARCH } from '../core/config.js';
+import { RESEARCH, RESEARCH_TABS, DEMO_LOCKED_RESEARCH, BUILDINGS } from '../core/config.js';
 
 export function installResearchPanel(UI) {
     Object.assign(UI.prototype, researchMethods);
@@ -60,7 +60,9 @@ const researchMethods = {
                 const tech = RESEARCH[key];
                 const completed = research.completed.has(key);
                 const demoLocked = this.game.settings.demoMode && DEMO_LOCKED_RESEARCH.has(key);
-                const available = !completed && !demoLocked && tech.requires.every(r => research.completed.has(r));
+                const prereqsMet = tech.requires.every(r => research.completed.has(r));
+                const gatesMet = prereqsMet && research._checkGates(tech);
+                const available = !completed && !demoLocked && prereqsMet && gatesMet;
                 const isActive = research.activeResearch === key;
                 const prog = research.getProgress(key);
                 let cls = 'research-node';
@@ -85,6 +87,17 @@ const researchMethods = {
                     html += `<div class="research-node-cost">${Math.floor(prog)}/${tech.cost} pts (paused)</div>`;
                 } else {
                     html += `<div class="research-node-cost">${tech.cost} pts</div>`;
+                }
+                if (!completed && !demoLocked) {
+                    const gateLines = this._getGateRequirements(tech, research);
+                    if (gateLines.length > 0) {
+                        html += '<div class="research-gates">';
+                        for (const gate of gateLines) {
+                            const color = gate.met ? '#66cc66' : '#cc8844';
+                            html += `<div class="research-gate" style="color:${color};">${gate.met ? '✓' : '○'} ${gate.label}</div>`;
+                        }
+                        html += '</div>';
+                    }
                 }
                 const crossTabReqs = tech.requires.filter(r => RESEARCH[r]?.tab !== activeTab && !research.completed.has(r));
                 if (crossTabReqs.length > 0) {
@@ -219,6 +232,55 @@ const researchMethods = {
                 path.classList.remove('dimmed', 'highlighted');
             }
         }
+    },
+
+    _getGateRequirements(tech, research) {
+        const gates = [];
+        const game = this.game;
+
+        if (tech.requiresBuildings) {
+            for (const [building, count] of Object.entries(tech.requiresBuildings)) {
+                let found = 0;
+                for (let y = 0; y < game.map.length; y++) {
+                    for (let x = 0; x < game.map[y].length; x++) {
+                        if (game.map[y][x].structure === building) found++;
+                        if (found >= count) break;
+                    }
+                    if (found >= count) break;
+                }
+                const bName = BUILDINGS[building]?.description?.split('.')[0] || building.replace(/_/g, ' ');
+                const label = count > 1
+                    ? `Build ${count}× ${building.replace(/_/g, ' ')} (${found}/${count})`
+                    : `Build ${building.replace(/_/g, ' ')}`;
+                gates.push({ label, met: found >= count });
+            }
+        }
+
+        if (tech.requiresMilestone) {
+            const { stat, min } = tech.requiresMilestone;
+            const current = game.stats?.[stat] || 0;
+            const labels = {
+                raidsDefeated: 'Survive a raid',
+                wavesCompleted: 'Complete a void wave',
+                expeditionsCompleted: 'Complete an expedition',
+                superiorItemsCrafted: 'Craft a Superior item',
+                itemsEnchanted: `Enchant ${min} items (${current}/${min})`,
+            };
+            gates.push({ label: labels[stat] || stat, met: current >= min });
+        }
+
+        if (tech.requiresTabCount) {
+            let tabCompleted = 0;
+            for (const [k, t] of Object.entries(RESEARCH)) {
+                if (t.tab === tech.tab && research.completed.has(k)) tabCompleted++;
+            }
+            gates.push({
+                label: `${tech.requiresTabCount} techs in tab (${tabCompleted}/${tech.requiresTabCount})`,
+                met: tabCompleted >= tech.requiresTabCount,
+            });
+        }
+
+        return gates;
     },
 
     _buildResearchLayers(tabKeys) {

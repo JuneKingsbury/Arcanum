@@ -667,6 +667,7 @@ export class ExplorationSystem {
         if (!allDefeated) {
             this.completedRealms.add(exp.realm);
             game.story.checkMilestone(`realm_${exp.realm}`, game);
+            if (game.stats) game.stats.expeditionsCompleted++;
         }
         const gx = exp.gatePos.x;
         const gy = exp.gatePos.y;
