@@ -147,6 +147,13 @@ export class UI {
         });
 
         this.elements.researchPanel.addEventListener('click', (e) => {
+            const toggle = e.target.closest('[data-research-hide-toggle]');
+            if (toggle) {
+                this._researchHideCompleted = !this._researchHideCompleted;
+                this._lastResearchHtml = null;
+                this.updateResearchPanel();
+                return;
+            }
             const tab = e.target.closest('[data-research-tab]');
             if (tab) {
                 this._researchTab = tab.dataset.researchTab;
@@ -992,8 +999,7 @@ export class UI {
         html += `<div class="info-row">HP: ${Math.round(colonist.hp)}/${colonist.maxHp} | Mood: <span class="mood-${moodLevel}">${colonist.mood.toFixed(0)} (${moodLevel})</span></div>`;
         html += `<div class="info-row">Hunger: ${bar(colonist.needs.hunger)} Rest: ${bar(colonist.needs.rest)}</div>`;
         html += `<div class="info-row">State: ${colonist.state} | Task: ${this.getColonistTaskDescription(colonist)}</div>`;
-        const genderLabel = colonist.gender ? colonist.gender.charAt(0).toUpperCase() + colonist.gender.slice(1) : '';
-        const allTraits = [genderLabel, ...traitSpanArr].filter(Boolean).join(', ');
+        const allTraits = traitSpanArr.filter(Boolean).join(', ');
         if (allTraits) html += `<div class="info-row">Traits: ${allTraits}</div>`;
         html += `<div class="info-row">Bed: ${colonist.assignedBed ? `(${colonist.assignedBed.x},${colonist.assignedBed.y})` : 'None'}</div>`;
 

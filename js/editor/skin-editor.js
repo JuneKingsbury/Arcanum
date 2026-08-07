@@ -144,7 +144,9 @@ class SkinEditor {
         this.hoveredPixel = null;
         this.savedSprites = {};
         this.categoryFilter = 'Buildings';
-        this.colonistVariants = 3;
+        this.bodyVariants = 3;
+        this.hairVariants = 3;
+        this.shirtVariants = 3;
         this.clipboard = null;
         this._undoStack = [];
         this._redoStack = [];
@@ -462,17 +464,21 @@ class SkinEditor {
                 }
                 break;
             case 'Entities':
-                for (let i = 1; i <= this.colonistVariants; i++) {
+                for (let i = 1; i <= this.bodyVariants; i++) {
                     const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
-                    items.push({ key: `colonist_${i}`, char: '@', color, desc: `Colonist variant ${i} (legacy)`, category: 'entities', isVariant: i > 1 });
+                    items.push({ key: `colonist_body_${i}`, char: '@', color, desc: `Colonist body (skin tone) ${i}`, category: 'entities', isVariant: i > 1, variantGroup: 'body' });
                 }
-                for (const gender of ['man', 'woman', 'nonbinary']) {
-                    for (let i = 1; i <= this.colonistVariants; i++) {
-                        const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
-                        items.push({ key: `colonist_${gender}_${i}`, char: '@', color, desc: `Colonist ${gender} variant ${i}`, category: 'entities' });
-                    }
+                items.push({ key: '__add_body__', char: '+', color: '#888888', desc: 'Add another body variant', category: 'entities', isAction: true, variantGroup: 'body' });
+                for (let i = 1; i <= this.hairVariants; i++) {
+                    const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
+                    items.push({ key: `colonist_hair_${i}`, char: '@', color, desc: `Colonist hair style ${i}`, category: 'entities', isVariant: i > 1, variantGroup: 'hair' });
                 }
-                items.push({ key: '__add_variant__', char: '+', color: '#888888', desc: 'Add another colonist variant', category: 'entities', isAction: true });
+                items.push({ key: '__add_hair__', char: '+', color: '#888888', desc: 'Add another hair variant', category: 'entities', isAction: true, variantGroup: 'hair' });
+                for (let i = 1; i <= this.shirtVariants; i++) {
+                    const color = VARIANT_COLORS[(i - 1) % VARIANT_COLORS.length];
+                    items.push({ key: `colonist_shirt_${i}`, char: '@', color, desc: `Colonist shirt ${i} (grayscale, tinted in-game)`, category: 'entities', isVariant: i > 1, variantGroup: 'shirt' });
+                }
+                items.push({ key: '__add_shirt__', char: '+', color: '#888888', desc: 'Add another shirt variant', category: 'entities', isAction: true, variantGroup: 'shirt' });
                 for (const e of ENTITY_SPECIALS) {
                     items.push({ key: e.key, char: e.char, color: e.color, desc: e.desc, category: 'entities' });
                 }
@@ -562,8 +568,8 @@ class SkinEditor {
         let html = '';
         for (const item of items) {
             if (item.isAction) {
-                html += `<div class="bp-palette-item se-add-variant" data-action="add-variant" title="${item.desc}">
-                    <span style="color:${item.color}">${item.char}</span> Add colonist variant
+                html += `<div class="bp-palette-item se-add-variant" data-action="add-variant" data-variant-group="${item.variantGroup || ''}" title="${item.desc}">
+                    <span style="color:${item.color}">${item.char}</span> ${item.desc}
                 </div>`;
                 continue;
             }
@@ -720,7 +726,7 @@ class SkinEditor {
             const item = e.target.closest('.bp-palette-item');
             if (!item) return;
             if (item.dataset.action === 'add-variant') {
-                this._addVariant();
+                this._addVariant(item.dataset.variantGroup);
                 return;
             }
             this._selectObject(item.dataset.key, item.dataset.category);
@@ -1335,7 +1341,7 @@ class SkinEditor {
         }
 
         if (category === 'equipment_worn') {
-            const colonistSprite = this.savedSprites['entities:colonist_1'];
+            const colonistSprite = this.savedSprites['entities:colonist_body_1'];
             if (colonistSprite) {
                 this._onionSkinOpacity = 1.0;
                 const slotType = HELMETS[key] ? 'helmet' : WEAPONS[key] ? 'weapon' : TOOLS[key] ? 'tool' : 'armor';
@@ -1343,9 +1349,9 @@ class SkinEditor {
                 this._onionSkinOffsetX = -(offsets.offsetX || 0);
                 this._onionSkinOffsetY = -(offsets.offsetY || 0);
                 if (slotType === 'weapon' || slotType === 'tool') {
-                    this._setOnionSkinComposite('entities:colonist_1');
+                    this._setOnionSkinComposite('entities:colonist_body_1');
                 } else {
-                    this._setOnionSkinFromSprite('entities:colonist_1');
+                    this._setOnionSkinFromSprite('entities:colonist_body_1');
                 }
             }
         } else if (this._onionSkinOpacity === 1.0) {
@@ -2575,28 +2581,33 @@ class SkinEditor {
     }
 
     // --- Colonist Variants ---
-    _addVariant() {
-        this.colonistVariants++;
+    _addVariant(group) {
+        if (group === 'body') this.bodyVariants++;
+        else if (group === 'hair') this.hairVariants++;
+        else if (group === 'shirt') this.shirtVariants++;
         this._persistSkinData();
         this._buildPalette();
     }
 
     _removeVariant(variantKey) {
-        const num = parseInt(variantKey.split('_')[1]);
-        if (!num || num > this.colonistVariants || this.colonistVariants <= 1) return;
+        // variantKey is like 'colonist_body_2', 'colonist_hair_1', 'colonist_shirt_3'
+        const parts = variantKey.split('_');
+        const group = parts[1]; // 'body' | 'hair' | 'shirt'
+        const num = parseInt(parts[2]);
+        const countProp = group === 'body' ? 'bodyVariants' : group === 'hair' ? 'hairVariants' : 'shirtVariants';
+        if (!num || num > this[countProp] || this[countProp] <= 1) return;
         delete this.savedSprites[`entities:${variantKey}`];
-        // Shift down higher variants
-        for (let i = num; i < this.colonistVariants; i++) {
-            const nextKey = `entities:colonist_${i + 1}`;
-            const curKey = `entities:colonist_${i}`;
+        for (let i = num; i < this[countProp]; i++) {
+            const nextKey = `entities:colonist_${group}_${i + 1}`;
+            const curKey = `entities:colonist_${group}_${i}`;
             if (this.savedSprites[nextKey]) {
                 this.savedSprites[curKey] = this.savedSprites[nextKey];
             } else {
                 delete this.savedSprites[curKey];
             }
         }
-        delete this.savedSprites[`entities:colonist_${this.colonistVariants}`];
-        this.colonistVariants--;
+        delete this.savedSprites[`entities:colonist_${group}_${this[countProp]}`];
+        this[countProp]--;
         if (this.activeObject && this.activeObject.key === variantKey) {
             this.activeObject = null;
             this.pixels = new Uint8ClampedArray(this.canvasSize * this.canvasSize * 4);
@@ -2662,7 +2673,7 @@ class SkinEditor {
             manifest[category].push(key);
         }
 
-        zip.file('manifest.json', JSON.stringify({ sprites: manifest, colonistVariants: this.colonistVariants }, null, 2));
+        zip.file('manifest.json', JSON.stringify({ sprites: manifest, bodyVariants: this.bodyVariants, hairVariants: this.hairVariants, shirtVariants: this.shirtVariants }, null, 2));
 
         const blob = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(blob);
@@ -2725,12 +2736,26 @@ class SkinEditor {
                 }
             }
 
-            if (manifest.colonistVariants != null) {
-                this.colonistVariants = manifest.colonistVariants;
+            if (manifest.bodyVariants != null) {
+                this.bodyVariants = manifest.bodyVariants;
             } else {
                 let v = 0;
-                while (this.savedSprites[`entities:colonist_${v + 1}`]) v++;
-                this.colonistVariants = Math.max(v, this.colonistVariants);
+                while (this.savedSprites[`entities:colonist_body_${v + 1}`]) v++;
+                this.bodyVariants = Math.max(v, this.bodyVariants);
+            }
+            if (manifest.hairVariants != null) {
+                this.hairVariants = manifest.hairVariants;
+            } else {
+                let v = 0;
+                while (this.savedSprites[`entities:colonist_hair_${v + 1}`]) v++;
+                this.hairVariants = Math.max(v, this.hairVariants);
+            }
+            if (manifest.shirtVariants != null) {
+                this.shirtVariants = manifest.shirtVariants;
+            } else {
+                let v = 0;
+                while (this.savedSprites[`entities:colonist_shirt_${v + 1}`]) v++;
+                this.shirtVariants = Math.max(v, this.shirtVariants);
             }
 
             this._persistSkinData();
@@ -2783,7 +2808,7 @@ class SkinEditor {
     }
 
     _persistSkinData() {
-        const data = { sprites: this.savedSprites, colonistVariants: this.colonistVariants };
+        const data = { sprites: this.savedSprites, bodyVariants: this.bodyVariants, hairVariants: this.hairVariants, shirtVariants: this.shirtVariants };
         localStorage.setItem(STORAGE_PREFIX + this.skinName, JSON.stringify(data));
     }
 
@@ -2793,9 +2818,9 @@ class SkinEditor {
             try {
                 const parsed = JSON.parse(data);
                 this.savedSprites = parsed.sprites || {};
-                if (typeof parsed.colonistVariants === 'number') {
-                    this.colonistVariants = parsed.colonistVariants;
-                }
+                if (typeof parsed.bodyVariants === 'number') this.bodyVariants = parsed.bodyVariants;
+                if (typeof parsed.hairVariants === 'number') this.hairVariants = parsed.hairVariants;
+                if (typeof parsed.shirtVariants === 'number') this.shirtVariants = parsed.shirtVariants;
             } catch { /* ignore */ }
         }
     }

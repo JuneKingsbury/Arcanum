@@ -5,7 +5,9 @@ export class SkinManager {
         this._sprites = new Map();
         this._skinNames = ['ascii'];
         this._activeSkin = 'ascii';
-        this._colonistVariantCount = 0;
+        this._bodyCount = 0;
+        this._hairCount = 0;
+        this._shirtCount = 0;
         this._compositeCache = new Map();
     }
 
@@ -17,9 +19,9 @@ export class SkinManager {
         return this._activeSkin;
     }
 
-    get colonistVariantCount() {
-        return this._colonistVariantCount;
-    }
+    get bodyCount() { return this._bodyCount; }
+    get hairCount() { return this._hairCount; }
+    get shirtCount() { return this._shirtCount; }
 
     getSkinNames() {
         return this._skinNames;
@@ -64,7 +66,9 @@ export class SkinManager {
         if (skinName === 'ascii') {
             this._sprites.clear();
             this._activeSkin = 'ascii';
-            this._colonistVariantCount = 0;
+            this._bodyCount = 0;
+            this._hairCount = 0;
+            this._shirtCount = 0;
             this._itemDataURLCache = null;
             this._compositeCache.clear();
             return;
@@ -102,65 +106,72 @@ export class SkinManager {
         return url;
     }
 
-    // Resolve which sprite variant a colonist uses for the CURRENTLY active pack.
-    // Precedence (all pack-count-agnostic so swapping packs never corrupts a choice):
-    //   1. an explicit per-pack choice from the Custom Colonist menu (skinVariants),
-    //   2. else the colonist's stable random seed mapped into the pack's range,
-    //   3. else the legacy id-ordering (old saves predate skinSeed).
-    // Returns a 1-based variant index, or 0 when the pack has no variants.
-    resolveColonistVariant(colonistId, skinSeed, skinVariants) {
-        const count = this._colonistVariantCount;
-        if (count <= 0) return 0;
-        const explicit = skinVariants && this._activeSkin ? skinVariants[this._activeSkin] : undefined;
-        if (explicit != null) {
-            // Clamp: the chosen index may exceed a pack that now has fewer variants.
-            return (((explicit - 1) % count) + count) % count + 1;
-        }
-        if (skinSeed != null) return (skinSeed % count) + 1;
-        return ((colonistId - 1) % count) + 1;
-    }
-
-    // `variant`, when provided, is a resolved 1-based index (see resolveColonistVariant);
-    // otherwise the legacy id-ordering is used so old call sites keep working.
-    getColonistSprite(colonistId, drafted, gender, variant) {
+    // Returns a composited canvas (body + hair + tinted shirt) for a colonist,
+    // or null if the active pack has no body sprites (ASCII mode).
+    // bodyVariant/hairVariant/shirtVariant are 1-based; missing/0 falls back to 1.
+    getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor) {
         if (drafted) {
-            if (gender) {
-                const s = this._sprites.get('entities:colonist_' + gender + '_drafted');
-                if (s) return s;
-            }
             const s = this._sprites.get('entities:colonist_drafted');
             if (s) return s;
         }
-        if (this._colonistVariantCount > 0) {
-            const variantIdx = variant != null ? variant : ((colonistId - 1) % this._colonistVariantCount) + 1;
-            if (gender) {
-                const s = this._sprites.get('entities:colonist_' + gender + '_' + variantIdx);
-                if (s) return s;
+        if (this._bodyCount <= 0) return null;
+
+        const bIdx = (bodyVariant && bodyVariant > 0) ? ((bodyVariant - 1) % this._bodyCount) + 1 : 1;
+        const body = this._sprites.get('entities:colonist_body_' + bIdx);
+        if (!body) return null;
+
+        const cw = body.width || body.naturalWidth || 16;
+        const ch = body.height || body.naturalHeight || 16;
+        const canvas = document.createElement('canvas');
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(body, 0, 0, cw, ch);
+
+        if (this._hairCount > 0) {
+            const hIdx = (hairVariant && hairVariant > 0) ? ((hairVariant - 1) % this._hairCount) + 1 : 1;
+            const hair = this._sprites.get('entities:colonist_hair_' + hIdx);
+            if (hair) ctx.drawImage(hair, 0, 0, cw, ch);
+        }
+
+        if (this._shirtCount > 0 && nameColor) {
+            const sIdx = (shirtVariant && shirtVariant > 0) ? ((shirtVariant - 1) % this._shirtCount) + 1 : 1;
+            const shirt = this._sprites.get('entities:colonist_shirt_' + sIdx);
+            if (shirt) {
+                const tinted = this._tintSprite(shirt, nameColor, cw, ch);
+                ctx.drawImage(tinted, 0, 0, cw, ch);
             }
-            const s = this._sprites.get('entities:colonist_' + variantIdx);
-            if (s) return s;
         }
-        if (gender) {
-            const s = this._sprites.get('entities:colonist_' + gender);
-            if (s) return s;
-        }
-        return this._sprites.get('entities:colonist') || null;
+
+        return canvas;
+    }
+
+    _tintSprite(sprite, color, w, h) {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(sprite, 0, 0, w, h);
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.drawImage(sprite, 0, 0, w, h);
+        return c;
     }
 
     getColonistSleepingSprite() {
         return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
-    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, gender, weaponKey, toolKey, variant) {
-        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, gender, variant);
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, bodyVariant, hairVariant, shirtVariant, nameColor, weaponKey, toolKey) {
+        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor);
 
-        // The variant is part of the base sprite, so it must key the composite cache
-        // too — otherwise two colonists with the same gear but different variants
-        // would collide on one cached image.
-        const cacheKey = `${colonistId}:${drafted}:${armorKey || ''}:${helmetKey || ''}:${gender || ''}:${weaponKey || ''}:${toolKey || ''}:${variant != null ? variant : ''}`;
+        const cacheKey = `${colonistId}:${drafted}:${bodyVariant || ''}:${hairVariant || ''}:${shirtVariant || ''}:${nameColor || ''}:${armorKey || ''}:${helmetKey || ''}:${weaponKey || ''}:${toolKey || ''}`;
         if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
 
-        const base = this.getColonistSprite(colonistId, drafted, gender, variant);
+        const base = this.getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor);
         if (!base) return null;
 
         const armorSprite = armorKey ? this._sprites.get('equipment_worn:' + armorKey) : null;
@@ -216,16 +227,19 @@ export class SkinManager {
 
     async _loadSkin(skinName) {
         this._sprites.clear();
-        this._colonistVariantCount = 0;
+        this._bodyCount = 0;
+        this._hairCount = 0;
+        this._shirtCount = 0;
 
         const loaded = await this._tryLoadFromZip(skinName) || await this._tryLoadFromFolder(skinName);
         if (!loaded) return;
 
-        let count = 0;
-        while (this._sprites.has('entities:colonist_' + (count + 1))) {
-            count++;
-        }
-        this._colonistVariantCount = count;
+        let b = 0; while (this._sprites.has('entities:colonist_body_' + (b + 1))) b++;
+        let h = 0; while (this._sprites.has('entities:colonist_hair_' + (h + 1))) h++;
+        let s = 0; while (this._sprites.has('entities:colonist_shirt_' + (s + 1))) s++;
+        this._bodyCount = b;
+        this._hairCount = h;
+        this._shirtCount = s;
     }
 
     async _tryLoadFromZip(skinName) {

@@ -108,21 +108,20 @@ export const COLONIST_CONFIG = {
     skillXpScalePerLevel: 4,
 };
 
-export const GENDERS = ['man', 'woman', 'nonbinary'];
+export const COLONIST_NAMES = [
+    'Bob', 'Cal', 'Finn', 'Hank', 'Jake', 'Max', 'Otto',
+    'Davis', 'Hugh', 'Matt', 'Paul', 'Jim', 'Rex', 'Liam', 'Noah', 'Owen',
+    'Ada', 'Dee', 'Eve', 'Gail', 'Iris', 'Lena', 'Nora', 'Pia',
+    'Mia', 'Tara', 'Uma', 'Xia', 'Wren', 'Faye', 'Opal', 'Ruth',
+    'Kit', 'Quinn', 'Sage', 'Vex', 'Morgan', 'Sam',
+    'Perry', 'Harper', 'Jules', 'Kris', 'Ash', 'Rowan', 'Ember', 'Lux',
+];
 
-export const COLONIST_NAMES = {
-    man: [
-        'Bob', 'Cal', 'Finn', 'Hank', 'Jake', 'Max', 'Otto',
-        'Davis', 'Hugh', 'Matt', 'Paul', 'Jim', 'Rex', 'Liam', 'Noah', 'Owen',
-    ],
-    woman: [
-        'Ada', 'Dee', 'Eve', 'Gail', 'Iris', 'Lena', 'Nora', 'Pia',
-        'Mia', 'Tara', 'Uma', 'Xia', 'Wren', 'Faye', 'Opal', 'Ruth',
-    ],
-    nonbinary: [
-        'Kit', 'Quinn', 'Sage', 'Vex', 'Morgan', 'Sam',
-        'Perry', 'Harper', 'Jules', 'Kris', 'Ash', 'Rowan', 'Ember', 'Lux',
-    ],
+// Expected sprite layer counts — actual counts come from the active skin pack at runtime.
+export const COLONIST_APPEARANCE = {
+    bodyCount: 4,
+    hairCount: 6,
+    shirtCount: 4,
 };
 
 export const NEED_DECAY = {

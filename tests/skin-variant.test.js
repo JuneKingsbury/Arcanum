@@ -1,56 +1,82 @@
-// Guards SkinManager.resolveColonistVariant — the single place the appearance
-// precedence rule lives. Colonists store their look decoupled from spawn order:
-// an explicit per-pack choice wins, else a stable random seed mapped into the
-// pack's range, else legacy id-ordering (old saves predate skinSeed).
-//
-// resolveColonistVariant is pure (no DOM), so we construct a SkinManager and set
-// its variant count / active pack directly rather than loading real sprites.
+// Guards SkinManager.getColonistSprite — the composited body+hair+shirt lookup.
+// We stub sprite lookups by populating _sprites directly so no fetch is needed.
+// Canvas-dependent paths (compositing) require DOM and can't run in this env;
+// we test only the pure lookup/guard paths here.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SkinManager } from '../js/ui/skin-manager.js';
 
-describe('SkinManager.resolveColonistVariant', () => {
+const fakeSprite = (label) => ({ _label: label, width: 16, height: 16 });
+
+describe('SkinManager.getColonistSprite — null/drafted guards (no canvas)', () => {
     let sm;
     beforeEach(() => {
         sm = new SkinManager();
         sm._activeSkin = 'fantasy';
-        sm._colonistVariantCount = 4;
+        sm._bodyCount = 3;
+        sm._hairCount = 2;
+        sm._shirtCount = 2;
+        for (let i = 1; i <= 3; i++) sm._sprites.set(`entities:colonist_body_${i}`, fakeSprite(`body_${i}`));
+        for (let i = 1; i <= 2; i++) sm._sprites.set(`entities:colonist_hair_${i}`, fakeSprite(`hair_${i}`));
+        for (let i = 1; i <= 2; i++) sm._sprites.set(`entities:colonist_shirt_${i}`, fakeSprite(`shirt_${i}`));
     });
 
-    it('returns 0 when the active pack has no variants', () => {
-        sm._colonistVariantCount = 0;
-        expect(sm.resolveColonistVariant(1, 123, { fantasy: 2 })).toBe(0);
+    it('returns null when bodyCount is 0 (ASCII mode)', () => {
+        sm._bodyCount = 0;
+        expect(sm.getColonistSprite(1, false, 1, 1, 1, '#ff0000')).toBeNull();
     });
 
-    it('honors an explicit per-pack choice over seed and id', () => {
-        expect(sm.resolveColonistVariant(1, 999, { fantasy: 3 })).toBe(3);
+    it('returns null when the body sprite key is missing from the map', () => {
+        sm._sprites.clear();
+        // bodyCount > 0 but no actual sprite loaded — should return null
+        expect(sm.getColonistSprite(1, false, 1, 1, 1, '#ff0000')).toBeNull();
     });
 
-    it('only applies a choice made for the ACTIVE pack', () => {
-        // A choice stored for a different pack must not leak into this one; it
-        // falls through to the seed instead.
-        expect(sm.resolveColonistVariant(1, 5, { otherPack: 2 })).toBe((5 % 4) + 1);
+    it('returns the drafted sprite when drafted=true and one exists', () => {
+        const drafted = fakeSprite('drafted');
+        sm._sprites.set('entities:colonist_drafted', drafted);
+        const result = sm.getColonistSprite(1, true, 1, 1, 1, '#ff0000');
+        expect(result).toBe(drafted);
     });
 
-    it('clamps an explicit choice that exceeds the current pack size', () => {
-        // A pack swapped for one with fewer variants: choice 7 wraps into 1..4.
-        // ((7-1) % 4) + 1 = 3.
-        expect(sm.resolveColonistVariant(1, 0, { fantasy: 7 })).toBe(3);
+    it('falls through to compositing when drafted=true but no drafted sprite exists', () => {
+        // No colonist_drafted sprite; should attempt to build composite from body
+        // (will throw due to missing document.createElement in this env, but that
+        // confirms it did not short-circuit — we just guard the drafted fast-path here)
+        sm._sprites.delete('entities:colonist_drafted');
+        // If bodyCount > 0 and body sprite exists, it will try to create a canvas.
+        // We verify it does NOT return the non-existent drafted sprite (null for that key).
+        // Instead it should proceed (throws in test env, but that's expected).
+        expect(() => sm.getColonistSprite(1, true, 1, 1, 1, '#ff0000')).toThrow();
+    });
+});
+
+describe('SkinManager body/hair/shirt counts', () => {
+    it('starts at zero before a skin is loaded', () => {
+        const sm = new SkinManager();
+        expect(sm.bodyCount).toBe(0);
+        expect(sm.hairCount).toBe(0);
+        expect(sm.shirtCount).toBe(0);
     });
 
-    it('falls back to the seed (decoupled from id) when no choice is set', () => {
-        // seed 6 % 4 + 1 = 3 — independent of the colonist id passed in.
-        expect(sm.resolveColonistVariant(1, 6, {})).toBe(3);
-        expect(sm.resolveColonistVariant(999, 6, {})).toBe(3);
+    it('exposes counts via getters after manual population', () => {
+        const sm = new SkinManager();
+        sm._bodyCount = 4;
+        sm._hairCount = 6;
+        sm._shirtCount = 3;
+        expect(sm.bodyCount).toBe(4);
+        expect(sm.hairCount).toBe(6);
+        expect(sm.shirtCount).toBe(3);
     });
 
-    it('falls back to legacy id-ordering when there is no seed (old saves)', () => {
-        // skinSeed undefined -> ((id-1) % count) + 1, the pre-feature behavior.
-        expect(sm.resolveColonistVariant(1, undefined, {})).toBe(1);
-        expect(sm.resolveColonistVariant(5, undefined, {})).toBe((5 - 1) % 4 + 1); // 2
-    });
-
-    it('treats a null skinVariants map as no choice', () => {
-        expect(sm.resolveColonistVariant(1, 6, null)).toBe(3);
-        expect(sm.resolveColonistVariant(1, undefined, undefined)).toBe(1);
+    it('resets all counts when switching back to ascii', async () => {
+        const sm = new SkinManager();
+        sm._bodyCount = 3;
+        sm._hairCount = 2;
+        sm._shirtCount = 4;
+        // switchSkin('ascii') clears everything synchronously (no fetch needed)
+        await sm.switchSkin('ascii');
+        expect(sm.bodyCount).toBe(0);
+        expect(sm.hairCount).toBe(0);
+        expect(sm.shirtCount).toBe(0);
     });
 });

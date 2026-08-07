@@ -1,4 +1,4 @@
-import { CONFIG, GENDERS, COLONIST_NAMES, COLONIST_CONFIG, TRAITS, TRAIT_EXCLUSIONS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT, SOCIAL_CONFIG } from '../core/config.js';
+import { CONFIG, COLONIST_NAMES, COLONIST_APPEARANCE, COLONIST_CONFIG, TRAITS, TRAIT_EXCLUSIONS, NEED_DECAY, MOOD_THRESHOLDS, MOOD_SPEED_MULT, WEAPONS, POTIONS, SKILLS, MAGIC_SKILLS, MANA_CONFIG, MAGIC_STUDY_CONFIG, SPELLS, THOUGHTS, COMBAT_VISUALS, WORK_CONFIG, TASK_CONFIG, GOLEM_TYPES, SUMMON_TYPES, TASK_SPEED_STATS, DAY_NIGHT, SOCIAL_CONFIG } from '../core/config.js';
 import { getRelationshipTier } from '../systems/social-utils.js';
 import { findPath, findPathAdjacent, manhattanDist } from '../world/pathfinding.js';
 import { isPassable, getMoveCost, hasLineOfSight } from '../world/map.js';
@@ -8,12 +8,20 @@ import { spawnSummon } from './summons.js';
 import { getNextId } from './entity-factory.js';
 import { completeTask } from './task-executor.js';
 
+function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    };
+    return '#' + [f(0), f(8), f(4)].map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+}
+
 export function createColonist(x, y, skillBias, existingNames = []) {
     const id = getNextId();
-    const gender = GENDERS[Math.floor(Math.random() * GENDERS.length)];
     const usedNames = new Set(existingNames);
-    const genderNames = COLONIST_NAMES[gender];
-    const available = genderNames.filter(n => !usedNames.has(n));
+    const available = COLONIST_NAMES.filter(n => !usedNames.has(n));
     let name = available.length > 0
         ? available[Math.floor(Math.random() * available.length)]
         : `Colonist ${id}`;
@@ -82,18 +90,22 @@ export function createColonist(x, y, skillBias, existingNames = []) {
     const combinedMagicLevel = Object.values(magicSkills).reduce((sum, lvl) => sum + lvl, 0);
     const maxMana = MANA_CONFIG.baseMana + combinedMagicLevel * MANA_CONFIG.manaPerMagicLevel;
 
+    // Use a large seed range so getColonistSprite's modulo wraps correctly into
+    // however many sprites the active pack actually has at render time.
+    const bodyVariant = Math.floor(Math.random() * 1000) + 1;
+    const hairVariant = Math.floor(Math.random() * 1000) + 1;
+    const shirtVariant = Math.floor(Math.random() * 1000) + 1;
+
+    // Random vibrant color: full hue wheel, stored as hex for use in canvas/input[type=color].
+    const hue = Math.floor(Math.random() * 360);
+    const nameColor = hslToHex(hue, 90, 65);
+
     return {
-        id, name, gender, x, y, skills, skillXp: {}, magicSkills, magicBias, traits,
-        // Visual identity, decoupled from entity-spawn order (see skin-manager):
-        //  - nameColor: the ASCII '@' colour, a random palette pick (editable in-game).
-        //  - skinSeed: a stable random int; sprite packs with no explicit choice map
-        //    this into their variant range, so the "random" look doesn't depend on how
-        //    many wild animals happened to spawn before this colonist.
-        //  - skinVariants: { [skinPackName]: variantIndex } — an explicit per-pack choice
-        //    (set in the Custom Colonist menu) that overrides the seed for that pack only.
-        nameColor: COLONIST_CONFIG.nameColors[Math.floor(Math.random() * COLONIST_CONFIG.nameColors.length)],
-        skinSeed: Math.floor(Math.random() * 1000000),
-        skinVariants: {},
+        id, name, x, y, skills, skillXp: {}, magicSkills, magicBias, traits,
+        nameColor,
+        bodyVariant,
+        hairVariant,
+        shirtVariant,
         priorities: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 3])),
         needs: { hunger: COLONIST_CONFIG.initialHunger[0] + Math.random() * (COLONIST_CONFIG.initialHunger[1] - COLONIST_CONFIG.initialHunger[0]), rest: COLONIST_CONFIG.initialRest[0] + Math.random() * (COLONIST_CONFIG.initialRest[1] - COLONIST_CONFIG.initialRest[0]) },
         mood: COLONIST_CONFIG.initialMood,

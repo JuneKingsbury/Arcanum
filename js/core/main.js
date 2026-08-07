@@ -1,4 +1,4 @@
-import { CONFIG, GAME_VERSION, RESEARCH, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, GENDERS, COLONIST_NAMES } from './config.js';
+import { CONFIG, GAME_VERSION, RESEARCH, FOOD_DECAY_CONFIG, SPELL_TOMES, SPELLS, COMBAT_VISUALS, GOLEM_TYPES, ARTIFACTS, WEAPONS, ARMORS, HELMETS, TOOLS, SKILLS, EVENTS, TERRAIN, RENDER_CONFIG, RECIPES, SALVAGE_RATE, COLONIST_CONFIG, ALL_ITEMS, TRAITS, TRAIT_EXCLUSIONS, COLONIST_NAMES } from './config.js';
 import { generateMap, getTileChar, getTileColor, getTileBg } from '../world/map.js';
 import { generateStartMap } from '../ui/start-map.js';
 import { Camera } from '../ui/camera.js';
@@ -197,12 +197,11 @@ class Game {
             const c = createColonist(cx + i - 1, cy, biases[i], existingNames);
             if (custom) {
                 if (custom.name) c.name = custom.name;
-                if (custom.gender) c.gender = custom.gender;
                 if (custom.skills) Object.assign(c.skills, custom.skills);
                 if (custom.traits) c.traits = [...custom.traits];
-                // Explicit appearance choices override the random pick made in
-                // createColonist. Both are optional — an unset field keeps the random.
-                if (custom.skinVariants) c.skinVariants = { ...custom.skinVariants };
+                if (custom.bodyVariant != null) c.bodyVariant = custom.bodyVariant;
+                if (custom.hairVariant != null) c.hairVariant = custom.hairVariant;
+                if (custom.shirtVariant != null) c.shirtVariant = custom.shirtVariant;
                 if (custom.nameColor) c.nameColor = custom.nameColor;
             }
             c.priorities[biases[i]] = 1;
@@ -2009,24 +2008,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const s = saved[i];
                 if (!s || typeof s !== 'object') continue;
                 colonistSlotStates[i].custom = !!s.custom;
-                colonistSlotStates[i].gender = GENDERS.includes(s.gender) ? s.gender : colonistSlotStates[i].gender;
                 colonistSlotStates[i].name = typeof s.name === 'string' ? s.name : '';
                 colonistSlotStates[i].skills = (s.skills && typeof s.skills === 'object') ? { ...s.skills } : {};
                 colonistSlotStates[i].traits = Array.isArray(s.traits) ? s.traits.filter(t => TRAITS[t]) : [];
-                colonistSlotStates[i].skinVariants = (s.skinVariants && typeof s.skinVariants === 'object') ? { ...s.skinVariants } : {};
+                colonistSlotStates[i].bodyVariant = typeof s.bodyVariant === 'number' ? s.bodyVariant : null;
+                colonistSlotStates[i].hairVariant = typeof s.hairVariant === 'number' ? s.hairVariant : null;
+                colonistSlotStates[i].shirtVariant = typeof s.shirtVariant === 'number' ? s.shirtVariant : null;
                 colonistSlotStates[i].nameColor = typeof s.nameColor === 'string' ? s.nameColor : null;
             }
         } catch (e) {}
     }
 
-    // Holds the 3 slot states. skinVariants ({ [packName]: variantIndex }) and
-    // nameColor mirror the colonist fields — an explicit look choice keyed per
-    // sprite pack, plus the ASCII '@' colour. Empty/undefined means "let the
-    // colonist pick randomly at creation".
+    // Holds the 3 slot states. bodyVariant/hairVariant/shirtVariant are explicit
+    // appearance choices (null = random at spawn). nameColor is both the ASCII '@'
+    // color and the shirt tint color.
     const colonistSlotStates = [
-        { custom: false, name: '', gender: 'man', skills: {}, traits: [], skinVariants: {}, nameColor: null },
-        { custom: false, name: '', gender: 'woman', skills: {}, traits: [], skinVariants: {}, nameColor: null },
-        { custom: false, name: '', gender: 'nonbinary', skills: {}, traits: [], skinVariants: {}, nameColor: null },
+        { custom: false, name: '', skills: {}, traits: [], bodyVariant: null, hairVariant: null, shirtVariant: null, nameColor: null },
+        { custom: false, name: '', skills: {}, traits: [], bodyVariant: null, hairVariant: null, shirtVariant: null, nameColor: null },
+        { custom: false, name: '', skills: {}, traits: [], bodyVariant: null, hairVariant: null, shirtVariant: null, nameColor: null },
     ];
     loadColonistSlots();
 
@@ -2037,8 +2036,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.skills = skills;
         state.traits = [];
         if (!state.name) {
-            const names = COLONIST_NAMES[state.gender];
-            state.name = names[idx % names.length] || `Colonist ${idx + 1}`;
+            state.name = COLONIST_NAMES[idx % COLONIST_NAMES.length] || `Colonist ${idx + 1}`;
         }
     }
 
@@ -2052,28 +2050,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const COLONIST_COLORS = ['#ff3300', '#00ff00', '#00ffff', '#ffff00', '#a600ff', '#ababab'];
 
-    // `state` (a colonist slot) is optional; when present its explicit look choice
-    // (skinVariants for the active pack, or nameColor for ASCII) is honored, so the
-    // preview matches what the colonist will actually spawn as. With no choice,
-    // resolveColonistVariant falls back to slot-index ordering — the old behavior.
-    function renderSlotSprite(canvas, slotIdx, gender, state) {
+    function renderSlotSprite(canvas, slotIdx, state) {
         const size = canvas.width;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, size, size);
+        const color = (state && state.nameColor) || COLONIST_COLORS[slotIdx % COLONIST_COLORS.length];
         if (sharedSkinManager.isActive) {
-            const variant = sharedSkinManager.resolveColonistVariant(slotIdx + 1, undefined, state?.skinVariants);
-            const sprite = sharedSkinManager.getColonistSprite(slotIdx + 1, false, gender, variant);
+            const sprite = sharedSkinManager.getColonistSprite(
+                slotIdx + 1, false,
+                state?.bodyVariant, state?.hairVariant, state?.shirtVariant, color
+            );
             if (sprite) {
                 ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(sprite, 0, 0, size, size);
                 return;
             }
         }
-        ctx.fillStyle = (state && state.nameColor) || COLONIST_COLORS[slotIdx % COLONIST_COLORS.length];
+        ctx.fillStyle = color;
         ctx.font = `bold ${Math.floor(size * 0.65)}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('@', size / 2, size / 2);
+    }
+
+    function renderSlotName(el, state, slotIdx) {
+        const color = (state && state.nameColor) || COLONIST_COLORS[slotIdx % COLONIST_COLORS.length];
+        const name = (state && state.name) || `Colonist ${slotIdx + 1}`;
+        el.textContent = name;
+        el.style.color = color;
     }
 
     function buildColonistSlotHTML(idx) {
@@ -2160,111 +2164,176 @@ document.addEventListener('DOMContentLoaded', () => {
         arrowRow.appendChild(rightArrow);
         slotEl.appendChild(arrowRow);
 
-        // Build the appearance chooser into `grid`, redrawing `previewCanvas` on
-        // every pick. The set of tiles adapts to the active pack: ASCII shows the
-        // palette colours; a sprite pack shows its N colonist variants. A "Random"
-        // tile clears the stored choice (falling back to a per-colonist random look
-        // at spawn). One tile is marked selected to reflect the current choice.
-        function rebuildLookPicker(grid, previewCanvas) {
+        const mkTile = (selected) => {
+            const t = document.createElement('div');
+            t.style.cssText = 'width:26px; height:26px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-sizing:border-box; border:2px solid ' + (selected ? '#ffcc00' : '#444') + ';';
+            return t;
+        };
+
+        // Build a single variant row (body, hair, or shirt) into `grid`.
+        // `field` is 'bodyVariant' | 'hairVariant' | 'shirtVariant'.
+        // `count` is the sprite count from the active skin pack.
+        // `getSpriteForVariant(v)` returns the sprite to preview (or null).
+        function rebuildVariantRow(grid, previewCanvas, field, count, getSpriteForVariant) {
             grid.innerHTML = '';
-            const active = sharedSkinManager.activeSkin;
-            const usingSprites = sharedSkinManager.isActive;
 
-            const mkTile = (selected) => {
-                const t = document.createElement('div');
-                t.style.cssText = 'width:26px; height:26px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-sizing:border-box; border:2px solid ' + (selected ? '#ffcc00' : '#444') + ';';
-                return t;
-            };
-
-            // "Random" reset tile — clears whatever choice applies to the active pack.
-            const noChoice = usingSprites ? (state.skinVariants[active] == null) : !state.nameColor;
-            const randomTile = mkTile(noChoice);
+            const randomTile = mkTile(state[field] == null);
             randomTile.title = 'Random';
-            randomTile.style.background = '#1a1a2e';
-            randomTile.style.color = '#888';
-            randomTile.style.fontSize = '14px';
+            randomTile.style.cssText += ' background:#1a1a2e; color:#888; font-size:14px;';
             randomTile.textContent = '?';
             randomTile.addEventListener('click', () => {
-                if (usingSprites) delete state.skinVariants[active];
-                else state.nameColor = null;
-                renderSlotSprite(previewCanvas, idx, state.gender, state);
-                rebuildLookPicker(grid, previewCanvas);
+                state[field] = null;
+                renderSlotSprite(previewCanvas, idx, state);
+                grid.querySelectorAll('div').forEach((t, i) => {
+                    t.style.borderColor = i === 0 ? '#ffcc00' : '#444';
+                });
                 saveColonistSlots();
             });
             grid.appendChild(randomTile);
 
-            if (usingSprites) {
-                const count = sharedSkinManager.colonistVariantCount;
-                for (let v = 1; v <= count; v++) {
-                    const selected = state.skinVariants[active] === v;
-                    const tile = mkTile(selected);
-                    tile.style.background = '#0d0d1a';
-                    const cv = document.createElement('canvas');
-                    cv.width = 22; cv.height = 22;
-                    cv.style.cssText = 'image-rendering:pixelated;';
-                    const sprite = sharedSkinManager.getColonistSprite(idx + 1, false, state.gender, v);
-                    if (sprite) {
-                        const cctx = cv.getContext('2d');
-                        cctx.imageSmoothingEnabled = false;
-                        cctx.drawImage(sprite, 0, 0, 22, 22);
-                    }
-                    tile.appendChild(cv);
-                    tile.addEventListener('click', () => {
-                        state.skinVariants[active] = v;
-                        renderSlotSprite(previewCanvas, idx, state.gender, state);
-                        rebuildLookPicker(grid, previewCanvas);
-                        saveColonistSlots();
-                    });
-                    grid.appendChild(tile);
+            for (let v = 1; v <= count; v++) {
+                const selected = state[field] === v;
+                const tile = mkTile(selected);
+                tile.style.background = '#0d0d1a';
+                const cv = document.createElement('canvas');
+                cv.width = 22; cv.height = 22;
+                cv.style.cssText = 'image-rendering:pixelated;';
+                const sprite = getSpriteForVariant(v);
+                if (sprite) {
+                    const cctx = cv.getContext('2d');
+                    cctx.imageSmoothingEnabled = false;
+                    cctx.drawImage(sprite, 0, 0, 22, 22);
                 }
-            } else {
-                for (const color of COLONIST_COLORS) {
-                    const selected = state.nameColor === color;
-                    const tile = mkTile(selected);
-                    tile.style.background = color;
-                    tile.title = color;
-                    tile.addEventListener('click', () => {
-                        state.nameColor = color;
-                        renderSlotSprite(previewCanvas, idx, state.gender, state);
-                        rebuildLookPicker(grid, previewCanvas);
-                        saveColonistSlots();
-                    });
-                    grid.appendChild(tile);
-                }
+                tile.appendChild(cv);
+                tile.addEventListener('click', () => {
+                    state[field] = v;
+                    renderSlotSprite(previewCanvas, idx, state);
+                    rebuildVariantRow(grid, previewCanvas, field, count, getSpriteForVariant);
+                    saveColonistSlots();
+                });
+                grid.appendChild(tile);
             }
+        }
+
+        function rebuildAppearancePickers(container, previewCanvas, nameEl) {
+            container.innerHTML = '';
+            const usingSprites = sharedSkinManager.isActive;
+            const color = state.nameColor || COLONIST_COLORS[idx % COLONIST_COLORS.length];
+
+            // Color picker — always shown; drives both name color and shirt tint
+            const colorRow = document.createElement('div');
+            colorRow.style.cssText = 'margin-bottom:6px;';
+            const colorLabel = document.createElement('div');
+            colorLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
+            colorLabel.textContent = 'Name & Clothing Color';
+            colorRow.appendChild(colorLabel);
+            const colorInputRow = document.createElement('div');
+            colorInputRow.style.cssText = 'display:flex; align-items:center; gap:6px;';
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = color;
+            colorInput.style.cssText = 'width:44px; height:28px; padding:0; border:1px solid #555; border-radius:3px; background:none; cursor:pointer;';
+            colorInput.title = 'Choose name & clothing color';
+            // 'input' fires on every drag — only update the live preview, no DOM rebuild.
+            colorInput.addEventListener('input', () => {
+                state.nameColor = colorInput.value;
+                renderSlotSprite(previewCanvas, idx, state);
+                if (nameEl) renderSlotName(nameEl, state, idx);
+            });
+            // 'change' fires when the picker closes — rebuild shirt thumbnails and save.
+            colorInput.addEventListener('change', () => {
+                state.nameColor = colorInput.value;
+                renderSlotSprite(previewCanvas, idx, state);
+                if (nameEl) renderSlotName(nameEl, state, idx);
+                if (usingSprites) rebuildAppearancePickers(container, previewCanvas, nameEl);
+                saveColonistSlots();
+            });
+            const colorHint = document.createElement('div');
+            colorHint.style.cssText = 'font-size:10px; color:#666; line-height:1.3;';
+            colorHint.textContent = 'Sets both the name color\nand shirt color in game';
+            colorHint.style.whiteSpace = 'pre-line';
+            colorInputRow.appendChild(colorInput);
+            colorInputRow.appendChild(colorHint);
+            colorRow.appendChild(colorInputRow);
+            container.appendChild(colorRow);
+
+            if (!usingSprites) return;
+
+            // Body picker
+            const bodyRow = document.createElement('div');
+            bodyRow.style.cssText = 'margin-bottom:6px;';
+            const bodyLabel = document.createElement('div');
+            bodyLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
+            bodyLabel.textContent = 'Body';
+            bodyRow.appendChild(bodyLabel);
+            const bodyGrid = document.createElement('div');
+            bodyGrid.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+            bodyRow.appendChild(bodyGrid);
+            rebuildVariantRow(bodyGrid, previewCanvas, 'bodyVariant', sharedSkinManager.bodyCount,
+                v => sharedSkinManager.getColonistSprite(idx + 1, false, v, 1, 1, color));
+            container.appendChild(bodyRow);
+
+            // Hair picker
+            const hairRow = document.createElement('div');
+            hairRow.style.cssText = 'margin-bottom:6px;';
+            const hairLabel = document.createElement('div');
+            hairLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
+            hairLabel.textContent = 'Hair';
+            hairRow.appendChild(hairLabel);
+            const hairGrid = document.createElement('div');
+            hairGrid.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+            hairRow.appendChild(hairGrid);
+            rebuildVariantRow(hairGrid, previewCanvas, 'hairVariant', sharedSkinManager.hairCount,
+                v => sharedSkinManager.getColonistSprite(idx + 1, false, 1, v, 1, color));
+            container.appendChild(hairRow);
+
+            // Shirt picker — previews with current color tint
+            const shirtRow = document.createElement('div');
+            shirtRow.style.cssText = 'margin-bottom:6px;';
+            const shirtLabel = document.createElement('div');
+            shirtLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
+            shirtLabel.textContent = 'Shirt';
+            shirtRow.appendChild(shirtLabel);
+            const shirtGrid = document.createElement('div');
+            shirtGrid.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+            shirtRow.appendChild(shirtGrid);
+            rebuildVariantRow(shirtGrid, previewCanvas, 'shirtVariant', sharedSkinManager.shirtCount,
+                v => sharedSkinManager.getColonistSprite(idx + 1, false, 1, 1, v, color));
+            container.appendChild(shirtRow);
         }
 
         function rebuildCustomView() {
             customView.innerHTML = '';
 
-            // Sprite preview at top of custom view
+            // Sprite preview at top of custom view, with colored name above it
             const spriteRow = document.createElement('div');
             spriteRow.style.cssText = 'text-align:center; margin-bottom:8px;';
+            const nameDisplay = document.createElement('div');
+            nameDisplay.dataset.slotName = idx;
+            nameDisplay.style.cssText = 'font-size:12px; font-weight:bold; margin-bottom:4px; font-family:monospace; min-height:16px;';
+            renderSlotName(nameDisplay, state, idx);
             const spriteCanvas = document.createElement('canvas');
             spriteCanvas.width = 48;
             spriteCanvas.height = 48;
             spriteCanvas.style.cssText = 'display:block; margin:0 auto; image-rendering:pixelated;';
             spriteCanvas.dataset.slotSprite = idx;
-            renderSlotSprite(spriteCanvas, idx, state.gender, state);
+            renderSlotSprite(spriteCanvas, idx, state);
+            spriteRow.appendChild(nameDisplay);
             spriteRow.appendChild(spriteCanvas);
             customView.appendChild(spriteRow);
 
-            // Look picker — unified colour (ASCII) / sprite-variant (a sprite pack)
-            // chooser, keyed to whatever pack is active. A choice is stored per-pack
-            // (skinVariants[pack]) or as nameColor for ASCII, so swapping packs never
-            // clobbers a choice made for another pack. "Random" clears the choice.
-            const lookRow = document.createElement('div');
-            lookRow.style.cssText = 'margin-bottom:8px;';
-            const lookLabel = document.createElement('div');
-            lookLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
-            lookLabel.textContent = 'Appearance';
-            lookRow.appendChild(lookLabel);
-            const lookGrid = document.createElement('div');
-            lookGrid.dataset.slotLook = idx;
-            lookGrid.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px; align-items:center;';
-            lookRow.appendChild(lookGrid);
-            rebuildLookPicker(lookGrid, spriteCanvas);
-            customView.appendChild(lookRow);
+            // Appearance pickers (color + body/hair/shirt when a sprite pack is active)
+            const appearanceSection = document.createElement('div');
+            appearanceSection.style.cssText = 'margin-bottom:8px;';
+            const appearanceLabel = document.createElement('div');
+            appearanceLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:3px;';
+            appearanceLabel.textContent = 'Appearance';
+            appearanceSection.appendChild(appearanceLabel);
+            const appearanceContainer = document.createElement('div');
+            appearanceContainer.dataset.slotAppearance = idx;
+            appearanceSection.appendChild(appearanceContainer);
+            rebuildAppearancePickers(appearanceContainer, spriteCanvas, nameDisplay);
+            customView.appendChild(appearanceSection);
 
             // Name
             const nameRow = document.createElement('div');
@@ -2277,40 +2346,14 @@ document.addEventListener('DOMContentLoaded', () => {
             nameInput.value = state.name;
             nameInput.maxLength = 20;
             nameInput.style.cssText = 'width:100%; box-sizing:border-box; background:#1a1a2e; color:#ccc; border:1px solid #444; border-radius:3px; padding:3px 5px; font-family:inherit; font-size:11px;';
-            nameInput.addEventListener('input', () => { state.name = nameInput.value.trim() || `Colonist ${idx + 1}`; saveColonistSlots(); });
+            nameInput.addEventListener('input', () => {
+                state.name = nameInput.value.trim() || `Colonist ${idx + 1}`;
+                renderSlotName(nameDisplay, state, idx);
+                saveColonistSlots();
+            });
             nameRow.appendChild(nameLabel);
             nameRow.appendChild(nameInput);
             customView.appendChild(nameRow);
-
-            // Gender
-            const genderRow = document.createElement('div');
-            genderRow.style.cssText = 'margin-bottom:8px;';
-            const genderLabel = document.createElement('div');
-            genderLabel.textContent = 'Gender';
-            genderLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:2px;';
-            const genderSelect = document.createElement('select');
-            genderSelect.style.cssText = 'width:100%; background:#1a1a2e; color:#ccc; border:1px solid #444; border-radius:3px; padding:2px 4px; font-family:inherit; font-size:11px;';
-            for (const g of GENDERS) {
-                const opt = document.createElement('option');
-                opt.value = g;
-                opt.textContent = g.charAt(0).toUpperCase() + g.slice(1);
-                if (g === state.gender) opt.selected = true;
-                genderSelect.appendChild(opt);
-            }
-            genderSelect.addEventListener('change', () => {
-                state.gender = genderSelect.value;
-                renderSlotSprite(spriteCanvas, idx, state.gender, state);
-                rebuildLookPicker(lookGrid, spriteCanvas);   // sprites differ per gender
-                const gnames = COLONIST_NAMES[state.gender];
-                if (!state.name || COLONIST_NAMES.man.includes(state.name) || COLONIST_NAMES.woman.includes(state.name) || COLONIST_NAMES.nonbinary.includes(state.name)) {
-                    state.name = gnames[idx % gnames.length];
-                    nameInput.value = state.name;
-                }
-                saveColonistSlots();
-            });
-            genderRow.appendChild(genderLabel);
-            genderRow.appendChild(genderSelect);
-            customView.appendChild(genderRow);
 
             // Skills
             const skillsSection = document.createElement('div');
@@ -2492,13 +2535,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Expose a refresh hook so buildColonistSlotsPanel can update sprites after skin load
         slotEl._refreshSprites = () => {
-            renderSlotSprite(randomCanvas, idx, state.gender, state);
+            renderSlotSprite(randomCanvas, idx, state);
             const sc = customView.querySelector('[data-slot-sprite]');
-            if (sc) renderSlotSprite(sc, idx, state.gender, state);
-            // The active pack may have changed — rebuild the picker so it shows the
-            // right tiles (colours vs. this pack's variants) and selection state.
-            const lg = customView.querySelector('[data-slot-look]');
-            if (lg && sc) rebuildLookPicker(lg, sc);
+            if (sc) renderSlotSprite(sc, idx, state);
+            // The active pack may have changed — rebuild the appearance pickers.
+            const ac = customView.querySelector('[data-slot-appearance]');
+            const nd = customView.querySelector('[data-slot-name]');
+            if (ac && sc) rebuildAppearancePickers(ac, sc, nd);
         };
 
         checkbox.addEventListener('change', () => {
@@ -2509,7 +2552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 initSlotState(idx);
                 rebuildCustomView();
             } else {
-                renderSlotSprite(randomCanvas, idx, state.gender, state);
+                renderSlotSprite(randomCanvas, idx, state);
             }
             saveColonistSlots();
         });
@@ -2540,10 +2583,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 anyCustom = true;
                 result.push({
                     name: state.name,
-                    gender: state.gender,
                     skills: { ...state.skills },
                     traits: [...state.traits],
-                    skinVariants: { ...state.skinVariants },
+                    bodyVariant: state.bodyVariant,
+                    hairVariant: state.hairVariant,
+                    shirtVariant: state.shirtVariant,
                     nameColor: state.nameColor,
                 });
             } else {

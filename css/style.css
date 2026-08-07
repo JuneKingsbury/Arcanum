@@ -1024,7 +1024,8 @@ body {
 
 #research-panel {
     max-width: 90vw;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 #priority-panel {
@@ -1393,6 +1394,7 @@ body {
     margin-bottom: 8px;
     border-bottom: 1px solid #444;
     flex-wrap: wrap;
+    align-items: flex-end;
 }
 
 .research-tab-btn {
@@ -1406,6 +1408,9 @@ body {
     cursor: pointer;
     border-radius: 3px 3px 0 0;
     transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .research-tab-btn:hover {
@@ -1417,6 +1422,45 @@ body {
     color: #aa88ff;
     background: #1a1a2e;
     border-color: #444;
+}
+
+.research-hide-toggle {
+    margin-left: auto;
+    font-size: 0.78em;
+    padding: 3px 8px;
+    color: #666;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.research-hide-toggle:hover { color: #aaa; }
+.research-hide-toggle.active { color: #aa88ff; border-color: #554477; }
+
+.research-tab-pill {
+    position: relative;
+    display: inline-block;
+    font-size: 0.78em;
+    background: #222233;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1px 6px;
+    min-width: 32px;
+    text-align: center;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.research-tab-pill-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: #3a2a5a;
+    border-radius: 8px;
+    transition: width 0.3s;
+}
+
+.research-tab-pill-text {
+    position: relative;
+    z-index: 1;
 }
 
 .research-cross-tab-row {
@@ -1441,6 +1485,16 @@ body {
 }
 
 /* === RESEARCH TREE === */
+
+.research-drag-handle {
+    display: none;
+    width: 40px;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+    margin: 0 auto 8px;
+    pointer-events: none;
+}
 
 .research-tree {
     position: relative;
@@ -1481,7 +1535,9 @@ body {
     border-radius: 6px;
     padding: 8px 10px;
     background: #1e1e32;
-    width: 120px;
+    min-width: 120px;
+    width: max-content;
+    max-width: 180px;
     text-align: center;
     transition: border-color 0.2s, background 0.2s;
 }
@@ -1504,6 +1560,12 @@ body {
 .research-node.available {
     border-color: #886622;
     background: #2a2a1a;
+    cursor: pointer;
+}
+
+.research-node.available:hover {
+    border-color: #aa8833;
+    background: #333320;
 }
 
 .research-node.locked {
@@ -1549,6 +1611,25 @@ body {
 
 .research-node-btn:hover {
     background: #4a3a6a;
+}
+
+.research-node-progress {
+    background: #333;
+    border-radius: 3px;
+    height: 6px;
+    margin: 4px 0 2px;
+    overflow: hidden;
+}
+
+.research-node-progress-fill {
+    background: #aa88ff;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s;
+}
+
+.research-node-progress-paused {
+    background: #776699;
 }
 
 .research-gates {
@@ -2414,8 +2495,8 @@ body {
     }
 
     #research-panel {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: hidden;
+        overflow-y: hidden;
     }
 
     #colonist-hud, #event-log {
@@ -2464,8 +2545,19 @@ body {
     }
 
     .research-node {
-        width: 100px;
+        min-width: 100px;
+        max-width: 150px;
         padding: 6px 6px;
+    }
+
+    .research-node-btn {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+
+    .research-cross-tab {
+        padding: 6px 10px;
+        font-size: 0.78em;
     }
 
     .research-layer {
@@ -2474,10 +2566,19 @@ body {
 
     .research-tree {
         gap: 18px;
+        max-height: calc(70vh - 110px);
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
     }
+
+    .research-drag-handle { display: block; }
 
     .research-node-name { font-size: 0.83em; }
     .research-node-desc { font-size: 0.67em; }
+
+    .research-tab-pill { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -2565,11 +2666,15 @@ body {
     padding: 12px 10px; max-height: 70vh;
     border-radius: 12px 12px 0 0; border: none; border-top: 2px solid #555;
 }
-.force-tabbed .research-node { width: 100px; padding: 6px 6px; }
+.force-tabbed .research-node { min-width: 100px; max-width: 150px; padding: 6px 6px; }
 .force-tabbed .research-layer { gap: 10px; }
-.force-tabbed .research-tree { gap: 18px; }
+.force-tabbed .research-tree { gap: 18px; max-height: calc(70vh - 110px); overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .force-tabbed .research-node-name { font-size: 0.83em; }
 .force-tabbed .research-node-desc { font-size: 0.67em; }
+.force-tabbed .research-node-btn { padding: 8px 12px; }
+.force-tabbed .research-cross-tab { padding: 6px 10px; }
+.force-tabbed .research-drag-handle { display: block; margin-bottom: 10px; }
+.force-tabbed .research-tab-pill { display: none; }
 
 /* Force separate layout even on small screens */
 @media (max-width: 768px) {
@@ -2603,7 +2708,7 @@ body {
         padding: 16px; max-height: 80vh;
         border-radius: 6px; border: 2px solid #555; border-top: 2px solid #555;
     }
-    .force-separate .research-node { width: 120px; padding: 8px 10px; }
+    .force-separate .research-node { min-width: 120px; max-width: 180px; padding: 8px 10px; }
     .force-separate .research-layer { gap: 16px; }
     .force-separate .research-tree { gap: 24px; }
     .force-separate .research-node-name { font-size: inherit; }
