@@ -709,6 +709,9 @@ export class ExplorationSystem {
                 game.resources.addConsumable({ key: itemKey, name: itemKey });
             }
         }
+        for (const [res, amt] of Object.entries(exp.loot)) {
+            game.overlays.push({ type: 'floating_text', x: exp.gatePos.x, y: exp.gatePos.y, text: `+${amt} ${res}`, color: '#ffdd44', fontSize: 10, ttl: 20, maxTtl: 20 });
+        }
         if (game.discoveredLoot) {
             for (const res of Object.keys(exp.loot)) {
                 game.discoveredLoot.add(`${exp.realm}:${res}`);

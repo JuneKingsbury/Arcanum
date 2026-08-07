@@ -289,8 +289,10 @@ export function attackStructure(game, x, y, damage) {
 
     tile.structureHp -= damage;
     tile._dmgFlashUntil = game.tick + COMBAT_VISUALS.dmgFlashTtl;
+    game.overlays.push({ type: 'floating_text', x, y, text: `-${damage}`, color: '#ff8800', fontSize: 11, ttl: 12, maxTtl: 12 });
 
     if (tile.structureHp <= 0) {
+        game.combatEffects.push({ x, y, char: COMBAT_VISUALS.mineDustChar, color: COMBAT_VISUALS.mineDustColor, ttl: COMBAT_VISUALS.mineDustTtl });
         const oldStructure = tile.structure;
         tile.structure = null;
         tile.structureHp = undefined;

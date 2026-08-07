@@ -182,7 +182,6 @@ export function completeTask(colonist, task, game) {
                     game.resources.add(output);
                 }
                 applyThought(colonist, 'crafted', game.tick);
-                game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.craftCompleteChar, color: COMBAT_VISUALS.craftCompleteColor, ttl: COMBAT_VISUALS.craftCompleteTtl });
                 const craftedName = Object.keys(task.recipe.output)[0]?.replace(/_/g, ' ') || 'item';
                 game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `Crafted ${craftedName}`, color: '#ffcc00', fontSize: 10, ttl: 20, maxTtl: 20 });
                 window.soundManager?.playSFX('craft_complete');
@@ -275,10 +274,12 @@ export function completeTask(colonist, task, game) {
                     const result = attemptDangerousTame(game, colonist, task.targetAnimalId);
                     if (result === 'success') {
                         applyThought(colonist, 'tamed_animal', game.tick);
+                        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Tamed!', color: '#44ff44', fontSize: 11, ttl: 12, maxTtl: 12 });
                     }
                 } else {
                     if (completeTame(game, task.targetAnimalId)) {
                         applyThought(colonist, 'tamed_animal', game.tick);
+                        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Tamed!', color: '#44ff44', fontSize: 11, ttl: 12, maxTtl: 12 });
                     }
                 }
             }
@@ -288,6 +289,7 @@ export function completeTask(colonist, task, game) {
             const tile = game.map[task.y][task.x];
             if (tile.structure && tile.structureHp !== undefined) {
                 tile.structureHp = undefined;
+                game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.buildCompleteChar, color: COMBAT_VISUALS.buildCompleteColor, ttl: COMBAT_VISUALS.buildCompleteTtl });
                 applyThought(colonist, 'repaired', game.tick);
             }
             break;
@@ -338,6 +340,7 @@ export function completeTask(colonist, task, game) {
                 tile.designation = null;
                 game.roomsDirty = true;
                 applyThought(colonist, 'deconstructed', game.tick);
+                game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.mineDustChar, color: COMBAT_VISUALS.mineDustColor, ttl: COMBAT_VISUALS.mineDustTtl });
             }
             break;
         }
@@ -352,7 +355,6 @@ export function completeTask(colonist, task, game) {
             if (colonist.pedestalSkillBonus) xpGain *= (1 + colonist.pedestalSkillBonus);
             if (colonist.traits.includes('prodigy')) xpGain *= TRAITS.prodigy.allSkillXpMult;
             colonist.skillXp[task.skillRequired] += xpGain;
-            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
             let xpNeeded = COLONIST_CONFIG.skillXpToLevel + colonist.skills[task.skillRequired] * COLONIST_CONFIG.skillXpScalePerLevel;
             while (colonist.skillXp[task.skillRequired] >= xpNeeded && colonist.skills[task.skillRequired] < maxLevel) {
                 colonist.skillXp[task.skillRequired] -= xpNeeded;

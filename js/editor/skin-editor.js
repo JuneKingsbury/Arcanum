@@ -117,6 +117,8 @@ const EFFECT_ITEMS = [
     { key: 'fire_ignite', char: '^', color: '#ff6600', desc: 'Fire spread ignition' },
     { key: 'wave_alert', char: '!', color: '#ff2222', desc: 'Wave incoming screen flash' },
     { key: 'golem_activate', char: '⚡', color: '#44ffff', desc: 'Golem activation burst' },
+    { key: 'xp_gain', char: '·', color: '#88ff88', desc: 'XP gain particle' },
+    { key: 'health_regen', char: '♥', color: '#66ff66', desc: 'Natural health regeneration' },
 ];
 
 let editorInstance = null;

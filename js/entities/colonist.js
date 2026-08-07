@@ -203,7 +203,7 @@ export function updateColonist(colonist, game) {
 
     if (game.tick % 15 === 0) {
         if (colonist.needs.hunger < 20) {
-            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.needCriticalChar, color: COMBAT_VISUALS.needCriticalColor, ttl: COMBAT_VISUALS.needCriticalTtl });
+            game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Starving!', color: '#ff4444', fontSize: 11, ttl: 12, maxTtl: 12 });
         }
         if (colonist.thoughts && colonist.thoughts.some(t => t.text === 'Freezing outside')) {
             game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.freezingChar, color: COMBAT_VISUALS.freezingColor, ttl: COMBAT_VISUALS.freezingTtl });
@@ -312,6 +312,7 @@ function checkCriticalAlerts(colonist, game) {
     if (colonist.mood < 30 && colonist.mood > 20 && !flags.mood) {
         flags.mood = true;
         game.notifications.push({ text: `${colonist.name} is near breaking!`, tick: game.tick, type: 'warning' });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Low mood!', color: '#ff4444', fontSize: 11, ttl: 12, maxTtl: 12 });
     } else if (colonist.mood >= 40) {
         flags.mood = false;
     }
@@ -320,6 +321,7 @@ function checkCriticalAlerts(colonist, game) {
     if (freezing && !flags.freezing) {
         flags.freezing = true;
         game.notifications.push({ text: `${colonist.name} is freezing!`, tick: game.tick, type: 'danger' });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Freezing!', color: '#88ddff', fontSize: 11, ttl: 12, maxTtl: 12 });
     } else if (!freezing) {
         flags.freezing = false;
     }
@@ -473,6 +475,7 @@ function tryUsePotions(colonist, game) {
                     workSpeedBonus: potion.workSpeedBonus,
                     expiresAt: game.tick + potion.duration,
                 });
+                game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.spellBuffChar, color: COMBAT_VISUALS.spellBuffColor, ttl: 3 });
             }
 
             game.notifications.push({ text: `${colonist.name} used ${potion.name}`, tick: game.tick, type: 'success' });
@@ -502,12 +505,6 @@ export function grantCastXp(colonist, spell, game) {
         game.notifications.push({ text: `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}`, tick: game.tick, type: 'success' });
         game.eventLog.add(game, `${colonist.name}'s ${MAGIC_SKILLS[school].name} increased to ${colonist.magicSkills[school]}!`, 'success', { type: 'colonist', id: colonist.id });
         game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `${MAGIC_SKILLS[school].name} lvl ${colonist.magicSkills[school]}`, color: '#aa66ff', fontSize: 11, ttl: 20, maxTtl: 20 });
-        game.combatEffects.push({
-            x: colonist.x, y: colonist.y,
-            char: COMBAT_VISUALS.magicLevelUpChar,
-            color: MAGIC_SKILLS[school].color || '#ffdd44',
-            ttl: COMBAT_VISUALS.magicLevelUpTtl,
-        });
         window.soundManager?.playSFX('magic_levelup');
         magicXpNeeded = MAGIC_STUDY_CONFIG.magicXpToLevel + colonist.magicSkills[school] * MAGIC_STUDY_CONFIG.magicXpScalePerLevel;
     }
@@ -524,7 +521,10 @@ function tryAutocastSpells(colonist, game) {
         if (colonist._spellCooldowns[spellKey] && game.tick - colonist._spellCooldowns[spellKey] < spell.cooldown) continue;
         const costReduction = getEquipmentStat(colonist, 'spellCostReduction');
         const effectiveCost = Math.max(1, Math.floor(spell.manaCost * (1 - costReduction)));
-        if (colonist.mana < effectiveCost) continue;
+        if (colonist.mana < effectiveCost) {
+            game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'No mana', color: '#6688cc', fontSize: 10, ttl: 10, maxTtl: 10 });
+            continue;
+        }
 
         if (!shouldCastSpell(colonist, spell, game)) continue;
 
@@ -669,6 +669,7 @@ function applySpellEffect(colonist, spell, game) {
                 expiresAt: game.tick + spell.duration,
             });
             game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.spellShieldChar, color: COMBAT_VISUALS.spellShieldColor, ttl: 3 });
+            game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.spellBuffChar, color: COMBAT_VISUALS.spellBuffColor, ttl: 3 });
             window.soundManager?.playSFX('spell_shield');
             break;
         }
@@ -769,7 +770,10 @@ function updateIdle(colonist, game) {
             if (failCount >= TASK_CONFIG.unreachableFailThreshold) {
                 game.taskQueue.remove(task.id);
                 const tile = game.map[task.y] && game.map[task.y][task.x];
-                if (tile) tile.designation = null;
+                if (tile) {
+                    tile.designation = null;
+                    game.combatEffects.push({ x: task.x, y: task.y, char: COMBAT_VISUALS.needCriticalChar, color: COMBAT_VISUALS.needCriticalColor, ttl: COMBAT_VISUALS.needCriticalTtl });
+                }
                 game.notifications.push({ text: `Cancelled unreachable ${task.type} task`, tick: game.tick, type: 'warning' });
             } else if (!colonist._lastPathFailNotify || game.tick - colonist._lastPathFailNotify > TASK_CONFIG.unreachableCheckInterval) {
                 colonist._lastPathFailNotify = game.tick;
@@ -974,6 +978,9 @@ function updateWorking(colonist, game) {
     if (task.type === 'research' && colonist.traits.includes('scholar')) {
         speed *= TRAITS.scholar.researchSpeedMult;
     }
+    if (task.type === 'research' && game.tick % 10 === 0) {
+        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.xpGainChar, color: COMBAT_VISUALS.xpGainColor, ttl: COMBAT_VISUALS.xpGainTtl });
+    }
 
     speed *= getEquipmentWorkBonus(colonist, task);
 
@@ -1058,7 +1065,6 @@ function updateSleeping(colonist, game) {
     if (colonist.traits.includes('deep_sleeper')) sleepRestMult = TRAITS.deep_sleeper.sleepRestMult;
     colonist.needs.rest = Math.min(100, colonist.needs.rest + COLONIST_CONFIG.restPerTick * sleepRestMult);
     if (game.tick % 12 === 0) {
-        game.combatEffects.push({ x: colonist.x, y: colonist.y, char: COMBAT_VISUALS.sleepChar, color: COMBAT_VISUALS.sleepColor, ttl: COMBAT_VISUALS.sleepTtl });
         game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Zzz', color: '#8888ff', fontSize: 10, ttl: 11, maxTtl: 11 });
     }
     if (colonist.stateTimer <= 0 || colonist.needs.rest >= 100) {
@@ -1357,6 +1363,7 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
     const dodgeChance = getEquipmentStat(colonist, 'dodgeChance');
     if (dodgeChance > 0 && Math.random() < dodgeChance) {
         game.combatEffects.push({ x: colonist.x, y: colonist.y, char: '~', color: '#88ccff', ttl: 4 });
+        game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: 'Block!', color: '#4488ff', fontSize: 11, ttl: 12, maxTtl: 12 });
         window.soundManager?.playSFX('shield_block');
         return;
     }
@@ -1386,6 +1393,7 @@ export function colonistTakeDamage(colonist, damage, game, attacker) {
     if (thornsDamage > 0 && attacker && attacker.hp > 0) {
         attacker.hp -= thornsDamage;
         game.combatEffects.push({ x: attacker.x, y: attacker.y, char: '*', color: '#ff6644', ttl: 3 });
+        game.overlays.push({ type: 'floating_text', x: attacker.x, y: attacker.y, text: `-${thornsDamage}`, color: '#44ff44', fontSize: 11, ttl: 12, maxTtl: 12 });
     }
 
     if (colonist.state !== 'fighting' && colonist.state !== 'fleeing' && colonist.hp > 0) {

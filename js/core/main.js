@@ -399,6 +399,38 @@ class Game {
             this.mapIndex.rebuild(this.map);
             checkComplexStructures(this);
             const qualities = calculateRoomQualities(this.map, roomCount);
+
+            // Track room completions and quality changes for visual feedback
+            for (let roomId = 0; roomId < roomCount; roomId++) {
+                const prevQuality = this.roomQualities[roomId];
+                const newQuality = qualities.roomQualities[roomId];
+                if (newQuality && !prevQuality) {
+                    // Room newly completed
+                    const roomTiles = Array.from({ length: this.map.length }, (_, y) =>
+                        Array.from({ length: this.map[y].length }, (_, x) =>
+                            this.map[y][x].roomId === roomId ? { x, y } : null
+                        ).filter(Boolean)
+                    ).flat();
+                    if (roomTiles.length > 0) {
+                        const centerX = Math.floor(roomTiles.reduce((sum, t) => sum + t.x, 0) / roomTiles.length);
+                        const centerY = Math.floor(roomTiles.reduce((sum, t) => sum + t.y, 0) / roomTiles.length);
+                        this.overlays.push({ type: 'floating_text', x: centerX, y: centerY, text: 'Room complete', color: '#ffcc00', fontSize: 11, ttl: 25, maxTtl: 25 });
+                    }
+                } else if (newQuality && prevQuality && newQuality.tier > prevQuality.tier) {
+                    // Room quality improved
+                    const roomTiles = Array.from({ length: this.map.length }, (_, y) =>
+                        Array.from({ length: this.map[y].length }, (_, x) =>
+                            this.map[y][x].roomId === roomId ? { x, y } : null
+                        ).filter(Boolean)
+                    ).flat();
+                    if (roomTiles.length > 0) {
+                        const centerX = Math.floor(roomTiles.reduce((sum, t) => sum + t.x, 0) / roomTiles.length);
+                        const centerY = Math.floor(roomTiles.reduce((sum, t) => sum + t.y, 0) / roomTiles.length);
+                        this.overlays.push({ type: 'floating_text', x: centerX, y: centerY, text: `Room: ${newQuality.tier}`, color: '#44ff44', fontSize: 11, ttl: 25, maxTtl: 25 });
+                    }
+                }
+            }
+
             this.roomQualities = qualities.roomQualities;
             this.workshopQualities = qualities.workshopQualities;
             this.roomsDirty = false;

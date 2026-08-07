@@ -614,6 +614,7 @@ function _updateFiresFallback(game) {
                     if (!neighbor.onFire && (neighbor.resource?.type === 'tree' || (neighbor.structure && neighbor.structure !== 'wall'))) {
                         neighbor.onFire = true;
                         neighbor.fireTimer = FIRE_CONFIG.spreadTimerMin + Math.floor(Math.random() * (FIRE_CONFIG.spreadTimerMax - FIRE_CONFIG.spreadTimerMin));
+                        game.combatEffects.push({ x: nx, y: ny, char: COMBAT_VISUALS.fireIgniteChar, color: COMBAT_VISUALS.fireIgniteColor, ttl: COMBAT_VISUALS.fireIgniteTtl });
                     }
                 }
             }
