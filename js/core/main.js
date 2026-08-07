@@ -1798,6 +1798,77 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBgCanvas = document.getElementById('start-bg-canvas');
     let startBgData = null;
 
+    // Dither state for start screen background
+    let _startDitherMasks = null;
+    let _startDitherSize = 0;
+    const _startDitherCache = new Map();
+    const START_DITHER_DIRS = [
+        { dir: 'north', dx: 0, dy: -1 },
+        { dir: 'south', dx: 0, dy: 1 },
+        { dir: 'west', dx: -1, dy: 0 },
+        { dir: 'east', dx: 1, dy: 0 },
+    ];
+
+    function _buildStartDitherMasks(size) {
+        const depth = Math.max(1, Math.round(size * RENDER_CONFIG.ditherDepth));
+        const bayer = [
+            [ 0,  8,  2, 10],
+            [12,  4, 14,  6],
+            [ 3, 11,  1,  9],
+            [15,  7, 13,  5],
+        ];
+        const masks = {};
+        for (const dir of ['north', 'south', 'east', 'west']) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const mctx = canvas.getContext('2d');
+            const imageData = mctx.createImageData(size, size);
+            const data = imageData.data;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    let edgeDist;
+                    if (dir === 'north') edgeDist = y;
+                    else if (dir === 'south') edgeDist = (size - 1) - y;
+                    else if (dir === 'west') edgeDist = x;
+                    else edgeDist = (size - 1) - x;
+                    if (edgeDist >= depth) continue;
+                    const t = edgeDist / depth;
+                    const intensity = 0.5 * (1 - t);
+                    const threshold = (bayer[y % 4][x % 4] + 0.5) / 16;
+                    if (intensity > threshold) {
+                        const idx = (y * size + x) * 4;
+                        data[idx] = 255;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 255;
+                        data[idx + 3] = 255;
+                    }
+                }
+            }
+            mctx.putImageData(imageData, 0, 0);
+            masks[dir] = canvas;
+        }
+        _startDitherMasks = masks;
+        _startDitherSize = size;
+        _startDitherCache.clear();
+    }
+
+    function _getStartDitherTile(terrain, dir, tileSize) {
+        const key = terrain + ':' + dir;
+        if (_startDitherCache.has(key)) return _startDitherCache.get(key);
+        const sprite = sharedSkinManager.getSprite('terrain', terrain);
+        if (!sprite) { _startDitherCache.set(key, null); return null; }
+        const canvas = document.createElement('canvas');
+        canvas.width = tileSize;
+        canvas.height = tileSize;
+        const c = canvas.getContext('2d');
+        c.drawImage(sprite, 0, 0, tileSize, tileSize);
+        c.globalCompositeOperation = 'destination-in';
+        c.drawImage(_startDitherMasks[dir], 0, 0, tileSize, tileSize);
+        _startDitherCache.set(key, canvas);
+        return canvas;
+    }
+
     function renderStartBackground() {
         if (!startBgCanvas) return;
         const dpr = window.devicePixelRatio || 1;
@@ -1823,6 +1894,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const offsetY = Math.max(0, Math.floor((mapH - rows) / 2));
 
             ctx.imageSmoothingEnabled = false;
+            if (RENDER_CONFIG.terrainDithering && (!_startDitherMasks || _startDitherSize !== tileSize)) {
+                _buildStartDitherMasks(tileSize);
+            }
             for (let sy = 0; sy < rows; sy++) {
                 for (let sx = 0; sx < cols; sx++) {
                     const mx = offsetX + sx;
@@ -1834,6 +1908,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const groundSprite = sharedSkinManager.getSprite('terrain', tile.terrain);
                     if (groundSprite) ctx.drawImage(groundSprite, px, py, tileSize, tileSize);
+
+                    if (RENDER_CONFIG.terrainDithering && _startDitherMasks && !tile.structure && !tile.floor && !tile.resource) {
+                        for (const { dir, dx, dy } of START_DITHER_DIRS) {
+                            const nx = mx + dx;
+                            const ny = my + dy;
+                            if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
+                            const neighbor = bgMap[ny][nx];
+                            if (neighbor.terrain === tile.terrain) continue;
+                            const cached = _getStartDitherTile(neighbor.terrain, dir, tileSize);
+                            if (cached) ctx.drawImage(cached, px, py);
+                        }
+                    }
 
                     if (tile.floor) {
                         const floorSprite = sharedSkinManager.getSprite('floors', tile.floor);
@@ -1850,17 +1936,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            const fontSize = tileSize;
-            const cellSize = fontSize;
+            const fontSize = RENDER_CONFIG.fontSize;
+            const cellSize = Math.ceil(fontSize * RENDER_CONFIG.fontHeightMult);
             const cols = Math.ceil(w / cellSize);
             const rows = Math.ceil(h / cellSize);
             const offsetX = Math.max(0, Math.floor((mapW - cols) / 2));
             const offsetY = Math.max(0, Math.floor((mapH - rows) / 2));
 
-            ctx.font = `${fontSize}px monospace`;
+            ctx.font = `${fontSize}px 'Courier New', monospace`;
             ctx.textBaseline = 'top';
-            const naturalCharWidth = Math.ceil(fontSize * 0.6);
-            const scaleX = cellSize / naturalCharWidth;
+            const textWidth = Math.ceil(ctx.measureText('M').width);
+            const textOffsetX = Math.floor((cellSize - textWidth) / 2);
 
             for (let sy = 0; sy < rows; sy++) {
                 for (let sx = 0; sx < cols; sx++) {
@@ -1876,12 +1962,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.fillStyle = bg;
                         ctx.fillRect(px, py, cellSize, cellSize);
                     }
+                    const char = getTileChar(tile, 'summer');
                     ctx.fillStyle = getTileColor(tile, 'summer');
-                    ctx.save();
-                    ctx.translate(px, py);
-                    ctx.scale(scaleX, 1);
-                    ctx.fillText(getTileChar(tile, 'summer'), 0, 0);
-                    ctx.restore();
+                    if (char === '█' || char === '▓' || char === '▒') {
+                        ctx.fillRect(px, py, cellSize, cellSize);
+                    } else {
+                        ctx.fillText(char, px + textOffsetX, py);
+                    }
                 }
             }
         }
@@ -1909,6 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const skinName = startSkinSelect.value;
             localStorage.setItem('convocation_skin', skinName);
             await sharedSkinManager.switchSkin(skinName);
+            _startDitherCache.clear();
             renderStartBackground();
             refreshColonistPanelSprites();
         });

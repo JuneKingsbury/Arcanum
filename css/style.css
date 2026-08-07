@@ -72,14 +72,15 @@ body {
 #start-screen h1 {
     font-size: 28px;
     color: #ffcc00;
-    text-shadow: 0 0 10px #ffcc0044;
+    text-shadow: 0 0 10px #ffcc0044, 0 1px 4px #000;
 }
 
 #start-screen p {
-    color: #999;
+    color: #bbb;
     max-width: 500px;
     text-align: center;
     line-height: 1.6;
+    text-shadow: 0 1px 4px #000, 0 0 8px #000;
 }
 
 .start-btn-grid {
