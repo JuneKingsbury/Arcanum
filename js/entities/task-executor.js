@@ -1,4 +1,4 @@
-import { COLONIST_CONFIG, THOUGHTS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH, ALL_ITEMS, TRAITS } from '../core/config.js';
+import { COLONIST_CONFIG, THOUGHTS, BUILDINGS, RESOURCES, IMPASSABLE_STRUCTURES, WORK_CONFIG, QUALITY_TIERS, TAMED_ANIMALS, MAGIC_STUDY_CONFIG, SPELL_TOMES, SPELLS, MAGIC_SKILLS, COMBAT_VISUALS, RESEARCH, ALL_ITEMS, TRAITS, POTIONS } from '../core/config.js';
 import { completeTame, attemptDangerousTame } from './taming.js';
 import { getPedestalEffect } from '../systems/artifacts.js';
 import { getEquippedItems, getEquipmentStat, addThought, recalcMaxMana } from './colonist.js';
@@ -172,7 +172,7 @@ export function completeTask(colonist, task, game) {
                 let handled = false;
                 for (const key of Object.keys(output)) {
                     const def = ALL_ITEMS[key];
-                    if (def) {
+                    if (def && def.type !== 'material') {
                         const item = { ...def, key };
                         if (def.type === 'weapon') applyQuality(item, colonist, game, 'damage');
                         else if (def.type === 'armor' || def.type === 'helmet') applyQuality(item, colonist, game, 'damageReduction');
