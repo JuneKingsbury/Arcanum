@@ -75,7 +75,7 @@ const TUTORIAL_STEPS = [
     {
         id: 'research',
         title: 'Start Researching',
-        description: "Open Research [R] and pick a technology to study. Stonework, Runecraft, and Druidcraft have no prerequisites — pick whichever sounds useful!",
+        description: "Open Research [R] and pick a technology to study. Stonework, Runecraft, and Druidcraft have no prerequisites so pick whichever sounds useful!",
         highlight: 'research',
         isComplete(game) { return game.research.activeResearch !== null || game.research.completed.size > 0; },
         goTo(game) { game.ui.toggleResearchPanel(); },
