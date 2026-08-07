@@ -1450,6 +1450,10 @@ body {
     gap: 24px;
     padding: 12px 0;
     min-width: max-content;
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    width: 100%;
 }
 
 .research-lines {
