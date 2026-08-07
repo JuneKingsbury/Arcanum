@@ -5,7 +5,7 @@
 ### Story Milestones (41 entries need narrative text)
 All milestone triggers and tracking work — just need the actual story text written.
 
-**Colony milestones:**
+**Colony lore milestones:**
 - [ ] `first_building` — placing your first building
 - [ ] `colony_5` — reaching 5 colonists
 - [ ] `colony_10` — reaching 10 colonists

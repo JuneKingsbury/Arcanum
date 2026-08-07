@@ -27,7 +27,7 @@ Use the in-game Glossary (accessible from Settings) for quick reference. Beds au
 Each colonist is an individual with skills, needs, traits, and moods that shape how they contribute to the colony.
 
 ### Skills & Priorities
-Colonists have skills in Building, Farming, Crafting, Cooking, Hauling, and six Magic schools. Set task priorities (1-5, 0 = disabled) to control what each colonist works on. Lower numbers mean higher priority. Use "Copy Priorities From..." to quickly replicate setups.
+Colonists have skills in Building, Farming, Crafting, Cooking, Animals, Research, and six Magic schools. Set task priorities (1-5, 0 = disabled) to control what each colonist works on. Lower numbers mean higher priority. Use "Copy Priorities From..." to quickly replicate setups.
 
 ### Needs & Mood
 Hunger and Rest decay over time. When critical (<20), colonists interrupt work to eat or sleep. Mood is calculated as Base 50 + active thoughts, and it directly affects productivity:
@@ -42,7 +42,7 @@ Hunger and Rest decay over time. When critical (<20), colonists interrupt work t
 Thoughts are temporary modifiers from events - good meals, nice rooms, and deaths all leave impressions that fade over time.
 
 ### Traits
-Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early Bird, Green Thumb, Iron Stomach, Socialite, Loner, Optimist, Pessimist, Tough, Pyromaniac, or Gourmand. These subtly alter behavior and mood.
+Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early Bird, Green Thumb, Iron Stomach, Socialite, Loner, Optimist, Pessimist, Tough, Sturdy, Brave, Quick, Light Sleeper, Deep Sleeper, Creative, Scholar, Gluttonous, Gourmand, Lucky, Pyromaniac, Pacifist, Prodigy, or Magically Gifted. These subtly alter behavior and mood.
 
 ### Controlling Colonists
 - **Drafting** - Take direct control. Drafted colonists move where you right-click. Select multiple with click-drag and use Draft All for quick combat response. They pulse red on the map.
@@ -53,11 +53,11 @@ Each colonist spawns with permanent traits: Hard Worker, Lazy, Night Owl, Early 
 ### Equipment
 Colonists have 5 gear slots, displayed in a person-shaped grid:
 
-- **Melee Weapon** - Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Hatchet (12, +chop speed) → Iron Sword (14) → Etched Axe (15) → Iron Mace (16, +mine speed) → Enchanted Glaive (18, +spell dmg) → Void Dagger (20, +spell dmg) → Runic Blade (22) → Runic Greatsword (26) → Void Blade (30).
-- **Ranged Weapon** - Bows and crossbows fire projectiles at enemies from a distance. Colonists stay at range instead of closing to melee. Short Bow (7 dmg, range 5) → Hunting Bow (10, range 6) → Iron Crossbow (14, range 7) → Runic Crossbow (18, range 8) → Void Longbow (22, range 10).
-- **Magic Weapon** - Wands and staves provide spell amplification and attack at range. Wooden Wand (range 5, +30% spell dmg), Crystal Staff (range 6, +20%), Runic Wand (range 7, +50%), Void Staff (range 8, +40%). Best for dedicated spellcasters.
-- **Armor** - Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Mana-Weave Robe (15%, +spell dmg) → Iron Chainmail (18%) → Runic Plate (24%) → Void Armor (30%).
-- **Helmet** - Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (10%) → Runic Helm (14%) → Void Crown (18%, +spell dmg).
+- **Melee Weapon** - Determines melee damage. Progression: Stone Spear (8) → Wooden Club (10) → Iron Sword (14) → Etched Axe (15) → Etched Mace (17) → Enchanted Glaive (18, +25% spell dmg) → Void Dagger (16 fast, +40% spell dmg) → Runic Blade (22) → Runic Greatsword (45 slow) → Void Blade (52 slow).
+- **Ranged Weapon** - Bows and crossbows fire projectiles at enemies from a distance. Colonists stay at range instead of closing to melee. Short Bow (7 dmg, range 5) → Hunting Bow (10, range 6) → Iron Crossbow (22, range 7 slow) → Runic Crossbow (30, range 8 slow) → Void Longbow (24, range 10).
+- **Magic Weapon** - Wands and staves provide spell amplification and attack at range. Wooden Wand (range 5, +20% spell dmg), Crystal Staff (range 6, +35%), Runic Wand (range 7, +50%), Void Staff (range 8, +65%). Best for dedicated spellcasters.
+- **Armor** - Reduces incoming damage. Progression: Iron Brigandine (8% DR) → Leather Vest (10%) → Enchanted Tunic (12%, +10% spell) → Iron Chainmail (16%) → Mana-Weave Robe (18%, +20% spell dmg) → Runic Plate (24%) → Void Armor (30%).
+- **Helmet** - Separate headgear slot. DR stacks multiplicatively with body armor. Progression: Leather Cap (5%) → Iron Helmet (8%) → Runic Helm (14%) → Void Crown (18%, +15% spell dmg).
 - **Tool** - Boosts work speed. 5 categories across 3 material tiers (Stone → Iron → Runic):
   - **Pickaxe** - Mining speed (1.25x / 1.45x / 1.7x)
   - **Axe** - Chopping speed (1.25x / 1.45x / 1.7x)
@@ -218,16 +218,16 @@ Colonists learn spells by studying Spell Tomes at the research desk. Equip a tom
 Each colonist has a personal mana pool (base 20 + bonuses from magic skill levels across all schools). Spells consume mana and go on cooldown. Mana regenerates over time. You can disable auto-casting for specific spells to conserve mana.
 
 ### The Six Schools
-- **Evocation** - Combat magic (Magic Missile, Fireball, Chain Lightning, Smite). Your primary offensive magic - ranged and melee burst.
-- **Enchantment** - Work buffs (Haste, Animate Golem). Makes colonists faster and more productive.
-- **Abjuration** - Defense and healing (Heal, Shield, Mass Heal). Keeps your colony alive.
-- **Conjuration** - Summoning and movement (Summon Familiar, Warp, Blink).
-- **Transmutation** - Terrain manipulation (Circle of Growth, Raise Mountain, Level Field). Reshape the map itself.
+- **Evocation** - Combat magic (Spark, Magic Missile, Fireball, Smite). Your primary offensive magic - ranged and melee burst.
+- **Enchantment** - Work buffs (Quicken, Haste). Makes colonists faster and more productive.
+- **Abjuration** - Defense and healing (Mend, Heal, Shield). Keeps your colony alive.
+- **Conjuration** - Summoning and movement (Phase Step, Warp, Summon Familiar, Summon Ghost).
+- **Transmutation** - Terrain manipulation (Nurture, Circle of Growth, Level Field). Reshape the map itself.
 - **Divination** - Probability manipulation (Foresight, Fair Winds, Merchant's Omen, Ward of Calamity, Fortunate Discovery). Influence weather, events, and raid timing.
 
 ### Potions
-Brewed at the Cauldron and auto-consumed by colonists:
-- **Health Potion** - Auto-used when HP drops below 50%. Heals 50 HP. (3 berries + 2 wheat)
+Brewed at the Alchemy Table (requires Alchemy research) and auto-consumed by colonists:
+- **Health Potion** - Auto-used when HP drops below 40%. Heals 50 HP. (3 berries + 1 wheat)
 - **Speed Potion** - Auto-used when working. +50% move, +30% work for 100 ticks. (2 corn + 2 potatoes + 1 berries)
 
 ---
@@ -237,19 +237,19 @@ Brewed at the Cauldron and auto-consumed by colonists:
 Artifacts are powerful items with effects spanning combat, expeditions, and colony management. They can be used in multiple ways:
 
 ### Equipped Effects
-Equip an artifact on a colonist for personal bonuses: Boots of Haste (+30% move speed), Hourglass of Diligence (+25% work speed), Cloak of Shadows (enemies avoid targeting you), or Aegis of the Vanguard (draw enemy fire + 30% damage reduction for a tank role).
+Equip an artifact on a colonist for personal bonuses: Boots of Haste (+50% move speed), Hourglass of Diligence (+25% work speed), Cloak of Shadows (enemies avoid targeting you), or Aegis of the Vanguard (draw enemy fire + 30% damage reduction for a tank role).
 
 ### Artifact Pedestals
 Build an Artifact Pedestal (requires Arcane Infusion research) and place an artifact on it to project effects in a radius. Each pedestal artifact has a mana cost (1-3) and a radius of effect displayed as a diamond highlight when selected.
 
 | Artifact | Pedestal Effect | Radius | Mana |
 |---|---|---|---|
-| Seedkeeper's Locket | Crops immune to blight | 5 | 1 |
-| Hourglass of Diligence | +15% work speed | 4 | 2 |
+| Seedkeeper's Locket | Crops immune to blight | 8 | 1 |
+| Hourglass of Diligence | +15% work speed | 5 | 2 |
 | Voidwalker's Lantern | Light source | 6 | 2 |
 | Drum of Rallying | +15% damage | 8 | 3 |
 | Tome of Shared Wisdom | +10% skill growth | 5 | 2 |
-| Lodestone of Prosperity | +50% wanderer chance | Global | 2 |
+| Lodestone of Prosperity | +25% wanderer/trader chance | Global | 2 |
 | Cornucopia Charm | +1 food per cook | Global | 1 |
 | Haggler's Coin | -15% trade markup | Global | 1 |
 
@@ -284,17 +284,17 @@ Press B to enter Build mode. Buildings are organized into 5 tabs (cycle with Tab
 - **Workbench** (C) - Crafting station for weapons, tools, planks, bricks.
 - **Cauldron** (F) - Cooking and potion brewing.
 - **Food Chest** (S) - Each reduces food spoilage by 15% (stacks to 60%).
-- **Anvil** (⌂) - Repair broken artifacts. Requires Runeforging research.
+- **Anvil** (⌂) - Required for metalworking (iron weapons, armor, tools) and artifact repair.
 
 ### Defense
-- **Void Wall** (▓) - 120 HP reinforced wall. Requires Void Forging.
-- **Void Door** (▒) - 80 HP reinforced door. Requires Void Forging.
+- **Void Wall** (▓) - 120 HP reinforced wall. Requires Void Architecture.
+- **Void Door** (▒) - 80 HP reinforced door. Requires Void Architecture.
 - **Void Turret** (Y) - 20 damage, range 5. Consumes 5 mana. Requires Void Forging.
 
 ### Arcane
 - **Research Desk** (R) - Research station. Colonists study here to unlock the tech tree and progress spell tomes.
 - **Beast Circle** (A) - Required for taming creatures.
-- **Mana Crystal** (W) - Generates 10 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
+- **Mana Crystal** (W) - Generates 8 mana for the leyline network. Limit 4 (increase with Crystal Capacitor).
 - **Glowstone** (L) - Mana-powered light, radius 5. Consumes 2 mana.
 - **Enchanting Table** (P) - 2x crafting speed. Consumes 4 mana.
 - **Ember Ward** (H) - Warms radius 4 in winter. Consumes 3 mana.
@@ -350,8 +350,9 @@ Press Z to enter Farm Zone mode. Pick a crop, then drag over grass or dirt tiles
 | Berries | Spring/Summer/Autumn | 150 ticks | 2 | Fast growing |
 | Corn | Summer only | 250 ticks | 4 | High yield, seasonal |
 | Potatoes | Spring/Autumn/Winter | 180 ticks | 3 | Hardy, grows in cold |
+| Moonbloom | All seasons | 220 ticks | 2 | Requires Herbalism research |
 
-Growth is boosted by rain (1.3x) and summer (1.5x). No outdoor growth in winter except potatoes.
+Growth is boosted by rain (1.3x) and summer (1.5x). No outdoor growth in winter except potatoes and moonbloom.
 
 ### Food Preservation
 All food rots over time. Faster-rotting items (milk, berries) decay first. Combat spoilage with:
@@ -372,8 +373,8 @@ Build a Cauldron, then queue recipes in the Craft panel (C). Cooked meals give a
 - **Deer** (d) - Passive, flees. 3 meat + 2 hides when hunted.
 - **Rabbit** (r) - Passive, fast. 1 meat.
 - **Wolf** (w) - Hostile at night/winter. 2 meat + 1 hide. Tameable (dangerous).
-- **Okapi** (k) - Passive. 3 meat + 3 hides when hunted. Pack animal when tamed.
-- **Tapir** (t) - Passive. 2 meat + 2 hides when hunted. Happiness aura when tamed.
+- **Okapi** (O) - Passive. 5 meat + 3 hides when hunted. Pack animal when tamed.
+- **Tapir** (t) - Passive. 4 meat + 2 hides when hunted. Happiness aura when tamed.
 - **Chicken** (c) - Passive. Produces eggs when tamed.
 
 Click an animal and press Hunt to create a hunting task. Medium and large animals drop hides, which can be tanned into leather for armor crafting.
@@ -396,16 +397,16 @@ Wolves are a special case. The taming UI shows your success chance and warns abo
 ## Combat & Defense
 
 ### How Combat Works
-Combat is either melee (1-tile) or ranged (bows, crossbows, wands). Damage = base + weapon bonus. Colonists auto-defend when attacked and engage threats within their weapon's range. Ranged weapon holders fire projectiles and stay at distance; melee fighters close the gap. Colonists with Evocation spells (Magic Missile, Fireball, Chain Lightning, Smite) also attack automatically - Smite is a melee-range burst for close encounters.
+Combat is either melee (1-tile) or ranged (bows, crossbows, wands). Damage = base + weapon bonus. Colonists auto-defend when attacked and engage threats within their weapon's range. Ranged weapon holders fire projectiles and stay at distance; melee fighters close the gap. Colonists with Evocation spells (Spark, Magic Missile, Fireball, Smite) also attack automatically - Smite is a melee-range burst for close encounters.
 
 ### Raids
-Raiders attack periodically (disabled in Peaceful Mode), scaling with both colony wealth and time elapsed. Early raids are gentle (1 raider after the first season), with full raid strength ramping up over 3 in-game years. This gives new colonies breathing room to establish defenses. Individual raiders flee when their HP drops below 30%. If 65% of the raiding party is dead or fleeing, the rest rout. A safety timeout ensures raiders eventually leave in stalemates.
+Raiders attack periodically (disabled in Peaceful Mode), scaling with both colony wealth and time elapsed. Early raids are gentle (1 raider after the first season), with full raid strength ramping up over 3 in-game years. This gives new colonies breathing room to establish defenses. Individual raiders flee when their HP drops below 15%. If 80% of the raiding party is dead or fleeing, the rest rout. A safety timeout ensures raiders eventually leave in stalemates.
 
 ### Wave Defense (Void Nexus)
 Build a Void Nexus after researching Void Summoning, then click it to start a wave challenge. Each wave is harder (more enemies, more HP). Enemies pathfind to the nexus and will break through walls.
 
 - **Nexus HP**: 200. If destroyed, rebuild it (wave progress is kept).
-- **Colony Cap**: 3 + waves completed (max 12). Complete waves to grow your colony.
+- **Colony Cap**: 3 + 1 per 2 waves completed (max 12). Complete waves to grow your colony. Hearth Shrine adds +2 to the base cap.
 - **Strategy**: Funnel enemies with walls/doors, line the path with turrets, and station drafted colonists at chokepoints.
 
 ### Guard/Patrol Mode
@@ -423,9 +424,12 @@ Research Golem Craft, build a Golem Forge, then click it to see available types:
 | Type | Specialty | Skill | HP | Cost |
 |---|---|---|---|---|
 | Farmer | Farming | 6 | 150 | 10 stone, 3 runite, 2 void essence |
-| Miner | Building/Mining | 6 | 180 | 12 stone, 4 runite, 2 void essence |
+| Builder | Building | 6 | 180 | 12 stone, 4 runite, 2 void essence |
+| Crafter | Crafting | 6 | 160 | 11 stone, 3 runite, 2 void essence |
+| Cook | Cooking | 6 | 140 | 9 stone, 2 runite, 1 void essence |
+| Herder | Animals | 6 | 170 | 11 stone, 3 runite, 2 void essence |
+| Scholar | Research | 6 | 130 | 8 stone, 2 runite, 2 void essence |
 | Combat | Fighting | - | 250 | 15 stone, 5 runite, 4 void essence |
-| Hauler | Hauling | 8 | 120 | 8 stone, 2 runite, 1 void essence |
 
 ### Limitations
 Golems cannot be drafted, cannot equip items or learn spells, and have fixed skills (only their specialty). They display as 'G' on the map. Combat golems auto-fight with 20 damage.
@@ -477,8 +481,8 @@ As your party explores, small events occur randomly:
 |---|---|---|---|---|---|
 | Crystal Caves | 1 | 220-380 | Stone, Runite | Resonating chambers, dwarven caches | - |
 | Verdant Depths | 1 | 150-280 | Wood, Wheat, Berries | Fertile seed caches, druid herb stashes | - |
-| Arcane Library | 1 | 180-320 | Spell Tomes, Runite | Headmaster vaults, enchanting caches | Arcane Studies |
-| Shadow Realm | 2 | 400-650 | Void Essence, Runite | Collapsing void crystals, sealed reliquaries | Deep Delving |
+| Arcane Library | 2 | 180-320 | Spell Tomes, Runite | Headmaster vaults, enchanting caches | Arcane Studies |
+| Shadow Realm | 3 | 400-650 | Void Essence, Runite | Collapsing void crystals, sealed reliquaries | Deep Delving |
 
 Each dimension has unique ambient text, trap descriptions, discovery messages, and rare encounters that can only happen there.
 
@@ -493,8 +497,8 @@ When a Trade Caravan arrives, you can barter any of your resources for theirs th
 
 ### How Bartering Works
 - The trader has a random inventory of resources and possibly a rare exclusive item.
-- You sell resources at **70% of base value** (trader discount).
-- You buy resources at **140% of base value** (trader markup).
+- You sell resources at **80% of base value** (trader discount).
+- You buy resources at **120% of base value** (trader markup).
 - Your total offer value must meet or exceed what you're requesting.
 - You can make **multiple trades** per visit - the trader stays until dismissed.
 
@@ -505,7 +509,7 @@ Some items can only be obtained through trade:
 - **Wanderer's Cloak** - Armor, -15% damage + 20% move speed.
 - **Seedkeeper's Locket** - Artifact, blight immunity radius (pedestal).
 - **Hourglass of Diligence** - Artifact, work speed bonus (equipped/pedestal).
-- **Lodestone of Prosperity** - Artifact, +50% wanderer chance (global pedestal).
+- **Lodestone of Prosperity** - Artifact, +25% wanderer/trader chance (global pedestal).
 - **Haggler's Coin** - Artifact, -15% trade markup (global pedestal).
 - **Crystal Capacitor** - Consumable. Permanently increases mana crystal build limit by 1. Also rarely found in Shadow Realm and Arcane Library expeditions.
 
@@ -519,8 +523,8 @@ Build a Research Desk and assign colonists to study. Select one research topic a
 |---|---|---|
 | Runecraft | - | Etched Axe. Unlocks Runeforging & Warding |
 | Druidcraft | - | Corn, Potatoes. Unlocks Beast Binding |
-| Ley Channeling | - | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
-| Alchemy | - | +2 bonus food per cooked meal |
+| Ley Channeling | Runecraft | Mana Crystal. Unlocks Luminance, Ember Magic, Arcane Infusion |
+| Alchemy | Stonework | +2 bonus food per cooked meal |
 | Mana Weaving | Ley Channeling | Mana-Weave Robe, Enchanted Glaive |
 | Masterwork | Runeforging | Runic Greatsword, Great Forge |
 | Runeforging | Runecraft | Runic Blade, Runic Pick, Runic Pickaxe, Runic Plate, Boots of Haste |
@@ -529,7 +533,8 @@ Build a Research Desk and assign colonists to study. Select one research topic a
 | Luminance | Ley Channeling | Glowstone |
 | Arcane Infusion | Ley Channeling | Enchanting Table |
 | Void Summoning | Ley Channeling + Warding | Void Nexus |
-| Void Forging | Void Summoning + Runeforging | Void Blade, Void Armor, Void Wall, Void Turret, Void Door |
+| Void Architecture | Void Summoning | Void Wall, Void Door |
+| Void Forging | Void Architecture + Runeforging | Void Blade, Void Armor, Void Turret, Void Crown |
 | Golem Craft | Arcane Infusion + Void Forging | Golem Forge, all golem types, Forge Core, Ritual Core |
 | Planar Rift | Void Summoning + Ley Channeling | Rift Gate |
 | Deep Delving | Planar Rift | Shadow Realm dimension |
@@ -557,13 +562,16 @@ Mana Crystals generate mana; arcane buildings consume it. If consumption exceeds
 
 | Building | Mana Cost |
 |---|---|
-| Mana Crystal | +10 (generates) |
+| Mana Crystal | +8 (generates) |
+| Mana Relay | -1 |
 | Ice Box | -1 |
 | Artifact Pedestal | -1 to -3 (varies by artifact) |
 | Glowstone | -2 |
 | Arcane Sentinel | -3 |
 | Ember Ward | -3 |
 | Enchanting Table | -4 |
+| Beacon | -4 |
+| Inferno Ward | -5 |
 | Void Turret | -5 |
 | Rift Gate | -6 |
 
