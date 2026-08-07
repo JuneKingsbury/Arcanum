@@ -79,7 +79,7 @@ export class Renderer {
         this._lastViewportH = CONFIG.VIEWPORT_HEIGHT;
     }
 
-    _resolveSprite(tile, entity, season) {
+    _resolveSprite(tile, entity, season, highlight) {
         const sm = this.skinManager;
         if (entity) {
             if (entity.type === 'colonist') {
@@ -89,10 +89,10 @@ export class Renderer {
                     if (s) return s;
                 }
                 if (entity.armorKey || entity.helmetKey || entity.weaponKey || entity.toolKey) {
-                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey, entity.bodyVariant, entity.hairVariant, entity.shirtVariant, entity.nameColor, entity.weaponKey, entity.toolKey);
+                    const comp = sm.getCompositedColonistSprite(entity.colonistId, entity.drafted, entity.armorKey, entity.helmetKey, entity.bodyVariant, entity.hairVariant, entity.shirtVariant, entity.nameColor, entity.weaponKey, entity.toolKey, highlight);
                     if (comp) return comp;
                 }
-                return sm.getColonistSprite(entity.colonistId, entity.drafted, entity.bodyVariant, entity.hairVariant, entity.shirtVariant, entity.nameColor);
+                return sm.getColonistSprite(entity.colonistId, entity.drafted, entity.bodyVariant, entity.hairVariant, entity.shirtVariant, entity.nameColor, highlight);
             }
             if (entity.type === 'golem') {
                 if (entity.golemType) {
@@ -563,13 +563,15 @@ export class Renderer {
                             if (structSprite) ctx.drawImage(structSprite, px, py, cw, ch);
                         }
                         if (entity) {
-                            const entitySprite = this._resolveSprite(tile, entity, game.weather.season);
+                            const hl = !!(entity.type === 'colonist' && game.settings.showColonistHighlight);
+                            const entitySprite = this._resolveSprite(tile, entity, game.weather.season, hl);
                             if (entitySprite) {
                                 const shakeActive = game.settings.showOverlays && game.settings.enableScreenShake && entity._atkShakeUntil > game.tick;
                                 const sPx = COMBAT_VISUALS.atkShakePx || 2;
                                 const shakeX = shakeActive ? ((game.tick * 7) % (sPx * 2 + 1)) - sPx : 0;
                                 const shakeY = shakeActive ? ((game.tick * 13) % (sPx + 1)) - Math.floor(sPx / 2) : 0;
-                                ctx.drawImage(entitySprite, px + shakeX, py + shakeY, cw, ch);
+                                const hlOff = hl ? 1 : 0;
+                                ctx.drawImage(entitySprite, px + shakeX - hlOff, py + shakeY - hlOff, cw + hlOff * 2, ch + hlOff * 2);
                                 if (game.settings.showOverlays && game.settings.showDamageFlash && entity._dmgFlashUntil > game.tick) {
                                     const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
                                     if (flashSprite) {
@@ -590,7 +592,8 @@ export class Renderer {
                         ctx.drawImage(overlaySprite, px, py, cw, ch);
                         spriteDrawn = true;
                     } else {
-                        const sprite = this._resolveSprite(tile, entity, game.weather.season);
+                        const hl = !!(entity && entity.type === 'colonist' && game.settings.showColonistHighlight);
+                        const sprite = this._resolveSprite(tile, entity, game.weather.season, hl);
                         if (sprite) {
                             const needsGround = tile.structure && BUILDINGS[tile.structure] &&
                                 BUILDINGS[tile.structure].structureType === 'furniture';
@@ -610,14 +613,10 @@ export class Renderer {
                             const shakePx = COMBAT_VISUALS.atkShakePx || 2;
                             const shakeX = shakeActive ? ((game.tick * 7) % (shakePx * 2 + 1)) - shakePx : 0;
                             const shakeY = shakeActive ? ((game.tick * 13) % (shakePx + 1)) - Math.floor(shakePx / 2) : 0;
-                            ctx.drawImage(sprite, px + shakeX, py + shakeY, cw, ch);
+                            const hlOff = hl ? 1 : 0;
+                            ctx.drawImage(sprite, px + shakeX - hlOff, py + shakeY - hlOff, cw + hlOff * 2, ch + hlOff * 2);
                             if (!entity && canDither) {
                                 this._drawTerrainDither(ctx, tile, wx, wy, px, py, cw, ch, map, game);
-                            }
-                            if (entity && entity.type === 'colonist') {
-                                ctx.fillStyle = entity.color;
-                                ctx.fillRect(px + cw - 4, py, 4, 4);
-                                lastColor = '';
                             }
                             if (game.settings.showOverlays && game.settings.showDamageFlash && entity && entity._dmgFlashUntil > game.tick) {
                                 const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
@@ -764,16 +763,14 @@ export class Renderer {
             const rpy = Math.round(sy * ch) + shakeY;
             if (this.skinManager.isActive) {
                 const destTile = map[ent.y]?.[ent.x];
-                const sprite = this._resolveSprite(destTile || {}, me, game.weather.season);
+                const meHl = !!(me.type === 'colonist' && game.settings.showColonistHighlight);
+                const sprite = this._resolveSprite(destTile || {}, me, game.weather.season, meHl);
                 if (sprite) {
-                    ctx.drawImage(sprite, rpx, rpy, cw, ch);
+                    const meHlOff = meHl ? 1 : 0;
+                    ctx.drawImage(sprite, rpx - meHlOff, rpy - meHlOff, cw + meHlOff * 2, ch + meHlOff * 2);
                 } else {
                     ctx.fillStyle = me.color;
                     ctx.fillText(me.char, rpx + this._textOffsetX, rpy);
-                }
-                if (me.type === 'colonist') {
-                    ctx.fillStyle = me.color;
-                    ctx.fillRect(rpx + cw - 4, rpy, 4, 4);
                 }
                 if (game.settings.showOverlays && game.settings.showDamageFlash && ent._dmgFlashUntil > game.tick) {
                     const flashSprite = this.skinManager.getSprite('effects', 'damage_flash');
@@ -833,8 +830,15 @@ export class Renderer {
                 const sx = pos.x - camera.x;
                 const sy = pos.y - camera.y;
                 if (sx < 0 || sx >= CONFIG.VIEWPORT_WIDTH || sy < 0 || sy >= CONFIG.VIEWPORT_HEIGHT) continue;
+                const nx = Math.round(sx * cw);
+                const ny = Math.round(sy * ch) - 1;
+                ctx.fillStyle = '#000000';
+                ctx.fillText(c.name, nx - 1, ny - 1);
+                ctx.fillText(c.name, nx + 1, ny - 1);
+                ctx.fillText(c.name, nx - 1, ny + 1);
+                ctx.fillText(c.name, nx + 1, ny + 1);
                 ctx.fillStyle = c.nameColor || '#ffff00';
-                ctx.fillText(c.name, Math.round(sx * cw), Math.round(sy * ch) - 1);
+                ctx.fillText(c.name, nx, ny);
             }
             ctx.restore();
         }

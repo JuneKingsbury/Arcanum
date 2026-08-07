@@ -512,6 +512,13 @@ export class UI {
             this.elements.modeBar.innerHTML = html;
             return;
         }
+        if (input.guardPointTargeting) {
+            const colonist = this.game.getColonist(input.guardPointTargeting.colonistId);
+            let html = `<span class="mode-label" style="color:#88ff88">SET GUARD POINT: ${colonist.name}</span>`;
+            html += `<span class="mode-hint" style="color:#66ff66">Click passable tile to set guard point | [Esc] Cancel</span>`;
+            this.elements.modeBar.innerHTML = html;
+            return;
+        }
         let html = `<span class="mode-label">Mode: ${input.mode.toUpperCase()}</span>`;
         if (input.mode === 'build') {
             html += '<span class="mode-opt mode-back" data-mode-action="back">[Esc]Back</span>';
@@ -1153,6 +1160,7 @@ export class UI {
         html += `<div class="info-actions">`;
         html += `<button onclick="window.game.toggleDraft(${colonist.id})">${colonist.drafted ? 'Undraft' : 'Draft'}</button>`;
         html += `<button onclick="window.game.toggleGuard(${colonist.id})">${colonist.guardMode ? 'Unguard' : 'Guard'}</button>`;
+        if (colonist.guardMode) html += `<button onclick="window.game.input.startGuardPointTargeting(${colonist.id})">Set Guard Point</button>`;
         html += `<button onclick="window.game.draftAll()">Draft All</button>`;
         html += `<button onclick="window.game.undraftAll()">Undraft All</button>`;
         html += `<button onclick="window.game.autoEquipBest(${colonist.id})">Auto-equip Best</button>`;
@@ -1658,6 +1666,7 @@ export class UI {
             html += `<button onclick="window.game.selectColonistById(${c.id})">Focus</button>`;
             html += `<button onclick="window.game.toggleDraft(${c.id})">${c.drafted ? 'Undraft' : 'Draft'}</button>`;
             html += `<button onclick="window.game.toggleGuard(${c.id})">${c.guardMode ? 'Unguard' : 'Guard'}</button>`;
+            if (c.guardMode) html += `<button onclick="window.game.input.startGuardPointTargeting(${c.id})">Set Guard Point</button>`;
             html += `</div></div>`;
         }
 
@@ -2396,6 +2405,7 @@ export class UI {
             html += `<option value="${val}"${s.layoutMode === val ? ' selected' : ''}>${label}</option>`;
         }
         html += `</select></div>`;
+        html += this._settingsCheck('set-colonist-highlight', s.showColonistHighlight, 'window.game.settings.showColonistHighlight=this.checked;window.game.renderer?.skinManager?._compositeCache.clear()', 'Show colonist color outline (sprite mode)');
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Effects & Performance</div>`;

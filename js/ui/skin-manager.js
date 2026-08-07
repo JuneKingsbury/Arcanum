@@ -109,7 +109,44 @@ export class SkinManager {
     // Returns a composited canvas (body + hair + tinted shirt) for a colonist,
     // or null if the active pack has no body sprites (ASCII mode).
     // bodyVariant/hairVariant/shirtVariant are 1-based; missing/0 falls back to 1.
-    getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor) {
+    _addOutline(canvas, color) {
+        const w = canvas.width;
+        const h = canvas.height;
+        const src = canvas.getContext('2d').getImageData(0, 0, w, h);
+        const out = document.createElement('canvas');
+        out.width = w + 2;
+        out.height = h + 2;
+        const ctx = out.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        const dst = ctx.getImageData(0, 0, w + 2, h + 2);
+        const d = dst.data;
+        const s = src.data;
+        // Parse outline color
+        const tmp = document.createElement('canvas');
+        tmp.width = tmp.height = 1;
+        const tc = tmp.getContext('2d');
+        tc.fillStyle = color;
+        tc.fillRect(0, 0, 1, 1);
+        const cd = tc.getImageData(0, 0, 1, 1).data;
+        const [or, og, ob] = [cd[0], cd[1], cd[2]];
+        // Check opacity of source pixel (offset +1 in dst space)
+        const opaque = (x, y) => x >= 0 && x < w && y >= 0 && y < h && s[(y * w + x) * 4 + 3] > 0;
+        for (let y = 0; y < h + 2; y++) {
+            for (let x = 0; x < w + 2; x++) {
+                const sx = x - 1, sy = y - 1;
+                if (opaque(sx, sy)) continue;
+                if (opaque(sx - 1, sy) || opaque(sx + 1, sy) || opaque(sx, sy - 1) || opaque(sx, sy + 1)) {
+                    const i = (y * (w + 2) + x) * 4;
+                    d[i] = or; d[i + 1] = og; d[i + 2] = ob; d[i + 3] = 255;
+                }
+            }
+        }
+        ctx.putImageData(dst, 0, 0);
+        ctx.drawImage(canvas, 1, 1);
+        return out;
+    }
+
+    getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor, highlight) {
         if (drafted) {
             const s = this._sprites.get('entities:colonist_drafted');
             if (s) return s;
@@ -144,7 +181,7 @@ export class SkinManager {
             }
         }
 
-        return canvas;
+        return highlight && nameColor ? this._addOutline(canvas, nameColor) : canvas;
     }
 
     _tintSprite(sprite, color, w, h) {
@@ -165,10 +202,10 @@ export class SkinManager {
         return this._sprites.get('entities:colonist_sleeping') || null;
     }
 
-    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, bodyVariant, hairVariant, shirtVariant, nameColor, weaponKey, toolKey) {
-        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor);
+    getCompositedColonistSprite(colonistId, drafted, armorKey, helmetKey, bodyVariant, hairVariant, shirtVariant, nameColor, weaponKey, toolKey, highlight) {
+        if (!armorKey && !helmetKey && !weaponKey && !toolKey) return this.getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor, highlight);
 
-        const cacheKey = `${colonistId}:${drafted}:${bodyVariant || ''}:${hairVariant || ''}:${shirtVariant || ''}:${nameColor || ''}:${armorKey || ''}:${helmetKey || ''}:${weaponKey || ''}:${toolKey || ''}`;
+        const cacheKey = `${colonistId}:${drafted}:${bodyVariant || ''}:${hairVariant || ''}:${shirtVariant || ''}:${nameColor || ''}:${armorKey || ''}:${helmetKey || ''}:${weaponKey || ''}:${toolKey || ''}${highlight ? ':hl' : ''}`;
         if (this._compositeCache.has(cacheKey)) return this._compositeCache.get(cacheKey);
 
         const base = this.getColonistSprite(colonistId, drafted, bodyVariant, hairVariant, shirtVariant, nameColor);
@@ -213,8 +250,9 @@ export class SkinManager {
             ctx.drawImage(toolSprite, offX, offY, cw, ch);
         }
 
-        this._compositeCache.set(cacheKey, canvas);
-        return canvas;
+        const result = highlight && nameColor ? this._addOutline(canvas, nameColor) : canvas;
+        this._compositeCache.set(cacheKey, result);
+        return result;
     }
 
     invalidateComposite(colonistId) {

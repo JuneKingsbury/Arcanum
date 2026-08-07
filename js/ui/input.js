@@ -27,6 +27,7 @@ export class InputHandler {
         this.destroyMode = false;
         this.rallyMode = false;
         this.spellTargeting = null;
+        this.guardPointTargeting = null;
 
         this.charWidth = 0;
         this.charHeight = 0;
@@ -185,6 +186,10 @@ export class InputHandler {
                     this.cancelSpellTargeting();
                     break;
                 }
+                if (this.guardPointTargeting) {
+                    this.cancelGuardPointTargeting();
+                    break;
+                }
                 const ui = this.game.ui;
                 const hadPanel = ui.priorityPanelVisible || ui.craftPanelVisible ||
                     ui.researchPanelVisible || ui.inventoryVisible ||
@@ -312,6 +317,15 @@ export class InputHandler {
                 this.executeSpellTarget(pos);
             } else {
                 this.cancelSpellTargeting();
+            }
+            return;
+        }
+
+        if (this.guardPointTargeting) {
+            if (e.button === 0) {
+                this.executeGuardPointTarget(pos);
+            } else {
+                this.cancelGuardPointTargeting();
             }
             return;
         }
@@ -652,6 +666,10 @@ export class InputHandler {
             this.executeSpellTarget(pos);
             return;
         }
+        if (this.guardPointTargeting) {
+            this.executeGuardPointTarget(pos);
+            return;
+        }
         if (this.rallyMode) {
             this.handleRightClick(pos);
             return;
@@ -693,6 +711,37 @@ export class InputHandler {
     cancelSpellTargeting() {
         this.spellTargeting = null;
         this.game.notifications.push({ text: 'Spell targeting cancelled', tick: this.game.tick, type: 'event' });
+        this.game.ui.updateModeDisplay(this);
+    }
+
+    startGuardPointTargeting(colonistId) {
+        this.guardPointTargeting = { colonistId };
+        const colonist = this.game.getColonist(colonistId);
+        this.game.notifications.push({ text: `Select guard point for ${colonist.name} (Esc to cancel)`, tick: this.game.tick, type: 'event' });
+        this.game.ui.updateModeDisplay(this);
+    }
+
+    cancelGuardPointTargeting() {
+        this.guardPointTargeting = null;
+        this.game.notifications.push({ text: 'Guard point selection cancelled', tick: this.game.tick, type: 'event' });
+        this.game.ui.updateModeDisplay(this);
+    }
+
+    executeGuardPointTarget(pos) {
+        const { colonistId } = this.guardPointTargeting;
+        const colonist = this.game.getColonist(colonistId);
+        if (!colonist || colonist.hp <= 0) {
+            this.guardPointTargeting = null;
+            return;
+        }
+
+        if (!isPassable(this.game.map, pos.x, pos.y)) {
+            this.game.notifications.push({ text: 'Cannot set guard point on impassable terrain', tick: this.game.tick, type: 'danger' });
+            return;
+        }
+
+        this.game.setGuardPost(colonistId, pos);
+        this.guardPointTargeting = null;
         this.game.ui.updateModeDisplay(this);
     }
 

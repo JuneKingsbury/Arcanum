@@ -84,6 +84,7 @@ class Game {
             temperatureUnit: 'F',
             ditherDistance: 'light',
             ditherQuality: 'medium',
+            showColonistHighlight: false,
         };
         try {
             const saved = JSON.parse(localStorage.getItem('colony_settings'));
@@ -617,6 +618,22 @@ class Game {
             this.ui.showMultiColonistInfo(this.selectedColonists);
         } else {
             this.ui.showColonistInfo(c);
+        }
+    }
+
+    setGuardPost(colonistId, pos) {
+        const c = this.getColonist(colonistId);
+        if (!c || c.hp <= 0) return;
+        if (c.guardMode) {
+            c.guardPost = { x: pos.x, y: pos.y };
+            this.notifications.push({ text: `${c.name}'s guard point set to (${pos.x}, ${pos.y})`, tick: this.tick, type: 'event' });
+            if (this.selectedColonists.length > 1) {
+                this.ui.showMultiColonistInfo(this.selectedColonists);
+            } else {
+                this.ui.showColonistInfo(c);
+            }
+        } else {
+            this.notifications.push({ text: `${c.name} must be in Guard Mode first`, tick: this.tick, type: 'danger' });
         }
     }
 
@@ -2078,6 +2095,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = (state && state.name) || `Colonist ${slotIdx + 1}`;
         el.textContent = name;
         el.style.color = color;
+        el.style.textShadow = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
     }
 
     function buildColonistSlotHTML(idx) {
@@ -2307,7 +2325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Sprite preview at top of custom view, with colored name above it
             const spriteRow = document.createElement('div');
-            spriteRow.style.cssText = 'text-align:center; margin-bottom:8px;';
+            spriteRow.style.cssText = 'text-align:center; margin-bottom:8px; background:#ffffff; border:1px solid #ccc; border-radius:6px; padding:10px;';
             const nameDisplay = document.createElement('div');
             nameDisplay.dataset.slotName = idx;
             nameDisplay.style.cssText = 'font-size:12px; font-weight:bold; margin-bottom:4px; font-family:monospace; min-height:16px;';
@@ -2625,6 +2643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             s.showCombatParticles = document.getElementById('start-combat-particles').checked;
             s.showProjectiles = document.getElementById('start-projectiles').checked;
             s.showEquipmentOverlays = document.getElementById('start-equip-overlays').checked;
+            s.showColonistHighlight = document.getElementById('start-colonist-highlight').checked;
             s.showProgressBars = document.getElementById('start-progress-bars').checked;
             s.showPortalPath = document.getElementById('start-portal-path').checked;
             s.showNightLighting = document.getElementById('start-night').checked;
@@ -2666,6 +2685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (s.showCombatParticles != null) document.getElementById('start-combat-particles').checked = s.showCombatParticles;
             if (s.showProjectiles != null) document.getElementById('start-projectiles').checked = s.showProjectiles;
             if (s.showEquipmentOverlays != null) document.getElementById('start-equip-overlays').checked = s.showEquipmentOverlays;
+            if (s.showColonistHighlight != null) document.getElementById('start-colonist-highlight').checked = s.showColonistHighlight;
             if (s.showProgressBars != null) document.getElementById('start-progress-bars').checked = s.showProgressBars;
             if (s.showPortalPath != null) document.getElementById('start-portal-path').checked = s.showPortalPath;
             if (s.showNightLighting != null) document.getElementById('start-night').checked = s.showNightLighting;
