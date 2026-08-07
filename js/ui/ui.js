@@ -12,6 +12,7 @@ import { getEquippedItems, getEquipmentStat } from '../entities/colonist.js';
 import { getRoleInfoHtml, getEffectInfoHtml } from '../entities/roles.js';
 import { installArcanePanel } from './ui-arcane.js';
 import { installResearchPanel } from './ui-research.js';
+import { installTutorialPanel } from './ui-tutorial.js';
 
 const WEATHER_ICONS = { clear: '☀', rain: '☔', thunderstorm: '⛈', snow: '❄', blizzard: '❅', heatwave: '♨' };
 
@@ -96,6 +97,8 @@ export class UI {
         this.elements.settingsPanel = document.getElementById('settings-panel');
         this.elements.arcanePanel = document.getElementById('arcane-panel');
         this.elements.storyPanel = document.getElementById('story-panel');
+
+        this.initTutorialNote();
 
         this.elements.storyPanel.addEventListener('click', (e) => {
             const tab = e.target.closest('[data-story-tab]');
@@ -552,6 +555,14 @@ export class UI {
         }
         if (input.mode !== 'build' && input.mode !== 'zone' && input.mode !== 'designate') this._hideBuildPanel();
         this.elements.modeBar.innerHTML = html;
+
+        if (input.mode === 'normal' && this.game.settings.showTutorial && this.game.tutorial) {
+            const hl = this.game.tutorial.getHighlight();
+            if (hl) {
+                const btn = this.elements.modeBar.querySelector(`[data-mode-action="${hl}"]`);
+                if (btn) btn.classList.add('tutorial-highlight');
+            }
+        }
     }
 
     _updateBuildPanel(input) {
@@ -2379,6 +2390,7 @@ export class UI {
             html += `<option value="${val}" ${s.autoSaveInterval === val ? 'selected' : ''}>${label}</option>`;
         }
         html += `</select></div>`;
+        html += this._settingsCheck('set-tutorial', s.showTutorial, 'window.game.settings.showTutorial=this.checked;window.game.saveSettingsToStorage();window.game.ui.updateTutorialNote(window.game)', 'Show tutorial hints');
         html += `</div>`;
 
         html += `<div class="settings-section"><div class="settings-section-title">Accessibility</div>`;
@@ -2965,3 +2977,4 @@ function getWeaponTooltip(colonist) {
 
 installArcanePanel(UI);
 installResearchPanel(UI);
+installTutorialPanel(UI);

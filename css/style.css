@@ -4492,3 +4492,97 @@ body {
     border-color: #88cc88;
     color: #aaffaa;
 }
+
+/* Tutorial sticky note */
+#tutorial-note {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    z-index: 15;
+    width: 210px;
+    padding: 10px 12px;
+    background: #2a2a1e;
+    border: 1px solid #665;
+    border-radius: 4px;
+    box-shadow: 2px 3px 8px rgba(0,0,0,0.5);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #ddd;
+    cursor: pointer;
+    user-select: none;
+    transition: width 0.15s;
+}
+
+#tutorial-note.expanded {
+    width: 280px;
+}
+
+#tutorial-note .tutorial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+#tutorial-note .tutorial-step {
+    font-size: 10px;
+    color: #998;
+}
+
+#tutorial-note .tutorial-collapse,
+#tutorial-note .tutorial-expand {
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+#tutorial-note .tutorial-collapse:hover,
+#tutorial-note .tutorial-expand:hover {
+    color: #fff;
+}
+
+#tutorial-note .tutorial-title {
+    color: #ffcc00;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+#tutorial-note .tutorial-desc {
+    color: #bbb;
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 6px 0 8px;
+}
+
+#tutorial-note .tutorial-goto {
+    display: block;
+    width: 100%;
+    padding: 5px 8px;
+    background: #3a3a2e;
+    border: 1px solid #665;
+    border-radius: 3px;
+    color: #ffcc00;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s;
+}
+
+#tutorial-note .tutorial-goto:hover {
+    background: #4a4a3e;
+}
+
+/* Tutorial mode-bar button highlight */
+.mode-opt.tutorial-highlight {
+    animation: tutorial-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tutorial-pulse {
+    0%, 100% { color: #ffcc00; }
+    50% { color: #fff; }
+}

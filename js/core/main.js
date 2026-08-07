@@ -37,6 +37,7 @@ import { renderChangelogHTML, initChangelogInteraction, renderCreditsHTML } from
 import { checkComplexStructures } from '../systems/complexBuildings.js';
 import { updateAutoRepair } from '../systems/auto-repair.js';
 import { StorySystem } from '../systems/story.js';
+import { TutorialSystem } from '../systems/tutorial.js';
 import { SoundManager } from './sound.js';
 import { TickProfiler } from './perf-probe.js';
 
@@ -85,6 +86,7 @@ class Game {
             ditherDistance: 'light',
             ditherQuality: 'medium',
             showColonistHighlight: false,
+            showTutorial: true,
         };
         try {
             const saved = JSON.parse(localStorage.getItem('colony_settings'));
@@ -108,6 +110,7 @@ class Game {
         this.exploration = new ExplorationSystem();
         this.eventLog = new EventLog();
         this.story = new StorySystem();
+        this.tutorial = new TutorialSystem();
 
         this.manaCrystalBonus = 0;
         this.discoveredLoot = new Set();
@@ -250,6 +253,9 @@ class Game {
                 this.togglePause();
             }
         });
+
+        this.tutorial.update(this);
+        this.ui.updateTutorialNote(this);
     }
 
     async switchSkin(skinName) {
@@ -383,8 +389,8 @@ class Game {
         this.weather.update(this.tick, this.divinationModifiers);
         if (this.weather.season !== prevSeason) {
             this.eventLog.add(this, `Season changed to ${this.weather.season} (Year ${this.weather.year})`, 'event', null);
-        }
-        if (this.tick % 50 === 0) {
+            this.weather.applySnow(this.map);
+        } else if (this.tick % 50 === 0) {
             this.weather.applySnow(this.map);
         }
 
@@ -516,6 +522,10 @@ class Game {
         if (prof) prof.mark('fires');
 
         this._recipeCacheVersion++;
+
+        if (this.tick % 20 === 0) {
+            this.tutorial.update(this);
+        }
 
         if (!this._gameOver && this.colonists.length > 0 && this.colonists.every(c => c.hp <= 0)) {
             this._gameOver = true;

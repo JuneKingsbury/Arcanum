@@ -92,6 +92,12 @@ export function saveGame(game) {
             viewed: [...game.story.viewed],
         },
 
+        tutorial: game.tutorial ? {
+            currentStep: game.tutorial.currentStep,
+            completed: [...game.tutorial.completed],
+            flags: { ...game.tutorial.flags },
+        } : { currentStep: 0, completed: [], flags: {} },
+
         tasks: game.taskQueue.getAll(),
         eventLog: game.eventLog.entries,
     };
@@ -189,6 +195,12 @@ export function loadGame(game) {
         if (data.story) {
             game.story.unlocked = new Map(Object.entries(data.story.unlocked || {}));
             game.story.viewed = new Set(data.story.viewed || []);
+        }
+
+        if (data.tutorial && game.tutorial) {
+            game.tutorial.currentStep = data.tutorial.currentStep || 0;
+            game.tutorial.completed = new Set(data.tutorial.completed || []);
+            game.tutorial.flags = data.tutorial.flags || {};
         }
 
         game.taskQueue.tasks = data.tasks || [];

@@ -141,6 +141,7 @@ export function completeTask(colonist, task, game) {
             }
             tile.designation = null;
             applyThought(colonist, 'good_work', game.tick);
+            if (game.tutorial) game.tutorial.flags.gathered = true;
             break;
         }
         case 'plant': {
@@ -192,6 +193,7 @@ export function completeTask(colonist, task, game) {
                 const craftedName = Object.keys(task.recipe.output)[0]?.replace(/_/g, ' ') || 'item';
                 game.overlays.push({ type: 'floating_text', x: colonist.x, y: colonist.y, text: `Crafted ${craftedName}`, color: '#ffcc00', fontSize: 10, ttl: 20, maxTtl: 20 });
                 window.soundManager?.playSFX('craft_complete');
+                if (game.tutorial && output.planks) game.tutorial.flags.craftedPlanks = true;
             }
             break;
         }
@@ -214,6 +216,7 @@ export function completeTask(colonist, task, game) {
                     game.resources.add(output);
                 }
                 applyThought(colonist, 'cooked', game.tick);
+                if (game.tutorial) game.tutorial.flags.cookedMeal = true;
             }
             break;
         }
